@@ -11,10 +11,6 @@
 namespace foreactor {
 
 
-class Intention;
-class SyscallNode;
-
-
 // Any syscall node is in one of the three stages at any time.
 typedef enum SyscallStage {
     STAGE_UNISSUED,
@@ -28,7 +24,9 @@ typedef enum SyscallStage {
 // dependency graph instance should be composed of instances of those
 // child classes -- no direct instantiation of this parent class.
 class SyscallNode {
-  friend Intention;
+  friend void DepGraphEnter(std::vector<SyscallNode *>& syscalls,
+                            int pre_issue_depth, IOUring& ring);
+  friend void DepGraphLeave();
 
   protected:
     SyscallNode *pred = nullptr;

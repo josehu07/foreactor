@@ -9,7 +9,7 @@
 #include <fcntl.h>
 #include <assert.h>
 
-#include "hinten.hpp"
+#include <foreactor.hpp>
 
 
 static constexpr char DBDIR[] = "/tmp/hintdemo_dbdir";
@@ -54,21 +54,25 @@ static void do_get_serial(std::vector<std::vector<int>>& files)
         << " ms" << std::endl;
 }
 
-static void do_get_hinten(std::vector<std::vector<int>>& files, int pre_issue_depth)
+static void do_get_foreactor(std::vector<std::vector<int>>& files, int pre_issue_depth)
 {
     auto t1 = std::chrono::high_resolution_clock::now();
+    foreactor::IOUring ring(pre_issue_depth);
     // build the intention
-    std::vector<SyscallNode *> syscalls;
+    std::vector<foreactor::SyscallNode *> syscalls;
     syscalls.reserve(FILES_PER_LEVEL + NUM_LEVELS - 1);
     // level-0 tables from latest to oldest
-    for (int index = FILES_PER_LEVEL - 1; index >= 0; --index)
-        syscalls.push_back(new SyscallPread(files[0][index], READ_BUF, FILE_SIZE, 0));
+    for (int index = FILES_PER_LEVEL - 1; index >= 0; --index) {
+        syscalls.push_back(
+            new foreactor::SyscallPread(files[0][index], READ_BUF, FILE_SIZE, 0));
+    }
     // levels 1 and beyond
     for (int level = 1; level < NUM_LEVELS; ++level) {
         int index = std::rand() % 8;    // simulate the calc of file in level
-        syscalls.push_back(new SyscallPread(files[level][index], READ_BUF, FILE_SIZE, 0));
+        syscalls.push_back(
+            new foreactor::SyscallPread(files[level][index], READ_BUF, FILE_SIZE, 0));
     }
-    Intention intention(syscalls, pre_issue_depth);
+    foreactor::DepGraphEnter(syscalls, pre_issue_depth, ring);
     auto t2 = std::chrono::high_resolution_clock::now();
 
     // make the syscalls in order
@@ -77,10 +81,11 @@ static void do_get_hinten(std::vector<std::vector<int>>& files, int pre_issue_de
         assert(ret == FILE_SIZE);
     }
     auto t3 = std::chrono::high_resolution_clock::now();
+    foreactor::DepGraphLeave();
 
     std::chrono::duration<double, std::milli> time_build_intention = t2 - t1;
     std::chrono::duration<double, std::milli> time_finish_syscalls = t3 - t2;
-    std::cout << "Hinten (" << pre_issue_depth << ") - total time: "
+    std::cout << "foreactor (" << pre_issue_depth << ") - total time: "
         << time_build_intention.count() + time_finish_syscalls.count()
         << " ms" << std::endl;
     std::cout << "  build intention: " << time_build_intention.count()
@@ -107,11 +112,11 @@ int main(void)
     drop_caches();
     do_get_serial(files);
     drop_caches();
-    do_get_hinten(files, 2);
+    do_get_foreactor(files, 2);
     drop_caches();
-    do_get_hinten(files, 4);
+    do_get_foreactor(files, 4);
     drop_caches();
-    do_get_hinten(files, 8);
+    do_get_foreactor(files, 8);
 
     for (auto l : files)
         for (auto fd : l)

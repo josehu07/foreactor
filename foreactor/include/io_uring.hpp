@@ -1,3 +1,4 @@
+#include <assert.h>
 #include <liburing.h>
 
 
@@ -23,7 +24,7 @@ class IOUring {
         io_uring_queue_exit(&ring);
     }
 
-    struct io_uring *Ring() {
+    struct io_uring *RingPtr() {
         return &ring;
     }
 };

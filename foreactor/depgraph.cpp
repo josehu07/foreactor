@@ -1,8 +1,8 @@
 #include <vector>
 #include <liburing.h>
 
-#include "depgraph.h"
-#include "io_uring.h"
+#include "depgraph.hpp"
+#include "io_uring.hpp"
 
 
 namespace foreactor {
@@ -74,7 +74,7 @@ long SyscallNode::Issue() {
 void DepGraphEnter(std::vector<SyscallNode *>& syscalls, int pre_issue_depth,
                    IOUring& ring) {
     for (size_t i = 0; i < syscalls.size(); ++i) {
-        syscalls[i]->ring = ring.Ring();
+        syscalls[i]->ring = ring.RingPtr();
         syscalls[i]->pre_issue_depth = pre_issue_depth;
         syscalls[i]->stage = STAGE_UNISSUED;
         if (i > 0)
