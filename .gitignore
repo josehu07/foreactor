@@ -1,2 +1,2 @@
-makedb
-ldbget
+demo/makedb
+demo/ldbget
