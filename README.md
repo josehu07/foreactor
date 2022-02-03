@@ -26,9 +26,10 @@ cd ..
 Finally, for each application of interest, go into the corresponding folder (which contains its foreactor-patched source code), then follow the README down there. Example:
 
 ```bash
-cd appname-x.y.z
+cd demo
 make
-#run    #FIXME
+./makedb
+./ldbget
 ```
 
 
