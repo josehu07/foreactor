@@ -9,6 +9,8 @@
 #include "leveldb/table.h"
 #include "util/coding.h"
 
+#include <foreactor.hpp>
+
 namespace leveldb {
 
 struct TableAndFile {
@@ -109,6 +111,28 @@ Status TableCache::Get(const ReadOptions& options, uint64_t file_number,
     cache_->Release(handle);
   }
   return s;
+}
+
+void TableCache::GetPrepUring(const ReadOptions& options, uint64_t file_number,
+                              uint64_t file_size, const Slice& k,
+                              struct io_uring_sqe* sqe, BlockContents* internal_contents) {
+  Cache::Handle* handle = nullptr;
+  Status s = FindTable(file_number, file_size, &handle);
+  assert(s.ok());
+  Table* t = reinterpret_cast<TableAndFile*>(cache_->Value(handle))->table;
+  t->InternalGetPrepUring(options, k, sqe, internal_contents);
+}
+
+void TableCache::GetReflectResult(uint64_t file_number, uint64_t file_size,
+                                  const Slice& k, void* arg,
+                                  void (*handle_result)(void*, const Slice&,
+                                                        const Slice&),
+                                  BlockContents* internal_contents) {
+  Cache::Handle* handle = nullptr;
+  Status s = FindTable(file_number, file_size, &handle);
+  assert(s.ok());
+  Table* t = reinterpret_cast<TableAndFile*>(cache_->Value(handle))->table;
+  t->InternalGetReflectResult(k, arg, handle_result, internal_contents);
 }
 
 void TableCache::Evict(uint64_t file_number) {

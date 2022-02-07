@@ -35,6 +35,8 @@
 #include "util/logging.h"
 #include "util/mutexlock.h"
 
+#include <foreactor.hpp>
+
 namespace leveldb {
 
 const int kNumNonTableCacheFiles = 10;
@@ -147,7 +149,10 @@ DBImpl::DBImpl(const Options& raw_options, const std::string& dbname)
       background_compaction_scheduled_(false),
       manual_compaction_(nullptr),
       versions_(new VersionSet(dbname_, &options_, table_cache_,
-                               &internal_comparator_)) {}
+                               &internal_comparator_)),
+      foreactor_ring_(options_.pre_issue_depth > 0
+                      ? new foreactor::IOUring(options_.pre_issue_depth)
+                      : nullptr) {}
 
 DBImpl::~DBImpl() {
   // Wait for background work to finish.
@@ -176,6 +181,9 @@ DBImpl::~DBImpl() {
   if (owns_cache_) {
     delete options_.block_cache;
   }
+
+  if (foreactor_ring_ != nullptr)
+    delete foreactor_ring_;
 }
 
 Status DBImpl::NewDB() {
@@ -1144,7 +1152,7 @@ Status DBImpl::Get(const ReadOptions& options, const Slice& key,
     } else if (imm != nullptr && imm->Get(lkey, value, &s)) {
       // Done
     } else {
-      s = current->Get(options, lkey, value, &stats);
+      s = current->Get(options, lkey, value, &stats, foreactor_ring_);
       have_stat_update = true;
     }
     mutex_.Lock();

@@ -9,6 +9,9 @@
 
 #include "leveldb/export.h"
 #include "leveldb/iterator.h"
+#include "table/format.h"
+
+#include <foreactor.hpp>
 
 namespace leveldb {
 
@@ -72,6 +75,14 @@ class LEVELDB_EXPORT Table {
   Status InternalGet(const ReadOptions&, const Slice& key, void* arg,
                      void (*handle_result)(void* arg, const Slice& k,
                                            const Slice& v));
+
+  // FIXME: foreactor
+  void InternalGetPrepUring(const ReadOptions& options, const Slice& k,
+                            struct io_uring_sqe* sqe, BlockContents* internal_contents);
+  void InternalGetReflectResult(const Slice& k, void* arg,
+                                void (*handle_result)(void*, const Slice&,
+                                                      const Slice&),
+                                BlockContents* internal_contents);
 
   void ReadMeta(const Footer& footer);
   void ReadFilter(const Slice& filter_handle_value);

@@ -15,7 +15,8 @@
 static constexpr char DBDIR[] = "/tmp/hintdemo_dbdir";
 static constexpr int NUM_LEVELS = 3;
 static constexpr int FILES_PER_LEVEL = 8;
-static constexpr size_t FILE_SIZE = 16 * 1024 * 1024;
+// static constexpr size_t FILE_SIZE = 16 * 1024 * 1024;
+static constexpr size_t FILE_SIZE = 4096;
 
 static const std::string table_name(int level, int index)
 {
@@ -81,7 +82,7 @@ static void do_get_foreactor(std::vector<std::vector<int>>& files, int pre_issue
         assert(ret == FILE_SIZE);
     }
     auto t3 = std::chrono::high_resolution_clock::now();
-    foreactor::DepGraphLeave();
+    foreactor::DepGraphLeave(syscalls);
 
     std::chrono::duration<double, std::milli> time_build_intention = t2 - t1;
     std::chrono::duration<double, std::milli> time_finish_syscalls = t3 - t2;

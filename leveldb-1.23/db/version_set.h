@@ -24,6 +24,8 @@
 #include "port/port.h"
 #include "port/thread_annotations.h"
 
+#include <foreactor.hpp>
+
 namespace leveldb {
 
 namespace log {
@@ -73,7 +75,7 @@ class Version {
   void AddIterators(const ReadOptions&, std::vector<Iterator*>* iters);
 
   Status Get(const ReadOptions&, const LookupKey& key, std::string* val,
-             GetStats* stats);
+             GetStats* stats, foreactor::IOUring* foreactor_ring = nullptr);
 
   // Adds "stats" into the current state.  Returns true if a new
   // compaction may need to be triggered, false otherwise.
@@ -143,7 +145,8 @@ class Version {
   //
   // REQUIRES: user portion of internal_key == user_key.
   void ForEachOverlapping(Slice user_key, Slice internal_key, void* arg,
-                          bool (*func)(void*, int, FileMetaData*));
+                          bool (*func)(void*, int, FileMetaData*, void*),
+                          foreactor::IOUring* foreactor_ring = nullptr);
 
   VersionSet* vset_;  // VersionSet to which this Version belongs
   Version* next_;     // Next version in linked list

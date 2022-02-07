@@ -73,10 +73,13 @@ long SyscallNode::Issue() {
 
 void DepGraphEnter(std::vector<SyscallNode *>& syscalls, int pre_issue_depth,
                    IOUring& ring) {
+    
+
     for (size_t i = 0; i < syscalls.size(); ++i) {
         syscalls[i]->ring = ring.RingPtr();
         syscalls[i]->pre_issue_depth = pre_issue_depth;
         syscalls[i]->stage = STAGE_UNISSUED;
+
         if (i > 0)
             syscalls[i]->pred = syscalls[i - 1];
         if (i < syscalls.size() - 1)
@@ -84,7 +87,7 @@ void DepGraphEnter(std::vector<SyscallNode *>& syscalls, int pre_issue_depth,
     }
 }
 
-void DepGraphLeave() {
+void DepGraphLeave(std::vector<SyscallNode *>& syscalls) {
     return;
 }
 

@@ -195,9 +195,10 @@ class PosixRandomAccessFile final : public RandomAccessFile {
     return status;
   }
 
- private:
   const bool has_permanent_fd_;  // If false, the file is opened on every read.
   const int fd_;                 // -1 if has_permanent_fd_ is false.
+  
+ private:
   Limiter* const fd_limiter_;
   const std::string filename_;
 };

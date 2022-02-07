@@ -140,6 +140,9 @@ struct LEVELDB_EXPORT Options {
   // Many applications will benefit from passing the result of
   // NewBloomFilterPolicy() here.
   const FilterPolicy* filter_policy = nullptr;
+
+  // Foreactor pre-issue depth. Depth <= 0 means no pre-issuing.
+  int pre_issue_depth = 0;
 };
 
 // Options that control read operations

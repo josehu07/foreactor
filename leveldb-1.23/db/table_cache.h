@@ -15,6 +15,8 @@
 #include "leveldb/table.h"
 #include "port/port.h"
 
+#include <foreactor.hpp>
+
 namespace leveldb {
 
 class Env;
@@ -39,6 +41,16 @@ class TableCache {
   Status Get(const ReadOptions& options, uint64_t file_number,
              uint64_t file_size, const Slice& k, void* arg,
              void (*handle_result)(void*, const Slice&, const Slice&));
+
+  // FIXME: foreactor
+  void GetPrepUring(const ReadOptions& options, uint64_t file_number,
+                    uint64_t file_size, const Slice& k,
+                    struct io_uring_sqe* sqe, BlockContents* internal_contents);
+  void GetReflectResult(uint64_t file_number, uint64_t file_size,
+                        const Slice& k, void* arg,
+                        void (*handle_result)(void*, const Slice&,
+                                              const Slice&),
+                        BlockContents* internal_contents);
 
   // Evict any entry for the specified file number
   void Evict(uint64_t file_number);

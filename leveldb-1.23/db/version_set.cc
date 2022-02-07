@@ -19,6 +19,8 @@
 #include "util/coding.h"
 #include "util/logging.h"
 
+#include <foreactor.hpp>
+
 namespace leveldb {
 
 static size_t TargetFileSize(const Options* options) {
@@ -274,15 +276,113 @@ static void SaveValue(void* arg, const Slice& ikey, const Slice& v) {
   }
 }
 
+class TaskLevelDBTableGet: public foreactor::SyscallNode {
+  private:
+    TableCache* table_cache;
+    const ReadOptions& options;
+    uint64_t file_number;
+    uint64_t file_size;
+    const Slice& k;
+    void* arg;
+    void (*handle_result)(void*, const Slice&, const Slice&);
+
+    // used when issued async
+    BlockContents internal_contents;
+
+    long SyscallSync() {
+        table_cache->Get(options, file_number, file_size, k, arg, handle_result);
+        return 0;
+    }
+
+    void PrepUring(struct io_uring_sqe *sqe) {
+        table_cache->GetPrepUring(options, file_number, file_size, k, sqe, &internal_contents);
+    }
+
+    void ReflectResult() {
+        table_cache->GetReflectResult(file_number, file_size, k, arg, handle_result, &internal_contents);
+    }
+
+  public:
+    TaskLevelDBTableGet(TableCache* table_cache, const ReadOptions& options, uint64_t file_number,
+                        uint64_t file_size, const Slice& k, void* arg,
+                        void (*handle_result)(void*, const Slice&, const Slice&))
+            : table_cache(table_cache), options(options), file_number(file_number), file_size(file_size),
+              k(k), arg(arg), handle_result(handle_result) {}
+
+    ~TaskLevelDBTableGet();
+};
+
+struct VersionGetState {
+  Saver saver;
+  Version::GetStats* stats;
+  const ReadOptions* options;
+  Slice ikey;
+  FileMetaData* last_file_read;
+  int last_file_read_level;
+
+  TableCache* table_cache;
+  Status s;
+  bool found;
+
+  static bool Match(void* arg, int level, FileMetaData* f,
+                    void* foreactor_task = nullptr) {
+    VersionGetState* state = reinterpret_cast<VersionGetState*>(arg);
+    TaskLevelDBTableGet* task = reinterpret_cast<TaskLevelDBTableGet*>(task);
+
+    if (state->stats->seek_file == nullptr &&
+        state->last_file_read != nullptr) {
+      // We have had more than one seek for this read.  Charge the 1st file.
+      state->stats->seek_file = state->last_file_read;
+      state->stats->seek_file_level = state->last_file_read_level;
+    }
+
+    state->last_file_read = f;
+    state->last_file_read_level = level;
+
+    if (task != nullptr) {
+      task->Issue();
+      state->s = Status::OK();
+    } else {
+      state->s = state->table_cache->Get(*state->options, f->number,
+                                         f->file_size, state->ikey,
+                                         &state->saver, SaveValue);
+    }
+
+    if (!state->s.ok()) {
+      state->found = true;
+      return false;
+    }
+    switch (state->saver.state) {
+      case kNotFound:
+        return true;  // Keep searching in other files
+      case kFound:
+        state->found = true;
+        return false;
+      case kDeleted:
+        return false;
+      case kCorrupt:
+        state->s =
+            Status::Corruption("corrupted key for ", state->saver.user_key);
+        state->found = true;
+        return false;
+    }
+
+    // Not reached. Added to avoid false compilation warnings of
+    // "control reaches end of non-void function".
+    return false;
+  }
+};
+
 static bool NewestFirst(FileMetaData* a, FileMetaData* b) {
   return a->number > b->number;
 }
 
 void Version::ForEachOverlapping(Slice user_key, Slice internal_key, void* arg,
-                                 bool (*func)(void*, int, FileMetaData*)) {
+                                 bool (*func)(void*, int, FileMetaData*, void*),
+                                 foreactor::IOUring* foreactor_ring) {
   const Comparator* ucmp = vset_->icmp_.user_comparator();
 
-  // Search level-0 in order from newest to oldest.
+  // Get all level-0 tables whose range covers the key.
   std::vector<FileMetaData*> tmp;
   tmp.reserve(files_[0].size());
   for (uint32_t i = 0; i < files_[0].size(); i++) {
@@ -292,13 +392,41 @@ void Version::ForEachOverlapping(Slice user_key, Slice internal_key, void* arg,
       tmp.push_back(f);
     }
   }
+
+  // Search level-0 in order from newest to oldest.
   if (!tmp.empty()) {
     std::sort(tmp.begin(), tmp.end(), NewestFirst);
-    for (uint32_t i = 0; i < tmp.size(); i++) {
-      if (!(*func)(arg, 0, tmp[i])) {
-        return;
+
+    // Build foreactor syscall graph.
+    std::vector<foreactor::SyscallNode*> syscalls;
+    if (foreactor_ring != nullptr) {
+      for (uint32_t i = 0; i < tmp.size(); i++) {
+        VersionGetState* state = reinterpret_cast<VersionGetState*>(arg);
+        FileMetaData* f = tmp[i];
+        syscalls.push_back(
+          new TaskLevelDBTableGet(vset_->table_cache_, *state->options,
+                                  f->number, f->file_size, state->ikey,
+                                  &state->saver, SaveValue));
+      }
+      foreactor::DepGraphEnter(syscalls, 4, *foreactor_ring);
+    }
+
+    if (foreactor_ring != nullptr) {
+      for (uint32_t i = 0; i < syscalls.size(); i++) {
+        if (!(*func)(arg, 0, tmp[i], &syscalls[i])) {
+          return;
+        }
+      }
+    } else {
+      for (uint32_t i = 0; i < tmp.size(); i++) {
+        if (!(*func)(arg, 0, tmp[i], nullptr)) {
+          return;
+        }
       }
     }
+
+    if (foreactor_ring != nullptr)
+      foreactor::DepGraphLeave(syscalls);
   }
 
   // Search other levels.
@@ -313,7 +441,7 @@ void Version::ForEachOverlapping(Slice user_key, Slice internal_key, void* arg,
       if (ucmp->Compare(user_key, f->smallest.user_key()) < 0) {
         // All of "f" is past any data for user_key
       } else {
-        if (!(*func)(arg, level, f)) {
+        if (!(*func)(arg, level, f, nullptr)) {
           return;
         }
       }
@@ -322,64 +450,12 @@ void Version::ForEachOverlapping(Slice user_key, Slice internal_key, void* arg,
 }
 
 Status Version::Get(const ReadOptions& options, const LookupKey& k,
-                    std::string* value, GetStats* stats) {
+                    std::string* value, GetStats* stats,
+                    foreactor::IOUring* foreactor_ring) {
   stats->seek_file = nullptr;
   stats->seek_file_level = -1;
 
-  struct State {
-    Saver saver;
-    GetStats* stats;
-    const ReadOptions* options;
-    Slice ikey;
-    FileMetaData* last_file_read;
-    int last_file_read_level;
-
-    VersionSet* vset;
-    Status s;
-    bool found;
-
-    static bool Match(void* arg, int level, FileMetaData* f) {
-      State* state = reinterpret_cast<State*>(arg);
-
-      if (state->stats->seek_file == nullptr &&
-          state->last_file_read != nullptr) {
-        // We have had more than one seek for this read.  Charge the 1st file.
-        state->stats->seek_file = state->last_file_read;
-        state->stats->seek_file_level = state->last_file_read_level;
-      }
-
-      state->last_file_read = f;
-      state->last_file_read_level = level;
-
-      state->s = state->vset->table_cache_->Get(*state->options, f->number,
-                                                f->file_size, state->ikey,
-                                                &state->saver, SaveValue);
-      if (!state->s.ok()) {
-        state->found = true;
-        return false;
-      }
-      switch (state->saver.state) {
-        case kNotFound:
-          return true;  // Keep searching in other files
-        case kFound:
-          state->found = true;
-          return false;
-        case kDeleted:
-          return false;
-        case kCorrupt:
-          state->s =
-              Status::Corruption("corrupted key for ", state->saver.user_key);
-          state->found = true;
-          return false;
-      }
-
-      // Not reached. Added to avoid false compilation warnings of
-      // "control reaches end of non-void function".
-      return false;
-    }
-  };
-
-  State state;
+  VersionGetState state;
   state.found = false;
   state.stats = stats;
   state.last_file_read = nullptr;
@@ -387,14 +463,15 @@ Status Version::Get(const ReadOptions& options, const LookupKey& k,
 
   state.options = &options;
   state.ikey = k.internal_key();
-  state.vset = vset_;
+  state.table_cache = vset_->table_cache_;
 
   state.saver.state = kNotFound;
   state.saver.ucmp = vset_->icmp_.user_comparator();
   state.saver.user_key = k.user_key();
   state.saver.value = value;
 
-  ForEachOverlapping(state.saver.user_key, state.ikey, &state, &State::Match);
+  ForEachOverlapping(state.saver.user_key, state.ikey, &state, &VersionGetState::Match,
+                     foreactor_ring);
 
   return state.found ? state.s : Status::NotFound(Slice());
 }
@@ -422,7 +499,8 @@ bool Version::RecordReadSample(Slice internal_key) {
     GetStats stats;  // Holds first matching file
     int matches;
 
-    static bool Match(void* arg, int level, FileMetaData* f) {
+    static bool Match(void* arg, int level, FileMetaData* f,
+                      void* unused = nullptr) {
       State* state = reinterpret_cast<State*>(arg);
       state->matches++;
       if (state->matches == 1) {

@@ -15,6 +15,8 @@
 #include "table/two_level_iterator.h"
 #include "util/coding.h"
 
+#include <foreactor.hpp>
+
 namespace leveldb {
 
 struct Table::Rep {
@@ -239,6 +241,38 @@ Status Table::InternalGet(const ReadOptions& options, const Slice& k, void* arg,
   }
   delete iiter;
   return s;
+}
+
+void Table::InternalGetPrepUring(const ReadOptions& options, const Slice& k,
+                                 struct io_uring_sqe* sqe, BlockContents* internal_contents) {
+  Iterator* iiter = rep_->index_block->NewIterator(rep_->options.comparator);
+  iiter->Seek(k);
+  assert(iiter->Valid());
+  BlockHandle handle;
+  Slice input = iiter->value();
+  Status s = handle.DecodeFrom(&input);
+  assert(s.ok());
+  ReadBlockPrepUring(rep_->file, options, handle, internal_contents);
+  delete iiter;
+}
+
+void Table::InternalGetReflectResult(const Slice& k, void* arg,
+                                     void (*handle_result)(void*, const Slice&,
+                                                           const Slice&),
+                                     BlockContents* internal_contents) {
+  BlockContents contents;
+  Status s = ReadBlockReflectResult(internal_contents, &contents);
+  assert(s.ok());
+  Block* block = block = new Block(contents);
+  assert(block != nullptr);
+  Iterator* block_iter = block->NewIterator(rep_->options.comparator);
+  block_iter->RegisterCleanup(&DeleteBlock, block, nullptr);
+  block_iter->Seek(k);
+  if (block_iter->Valid()) {
+    (*handle_result)(arg, block_iter->key(), block_iter->value());
+  }
+  assert(block_iter->status().ok());
+  delete block_iter;
 }
 
 uint64_t Table::ApproximateOffsetOf(const Slice& key) const {

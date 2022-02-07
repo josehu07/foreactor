@@ -56,7 +56,7 @@ class SyscallNode {
 // a syscall dependency graph. Call Leave() before finishing the intention.
 void DepGraphEnter(std::vector<SyscallNode *>& syscalls, int pre_issue_depth,
                    IOUring& ring);
-void DepGraphLeave();
+void DepGraphLeave(std::vector<SyscallNode *>& syscalls);
 
 
 }

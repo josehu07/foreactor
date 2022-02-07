@@ -12,16 +12,21 @@ namespace foreactor {
 class IOUring {
   private:
     struct io_uring ring;
+    bool initialized = false;
 
   public:
     IOUring() = delete;
     IOUring(int sq_length) {
-        int ret = io_uring_queue_init(sq_length, &ring, /*flags*/ 0);
-        assert(ret == 0);
+        if (sq_length > 0) {
+            int ret = io_uring_queue_init(sq_length, &ring, /*flags*/ 0);
+            assert(ret == 0);
+            initialized = true;
+        }
     }
 
     ~IOUring() {
-        io_uring_queue_exit(&ring);
+        if (initialized)
+            io_uring_queue_exit(&ring);
     }
 
     struct io_uring *RingPtr() {
