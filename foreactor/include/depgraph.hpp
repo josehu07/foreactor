@@ -11,29 +11,36 @@
 namespace foreactor {
 
 
-// Any syscall node is in one of the three stages at any time.
-typedef enum SyscallStage {
-    STAGE_UNISSUED,
-    STAGE_ISSUED,
-    STAGE_FINISHED
-} SyscallStage;
+// Parent class of a node in the dependency graph.
+typedef enum NodeType {
+    NODE_BASE,
+    NODE_SYSCALL,
+    NODE_BRANCH
+} NodeType;
+
+class DepGraphNode {
+  protected:
+    NodeType node_type = NODE_BASE;
+};
 
 
 // Parent class of a syscall node in the dependency graph.
 // Each syscall type is a child class that inherits from this class, and a
 // dependency graph instance should be composed of instances of those
 // child classes -- no direct instantiation of this parent class.
-class SyscallNode {
-  friend void DepGraphEnter(std::vector<SyscallNode *>& syscalls,
-                            int pre_issue_depth, IOUring& ring);
-  friend void DepGraphLeave();
+// See syscalls.hpp.
+typedef enum SyscallStage {
+    STAGE_UNISSUED,
+    STAGE_ISSUED,
+    STAGE_FINISHED
+} SyscallStage;
 
+class SyscallNode : public DepGraphNode {
   protected:
-    SyscallNode *pred = nullptr;
-    SyscallNode *succ = nullptr;
+    NodeType node_type = NODE_SYSCALL;
+    SyscallNode *next = nullptr;
 
-    struct io_uring *ring;
-    int pre_issue_depth;
+    IOUring& ring;
 
     SyscallStage stage = STAGE_UNISSUED;
     long rc = -1;
@@ -47,16 +54,39 @@ class SyscallNode {
     void PrepAsync();
 
   public:
+    void SetNext(SyscallNode *next) {
+        assert(next != nullptr);
+        next = next;
+    }
+
     // The only public API for applications to invoke a syscall in graph.
     long Issue();
 };
 
 
-// Applications call Enter() as the first step of an intention to register
-// a syscall dependency graph. Call Leave() before finishing the intention.
-void DepGraphEnter(std::vector<SyscallNode *>& syscalls, int pre_issue_depth,
-                   IOUring& ring);
-void DepGraphLeave(std::vector<SyscallNode *>& syscalls);
+// Special branching node.
+class BranchNode : public DepGraphNode {
+  protected:
+    NodeType node_type = NODE_BRANCH;
+    std::vector<SyscallNode *> children;
+
+    // Condition function, must return an index to child.
+    int (*condition)(void *) = nullptr;
+
+  public:
+    BranchNode() = delete;
+    BranchNode(int (*condition)(void *)) : condition(condition) {}
+
+    void SetChildren(std::vector<SyscallNode *>& children) {
+        
+    }
+
+    SyscallNode *PickBranch(void *arg) const {
+        if (condition != nullptr)
+            return condition(arg);
+        return nullptr;
+    }
+}
 
 
 }

@@ -4,6 +4,7 @@
 #include <liburing.h>
 
 #include "depgraph.hpp"
+#include "io_uring.hpp"
 
 
 #ifndef __FOREACTOR_SYSCALLS_H__
@@ -36,8 +37,8 @@ class SyscallPread : public SyscallNode {
     }
 
   public:
-    SyscallPread(int fd, char *buf, size_t count, off_t offset)
-            : fd(fd), buf(buf), count(count), offset(offset) {
+    SyscallPread(int fd, char *buf, size_t count, off_t offset, IOUring& ring)
+            : fd(fd), buf(buf), count(count), offset(offset), ring(ring) {
         internal_buf = new char[count];
     }
 

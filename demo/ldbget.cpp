@@ -2,6 +2,7 @@
 #include <sstream>
 #include <string>
 #include <vector>
+#include <unordered_set>
 #include <filesystem>
 #include <chrono>
 
@@ -58,14 +59,12 @@ static void do_get_serial(std::vector<std::vector<int>>& files)
 static void do_get_foreactor(std::vector<std::vector<int>>& files, int pre_issue_depth)
 {
     auto t1 = std::chrono::high_resolution_clock::now();
-    foreactor::IOUring ring(pre_issue_depth);
+    foreactor::IOUring ring(pre_issue_depth, pre_issue_depth);
     // build the intention
-    std::vector<foreactor::SyscallNode *> syscalls;
-    syscalls.reserve(FILES_PER_LEVEL + NUM_LEVELS - 1);
+    std::unordered_set<foreactor::SyscallNode *> nodes;
     // level-0 tables from latest to oldest
     for (int index = FILES_PER_LEVEL - 1; index >= 0; --index) {
-        syscalls.push_back(
-            new foreactor::SyscallPread(files[0][index], READ_BUF, FILE_SIZE, 0));
+        new foreactor::SyscallPread(files[0][index], READ_BUF, FILE_SIZE, 0);
     }
     // levels 1 and beyond
     for (int level = 1; level < NUM_LEVELS; ++level) {
