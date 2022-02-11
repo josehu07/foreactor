@@ -35,6 +35,8 @@ make
 
 ## TODO List
 
+- [ ] argument dependency
+- [ ] pre/post-syscall inject logic
 - [ ] io_uring fixed buffers
 - [ ] io_uring SQ polling
 - [ ] config & options on/off
