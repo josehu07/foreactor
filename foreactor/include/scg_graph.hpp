@@ -75,8 +75,17 @@ class SCGraph {
 
         // Deconstruct all nodes added to graph.
         void DeleteAllNodes() {
-            for (auto& [id, node] : nodes)
+            for (auto& [id, node] : nodes) {
+                if ((node->node_type == NODE_SYSCALL_PURE ||
+                     node->node_type == NODE_SYSCALL_SIDE)) {
+                    SyscallNode *syscall_node
+                        = static_cast<SyscallNode *>(node);
+                    // harvest in-progress syscall from uring
+                    if (syscall_node->stage == STAGE_PROGRESS)
+                        syscall_node->CompAsync();
+                }
                 delete node;
+            }
             nodes.clear();
         }
 };

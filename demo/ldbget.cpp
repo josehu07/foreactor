@@ -12,6 +12,8 @@
 
 #include <foreactor.hpp>
 
+namespace fa = foreactor;
+
 
 static constexpr char DBDIR[] = "/tmp/hintdemo_dbdir";
 static constexpr int NUM_LEVELS = 4;
@@ -63,6 +65,7 @@ static void close_all(std::vector<std::vector<int>> files) {
 void do_get_serial(bool check_result) {
     auto files = open_selective();
 
+    // make the syscalls to mimic LevelDB::Get
     auto t1 = std::chrono::high_resolution_clock::now();
     // level-0 tables from latest to oldest, not hit
     for (int index = FILES_PER_LEVEL - 1; index >= 0; --index) {
@@ -91,8 +94,7 @@ void do_get_serial(bool check_result) {
 
     if (!check_result) {
         std::chrono::duration<double, std::milli> time_finish_syscalls = t2 - t1;
-        std::cout << "Serial - total time: " << time_finish_syscalls.count()
-            << " ms" << std::endl;
+        std::cout << "Serial - total time: " << time_finish_syscalls.count() << " ms" << std::endl;
     }
 
     close_all(files);
@@ -106,51 +108,54 @@ void do_get_foreactor(int pre_issue_depth, bool check_result) {
         int fid = level * FILES_PER_LEVEL + index;
         return bop * fmax + fid;
     };
-    auto PickBranch = [](void *fd_ptr) -> int {
+    auto PickOpenBranch = [](void *fd_ptr) -> int {
         int *fdp = static_cast<int *>(fd_ptr);
         if (*fdp < 0)
             return 0;   // pick Open branch
         return 1;   // file already open, pick nothing branch
     };
-    foreactor::SCGraph scgraph(pre_issue_depth, pre_issue_depth);
+    auto LinkFdArg = [](fa::SyscallNode *me, fa::SyscallNode *next) {
+        auto open_node = static_cast<fa::SyscallOpen *>(me);
+        auto pread_node = static_cast<fa::SyscallPread *>(next);
+        pread_node->fd = open_node->rc;
+    };
+    fa::SCGraph scgraph(pre_issue_depth, pre_issue_depth);
 
-    auto t1 = std::chrono::high_resolution_clock::now();
     // build the syscall graph
-    foreactor::SyscallNode *last_node = nullptr;
+    auto t1 = std::chrono::high_resolution_clock::now();
+    fa::SyscallNode *last_node = nullptr;
     // level-0 tables from latest to oldest
     for (int index = FILES_PER_LEVEL - 1; index >= 0; --index) {
-        auto node_branch = new foreactor::BranchNode(PickBranch, &files[0][index]);
-        auto node_open = new foreactor::SyscallOpen(table_name(0, index).c_str(), 0, O_RDONLY);
-        // FIXME: argument dependency on fd
-        auto node_pread = new foreactor::SyscallPread(files[0][index], READ_BUF, FILE_SIZE, 0);
+        auto node_branch = new fa::BranchNode(PickOpenBranch, &files[0][index]);
+        auto node_open = new fa::SyscallOpen(table_name(0, index), 0, O_RDONLY);
+        auto node_pread = new fa::SyscallPread(files[0][index], READ_BUF, FILE_SIZE, 0);
         assert(scgraph.AddNode(GenNodeId(0, index, 0), node_branch));
         assert(scgraph.AddNode(GenNodeId(0, index, 1), node_open));
         assert(scgraph.AddNode(GenNodeId(0, index, 2), node_pread));
         if (last_node != nullptr)
-            last_node->SetNext(node_branch, DEP_OCCURRENCE);
-        node_branch.SetChildren(std::vector{&node_open, &node_pread});
-        node_open.SetNext(node_pread, DEP_ARGUMENT);
+            last_node->SetNextDepOccurrence(node_branch);
+        node_branch->SetChildren(std::vector<fa::SCGraphNode *>{node_open, node_pread});
+        node_open->SetNextDepArgument(node_pread, LinkFdArg);
         last_node = node_pread;
     }
     // levels 1 and beyond
     for (int level = 1; level < NUM_LEVELS; ++level) {
         int index = level % 8;    // simulate the calc of file in level
-        auto node_branch = new foreactor::BranchNode(PickBranch, &files[level][index]);
-        auto node_open = new foreactor::SyscallOpen(table_name(level, index).c_str(), 0, O_RDONLY);
-        // FIXME: argument dependency on fd
-        auto node_pread = new foreactor::SyscallPread(files[level][index], READ_BUF, FILE_SIZE, 0);
+        auto node_branch = new fa::BranchNode(PickOpenBranch, &files[level][index]);
+        auto node_open = new fa::SyscallOpen(table_name(level, index), 0, O_RDONLY);
+        auto node_pread = new fa::SyscallPread(files[level][index], READ_BUF, FILE_SIZE, 0);
         assert(scgraph.AddNode(GenNodeId(level, index, 0), node_branch));
         assert(scgraph.AddNode(GenNodeId(level, index, 1), node_open));
         assert(scgraph.AddNode(GenNodeId(level, index, 2), node_pread));
         if (last_node != nullptr)
-            last_node->SetNext(node_branch, DEP_OCCURRENCE);
-        node_branch.SetChildren(std::vector{&node_open, &node_pread});
-        node_open.SetNext(node_pread, DEP_ARGUMENT);
+            last_node->SetNextDepOccurrence(node_branch);
+        node_branch->SetChildren(std::vector<fa::SCGraphNode *>{node_open, node_pread});
+        node_open->SetNextDepArgument(node_pread, LinkFdArg);
         last_node = node_pread;
     }
-    auto t2 = std::chrono::high_resolution_clock::now();
 
     // make the syscalls to mimic LevelDB::Get
+    auto t2 = std::chrono::high_resolution_clock::now();
     // level-0 tables from latest to oldest, not hit
     for (int index = FILES_PER_LEVEL - 1; index >= 0; --index) {
         if (files[0][index] < 0)
@@ -158,8 +163,8 @@ void do_get_foreactor(int pre_issue_depth, bool check_result) {
         ssize_t ret = scgraph.IssueSyscall(GenNodeId(0, index, 2));
         if (check_result) {
             assert(ret == FILE_SIZE);
-            result_serial.push_back(new char[FILE_SIZE]);
-            memcpy(result_serial.back(), READ_BUF, FILE_SIZE);
+            result_foreactor.push_back(new char[FILE_SIZE]);
+            memcpy(result_foreactor.back(), READ_BUF, FILE_SIZE);
         }
     }
     // key found at level-1
@@ -170,8 +175,8 @@ void do_get_foreactor(int pre_issue_depth, bool check_result) {
         ssize_t ret = scgraph.IssueSyscall(GenNodeId(level, index, 2));
         if (check_result) {
             assert(ret == FILE_SIZE);
-            result_serial.push_back(new char[FILE_SIZE]);
-            memcpy(result_serial.back(), READ_BUF, FILE_SIZE);
+            result_foreactor.push_back(new char[FILE_SIZE]);
+            memcpy(result_foreactor.back(), READ_BUF, FILE_SIZE);
         }
     }
     auto t3 = std::chrono::high_resolution_clock::now();
@@ -180,13 +185,11 @@ void do_get_foreactor(int pre_issue_depth, bool check_result) {
         std::cout << "  check result ";
         for (size_t i = 0; i < result_serial.size(); ++i) {
             if (i >= result_foreactor.size()) {
-                std::cout << "FAILED, file " << i << " not read"
-                    << std::endl;
+                std::cout << "FAILED, " << i << "-th read not found" << std::endl;
                 return;
             }
             if (memcmp(result_serial[i], result_foreactor[i], FILE_SIZE) != 0) {
-                std::cout << "FAILED, file " << i << " data not match"
-                    << std::endl;
+                std::cout << "FAILED, " << i << "-th read data mismatch" << std::endl;
                 return;
             }
         }
@@ -198,12 +201,9 @@ void do_get_foreactor(int pre_issue_depth, bool check_result) {
         std::chrono::duration<double, std::milli> time_build_intention = t2 - t1;
         std::chrono::duration<double, std::milli> time_finish_syscalls = t3 - t2;
         std::cout << "foreactor (" << pre_issue_depth << ") - total time: "
-            << time_build_intention.count() + time_finish_syscalls.count()
-            << " ms" << std::endl;
-        std::cout << "  build scgraph:   " << time_build_intention.count()
-            << " ms" << std::endl;
-        std::cout << "  finish syscalls: " << time_finish_syscalls.count()
-            << " ms" << std::endl;
+            << time_build_intention.count() + time_finish_syscalls.count() << " ms" << std::endl;
+        std::cout << "  build scgraph:   " << time_build_intention.count() << " ms" << std::endl;
+        std::cout << "  finish syscalls: " << time_finish_syscalls.count() << " ms" << std::endl;
     }
 
     scgraph.DeleteAllNodes();

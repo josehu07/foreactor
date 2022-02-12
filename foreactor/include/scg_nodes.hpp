@@ -45,9 +45,12 @@ class SCGraphNode {
 
 typedef enum SyscallStage {
     STAGE_UNISSUED,
-    STAGE_ISSUED,
+    STAGE_PROGRESS,
     STAGE_FINISHED
 } SyscallStage;
+
+class SyscallNode;
+typedef void (*ArgLinkFunc)(SyscallNode *, SyscallNode *);
 
 // Parent class of a syscall node in the dependency graph.
 // Each syscall type is a child class that inherits from this class, and a
@@ -55,9 +58,12 @@ typedef enum SyscallStage {
 // child classes -- no direct instantiation of this parent class.
 // See syscalls.hpp.
 class SyscallNode : public SCGraphNode {
+    friend class SCGraph;
+
     protected:
-        SyscallNode *next = nullptr;
+        SCGraphNode *next = nullptr;
         EdgeType next_dep = DEP_NONE;
+        ArgLinkFunc arg_link_func = nullptr;
         SyscallStage stage = STAGE_UNISSUED;
 
     public:
@@ -71,6 +77,7 @@ class SyscallNode : public SCGraphNode {
 
         long CallSync();
         void PrepAsync();
+        void CompAsync();
 
         SyscallNode() = delete;
         SyscallNode(NodeType node_type)
@@ -82,10 +89,17 @@ class SyscallNode : public SCGraphNode {
         virtual ~SyscallNode() {}
 
     public:
-        void SetNext(SyscallNode *node, EdgeType dep) {
+        void SetNextDepOccurrence(SCGraphNode *node) {
             assert(node != nullptr);
             next = node;
-            next_dep = dep;
+            next_dep = DEP_OCCURRENCE;
+        }
+
+        void SetNextDepArgument(SCGraphNode *node, ArgLinkFunc link_func) {
+            assert(node != nullptr);
+            next = node;
+            next_dep = DEP_ARGUMENT;
+            arg_link_func = link_func;
         }
 
         // The public API for applications to invoke a syscall in graph.
@@ -97,19 +111,20 @@ typedef int (*ConditionFunc)(void *);
 
 // Special branching node, must be associated with a condition function.
 class BranchNode : public SCGraphNode {
+    friend class SCGraph;
     friend class SyscallNode;
 
     protected:
-        std::vector<SyscallNode *> children;
+        std::vector<SCGraphNode *> children;
         // Condition function, must return an index to child.
-        ConditionFunc condition = nullptr;
+        ConditionFunc condition_func = nullptr;
         void *condition_arg = nullptr;
         int branch_taken = -1;      // set after first exec of PickBranch
 
-        SyscallNode *PickBranch() {
+        SCGraphNode *PickBranch() {
             if (branch_taken >= 0 && branch_taken < (int) children.size())
                 return children[branch_taken];
-            int child_idx = condition(condition_arg);
+            int child_idx = condition_func(condition_arg);
             if (child_idx >= 0 && child_idx < (int) children.size()) {
                 branch_taken = child_idx;
                 return children[child_idx];
@@ -120,13 +135,13 @@ class BranchNode : public SCGraphNode {
     public:
         BranchNode() = delete;
         BranchNode(ConditionFunc condition, void *arg)
-                : SCGraphNode(NODE_BRANCH), condition(condition),
+                : SCGraphNode(NODE_BRANCH), condition_func(condition),
                   condition_arg(arg), branch_taken(-1) {
-            assert(condition != nullptr);
+            assert(condition_func != nullptr);
         }
         ~BranchNode() {}
 
-        void SetChildren(std::vector<SyscallNode *>& children_list) {
+        void SetChildren(std::vector<SCGraphNode *> children_list) {
             assert(children_list.size() > 0);
             children = children_list;
         }

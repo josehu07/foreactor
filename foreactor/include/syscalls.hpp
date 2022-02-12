@@ -1,3 +1,4 @@
+#include <string>
 #include <iostream>
 #include <string.h>
 #include <fcntl.h>
@@ -15,17 +16,18 @@ namespace foreactor {
 
 
 class SyscallOpen : public SyscallNode {
-    private:
-        const char * const filename;
-        const int flags;
-        const mode_t mode;
+    public:
+        std::string filename;
+        int flags;
+        mode_t mode;
 
+    private:
         long SyscallSync() {
-            return open(filename, flags, mode);
+            return open(filename.c_str(), flags, mode);
         }
 
         void PrepUring(struct io_uring_sqe *sqe) {
-            io_uring_prep_openat(sqe, AT_FDCWD, filename, flags, mode);
+            io_uring_prep_openat(sqe, AT_FDCWD, filename.c_str(), flags, mode);
         }
 
         void ReflectResult() {
@@ -34,22 +36,21 @@ class SyscallOpen : public SyscallNode {
 
     public:
         SyscallOpen() = delete;
-        SyscallOpen(const char *filename, int flags, mode_t mode)
+        SyscallOpen(std::string filename, int flags, mode_t mode)
                 : SyscallNode(NODE_SYSCALL_SIDE), filename(filename),
-                  flags(flags), mode(mode) {
-            assert(filename != nullptr);
-        }
+                  flags(flags), mode(mode) {}
 
         ~SyscallOpen() {}
 };
 
 class SyscallPread : public SyscallNode {
-    private:
-        const int fd;
-        char * const buf;
-        const size_t count;
-        const off_t offset;
+    public:
+        int fd;
+        char *buf;
+        size_t count;
+        off_t offset;
 
+    private:
         // used when issued async
         char *internal_buf = nullptr;
 
@@ -75,8 +76,10 @@ class SyscallPread : public SyscallNode {
         }
 
         ~SyscallPread() {
-            // FIXME: think about how to safely delete internal_buf
-            // delete[] internal_buf;
+            // syscall node cannot be destructed when in the stage of
+            // in io_uring progress
+            assert(stage != STAGE_PROGRESS);
+            delete[] internal_buf;
         }
 };
 

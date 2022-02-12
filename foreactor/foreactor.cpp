@@ -22,6 +22,22 @@ void SyscallNode::PrepAsync() {
     PrepUring(sqe);
 }
 
+void SyscallNode::CompAsync() {
+    assert(scgraph != nullptr);
+    struct io_uring_cqe *cqe;
+    while (true) {
+        int ret = io_uring_wait_cqe(scgraph->Ring(), &cqe);
+        assert(ret == 0);
+        SyscallNode *node = reinterpret_cast<SyscallNode *>(
+            io_uring_cqe_get_data(cqe));
+        node->rc = cqe->res;
+        node->stage = STAGE_FINISHED;
+        io_uring_cqe_seen(scgraph->Ring(), cqe);
+        if (node == this)
+            break;
+    }
+}
+
 
 long SyscallNode::Issue() {
     // pre-issue the next few syscalls asynchronously
@@ -50,7 +66,7 @@ long SyscallNode::Issue() {
                 // then it is safe to kick it off asynchronously
                 if (syscall_node->stage == STAGE_UNISSUED) {
                     syscall_node->PrepAsync();
-                    syscall_node->stage = STAGE_ISSUED;
+                    syscall_node->stage = STAGE_PROGRESS;
                     num_prepared++;
                 }
                 node = syscall_node->next;
@@ -74,29 +90,25 @@ long SyscallNode::Issue() {
         stage = STAGE_FINISHED;
     } else {
         // if has been pre-issued
-        if (stage == STAGE_ISSUED) {
+        if (stage == STAGE_PROGRESS) {
             // if result not harvested yet, process CQEs until mine
             // is seen
-            assert(scgraph != nullptr);
-
-            struct io_uring_cqe *cqe;
-            while (true) {
-                int ret = io_uring_wait_cqe(scgraph->Ring(), &cqe);
-                assert(ret == 0);
-                SyscallNode *node = reinterpret_cast<SyscallNode *>(
-                    io_uring_cqe_get_data(cqe));
-                node->rc = cqe->res;
-                node->stage = STAGE_FINISHED;
-                io_uring_cqe_seen(scgraph->Ring(), cqe);
-                if (node == this)
-                    break;
-            }
+            CompAsync();
         }
 
         ReflectResult();
+        assert(stage == STAGE_FINISHED);
     }
 
-    assert(stage == STAGE_FINISHED);
+    // if has argument dependency pointing to other node, call the
+    // argument link function to put the now ready values into those
+    // nodes
+    if (next_dep == DEP_ARGUMENT && (next->node_type == NODE_SYSCALL_PURE ||
+                                     next->node_type == NODE_SYSCALL_SIDE)) {
+        // TODO: should have more cases
+        arg_link_func(this, static_cast<SyscallNode *>(next));
+    }
+
     return rc;
 }
 
