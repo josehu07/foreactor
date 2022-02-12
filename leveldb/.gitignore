@@ -1,0 +1,10 @@
+# Editors.
+*.sw*
+.vscode
+.DS_Store
+
+# Build directory.
+leveldb-1.23/build/
+leveldb-1.23/out/
+
+ycsbcli
