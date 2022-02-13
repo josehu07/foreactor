@@ -1,9 +1,5 @@
 #include <string>
-#include <iostream>
-#include <string.h>
-#include <fcntl.h>
-#include <unistd.h>
-#include <liburing.h>
+#include <vector>
 
 #include "scg_nodes.hpp"
 
@@ -22,25 +18,27 @@ class SyscallOpen : public SyscallNode {
         mode_t mode;
 
     private:
-        long SyscallSync() {
-            return open(filename.c_str(), flags, mode);
-        }
+        std::vector<bool> arg_ready;
 
-        void PrepUring(struct io_uring_sqe *sqe) {
-            io_uring_prep_openat(sqe, AT_FDCWD, filename.c_str(), flags, mode);
-        }
-
-        void ReflectResult() {
-            return;
-        }
+        long SyscallSync();
+        void PrepUring(struct io_uring_sqe *sqe);
+        void ReflectResult();
 
     public:
         SyscallOpen() = delete;
-        SyscallOpen(std::string filename, int flags, mode_t mode)
-                : SyscallNode(NODE_SYSCALL_SIDE), filename(filename),
-                  flags(flags), mode(mode) {}
-
+        // Arguments could be not ready at the point of constructing the
+        // SCGraph, in which case those they must be set before calling
+        // Issue on this syscall node.
+        SyscallOpen(std::string filename, int flags, mode_t mode,
+                    std::vector<bool> arg_ready);
+        // Syntax sugar for syscall nodes with all arguments ready.
+        SyscallOpen(std::string filename, int flags, mode_t mode);
         ~SyscallOpen() {}
+
+        // For setting arguments whose value was not ready at construction.
+        void SetArgFilename(std::string filename_);
+        void SetArgFlags(int flags_);
+        void SetArgMode(mode_t mode_);
 };
 
 class SyscallPread : public SyscallNode {
@@ -51,36 +49,24 @@ class SyscallPread : public SyscallNode {
         off_t offset;
 
     private:
-        // used when issued async
-        char *internal_buf = nullptr;
+        std::vector<bool> arg_ready;
+        char *internal_buf = nullptr;   // used when issued async
 
-        long SyscallSync() {
-            return pread(fd, buf, count, offset);
-        }
-
-        void PrepUring(struct io_uring_sqe *sqe) {
-            io_uring_prep_read(sqe, fd, internal_buf, count, offset);
-        }
-
-        void ReflectResult() {
-            memcpy(buf, internal_buf, count);
-        }
+        long SyscallSync();
+        void PrepUring(struct io_uring_sqe *sqe);
+        void ReflectResult();
 
     public:
         SyscallPread() = delete;
-        SyscallPread(int fd, char *buf, size_t count, off_t offset)
-                : SyscallNode(NODE_SYSCALL_PURE), fd(fd), buf(buf),
-                  count(count), offset(offset) {
-            assert(buf != nullptr);
-            internal_buf = new char[count];
-        }
+        SyscallPread(int fd, char *buf, size_t count, off_t offset,
+                     std::vector<bool> arg_ready);
+        SyscallPread(int fd, char *buf, size_t count, off_t offset);
+        ~SyscallPread();
 
-        ~SyscallPread() {
-            // syscall node cannot be destructed when in the stage of
-            // in io_uring progress
-            assert(stage != STAGE_PROGRESS);
-            delete[] internal_buf;
-        }
+        void SetArgFd(int fd_);
+        void SetArgBuf(char * buf_);
+        void SetArgCount(size_t count_);
+        void SetArgOffset(off_t offset_);
 };
 
 

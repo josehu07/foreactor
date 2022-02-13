@@ -75,6 +75,18 @@ Status TableCache::FindTable(uint64_t file_number, uint64_t file_size,
   return s;
 }
 
+Cache::Handle* TableCache::TryFindTable(uint64_t file_number) {
+  char buf[sizeof(file_number)];
+  EncodeFixed64(buf, file_number);
+  Slice key(buf, sizeof(buf));
+  Cache::Handle* handle = cache_->Lookup(key);
+  return handle;
+}
+
+void TableCache::ReleaseHandle(Cache::Handle* handle) {
+  cache_->Release(handle);
+}
+
 Iterator* TableCache::NewIterator(const ReadOptions& options,
                                   uint64_t file_number, uint64_t file_size,
                                   Table** tableptr) {

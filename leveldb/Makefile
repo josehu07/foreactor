@@ -1,25 +1,29 @@
 CC=g++
-CFLAGS_TRACING=-O1 -g -ggdb -I./leveldb-1.23/include -gpubnames -fno-omit-frame-pointer \
-               -fkeep-inline-functions -fkeep-static-functions
-CFLAGS_RELEASE=-O2 -I./leveldb-1.23/include
-CFLAGS_EXTRA=-Wall -Werror
-CSTATIC=./leveldb-1.23/build/libleveldb.a
-CDYLIBS=-lpthread
+CXXFLAGS=-Wall -Werror -O3
 
-TARGET=ycsbcli
+YCSBCLI_SRC=ycsbcli.cpp cxxopts.hpp
 
-
-.PHONY: all tracing release
-all: tracing
+LEVLEDB_SRC=leveldb-1.23
+LEVELDB_INC=-I./$(LEVLEDB_SRC)/include
+LEVELDB_LIB=./$(LEVLEDB_SRC)/build/libleveldb.a
 
 
-tracing: $(TARGET).cpp cxxopts.hpp
-	$(CC) $(CFLAGS_TRACING) $(CFLAGS_EXTRA) -o $(TARGET) $^ $(CSTATIC) $(CDYLIBS)
+.PHONY: all
+all: leveldb ycsbcli
 
-release: $(TARGET).cpp cxxopts.hpp
-	$(CC) $(CFLAGS_RELEASE) $(CFLAGS_EXTRA) -o $(TARGET) $^ $(CSTATIC) $(CDYLIBS)
+
+.PHONY: leveldb
+leveldb:
+	mkdir -p $(LEVLEDB_SRC)/build
+	cd $(LEVLEDB_SRC)/build && \
+		cmake -DCMAKE_BUILD_TYPE=Release .. && \
+		make -j$(shell nproc)
+
+ycsbcli: leveldb $(YCSBCLI_SRC)
+	$(CC) $(CXXFLAGS) $(LEVELDB_INC) -o ycsbcli $(YCSBCLI_SRC) $(LEVELDB_LIB) -lpthread
 
 
 .PHONY: clean
 clean:
-	rm -f $(TARGET)
+	rm -rf $(LEVLEDB_SRC)/build
+	rm -f ycsbcli

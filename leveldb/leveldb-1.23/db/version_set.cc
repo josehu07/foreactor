@@ -278,8 +278,64 @@ static bool NewestFirst(FileMetaData* a, FileMetaData* b) {
   return a->number > b->number;
 }
 
+void Version::BuildGetSCGraph(fa::SCGraph *scgraph, std::vector<FileMetaData*>& l0tables,
+                              uint64_t (*GenNodeId)(int, int, int)) {
+  fa::SyscallNode *last_node = nullptr;
+  for (size_t i = 0; i < l0tables.size(); i++) {
+    Cache::Handle* handle = TableCache::TryFindTable(l0tables[i]->number);
+    Table* table = nullptr;
+    if (handle != nullptr)
+      table = reinterpret_cast<TableAndFile*>(handle)->table;
+
+    if (table == nullptr) {
+      // need to open
+      auto node_open = new fa::SyscallOpen(TableFileName(dbname_, l0tables[i]->number),
+                                           kOpenBaseFlags,
+                                           O_RDONLY);
+      auto node_pread_footer = new fa::SyscallPread(-1,
+                                                    BUF,
+                                                    Footer::kEncodedLength,
+                                                    l0tables[i]->file_size - Footer::kEncodedLength,
+                                                    std::vector{false, true, true, true});
+      auto node_pread_index  = new fa::SyscallPread(-1,
+                                                    BUF,
+                                                    0,
+                                                    0,
+                                                    std::vector{false, true, false, false});
+      auto node_pread_data   = new fa::SyscallPread(-1,
+                                                    BUF,
+                                                    0,
+                                                    0,
+                                                    std::vector{false, true, false, false});
+      assert(scgraph->AddNode(GenNodeId(0, i, 0), node_open));
+      assert(scgraph->AddNode(GenNodeId(0, i, 1), node_pread_footer));
+      assert(scgraph->AddNode(GenNodeId(0, i, 2), node_pread_index));
+      assert(scgraph->AddNode(GenNodeId(0, i, 3), node_pread_data));
+      if (last_node != nullptr)
+        last_node->SetNext(node_open, /*weak_edge*/ true);
+      node_open->SetNext(node_pread_footer, /*weak_edge*/ false);
+      node_pread_footer->SetNext(node_pread_index, /*weak_edge*/ false);
+      node_pread_index->SetNext(node_pread_data, /*weak_edge*/ false);
+      last_node = node_pread_data;
+    } else {
+      // already open
+      auto node_pread_data = new fa::SyscallPread(table->rep_->file->fd_,
+                                                  BUF,
+                                                  BLOCK_SIZE,
+                                                  OFFSET);
+      assert(scgraph->AddNode(GenNodeId(0, i, 3), node_pread_data));
+      if (last_node != nullptr)
+        last_node->SetNext(node_pread, /*weak_edge*/ true);
+      last_node = node_pread_data;
+    }
+
+    TableCache::ReleaseHandle(handle);
+  }
+}
+
 void Version::ForEachOverlapping(Slice user_key, Slice internal_key, void* arg,
-                                 bool (*func)(void*, int, FileMetaData*)) {
+                                 bool (*func)(void*, int, FileMetaData*),
+                                 bool do_foreactor_get) {
   const Comparator* ucmp = vset_->icmp_.user_comparator();
 
   // Search level-0 in order from newest to oldest.
@@ -294,10 +350,29 @@ void Version::ForEachOverlapping(Slice user_key, Slice internal_key, void* arg,
   }
   if (!tmp.empty()) {
     std::sort(tmp.begin(), tmp.end(), NewestFirst);
+
+    fa::SCGraph *scgraph = nullptr;
+    auto GenNodeId = [](int level, int index, int nodeid) -> uint64_t {
+      // TODO: this is now too arbitrary
+      constexpr int LEVEL_BASE = 1000;
+      constexpr int NODES_BASE = 10;
+      return level * LEVEL_BASE + index * NODES_BASE + nodeid;
+    };
+
+    if (do_foreactor_get) {
+      scgraph = new fa::SCGraph(8, 4);
+      BuildGetSCGraph(scgraph, tmp, GenNodeId);
+    }
+
     for (uint32_t i = 0; i < tmp.size(); i++) {
       if (!(*func)(arg, 0, tmp[i])) {
         return;
       }
+    }
+
+    if (do_foreactor_get) {
+      scgraph->DeleteAllNodes();
+      delete scgraph;
     }
   }
 

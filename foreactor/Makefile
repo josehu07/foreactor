@@ -3,19 +3,24 @@ CXXFLAGS=-O3 -Wall -Werror -std=c++20 -D_GNU_SOURCE
 
 FOREACTOR_PATH=$(shell dirname $(realpath $(lastword $(MAKEFILE_LIST))))
 FOREACTOR_SRCS=$(wildcard $(FOREACTOR_PATH)/*.cpp)
+FOREACTOR_OBJS=$(patsubst %.cpp, %.o, $(FOREACTOR_SRCS))
 FOREACTOR_INC=-I$(FOREACTOR_PATH)/include
 
 LIBURING_INC=-I/home/jose/Repos/misc/liburing/src/include
 LIBURING_LIB=-L/home/jose/Repos/misc/liburing/src -luring
 
 
-.PHONY: all clean
-
+.PHONY: all
 all: foreactor
 
-foreactor: $(FOREACTOR_SRCS)
-	$(CC) -c -fPIC $(CXXFLAGS) $(FOREACTOR_INC) $(LIBURING_INC) $^ -o $@.o $(LIBURING_LIB)
-	$(CC) $@.o -shared -o lib$@.so
 
+%.o: %.cpp
+	$(CC) -c -fPIC $(CXXFLAGS) $(FOREACTOR_INC) $(LIBURING_INC) $< -o $@ $(LIBURING_LIB)
+
+foreactor: $(FOREACTOR_OBJS)
+	$(CC) $^ -shared -o lib$@.so
+
+
+.PHONY: clean
 clean:
 	rm -f *.o lib*.so

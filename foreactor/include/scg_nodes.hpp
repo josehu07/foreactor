@@ -12,18 +12,17 @@ namespace foreactor {
 
 class SCGraph;
 
-
 typedef enum NodeType {
     NODE_BASE,
-    NODE_SYSCALL_PURE,  // pure syscall with no state changes, e.g., pread
-    NODE_SYSCALL_SIDE,  // syscall that has side effects
-    NODE_BRANCH         // special branching control flow
+    NODE_SC_PURE,   // pure syscall with no state changes, e.g., pread
+    NODE_SC_SEFF,   // syscall with side effects that change state, e.g., open
+    NODE_BRANCH     // special branching control flow
 } NodeType;
 
 typedef enum EdgeType {
-    DEP_NONE,
-    DEP_OCCURRENCE,
-    DEP_ARGUMENT
+    EDGE_BASE,
+    EDGE_MUST,      // if predecessor occurs, the successor must occur
+    EDGE_WEAK       // early exit could happen on this edge
 } EdgeType;
 
 // Parent class of a node in the dependency graph.
@@ -31,7 +30,7 @@ class SCGraphNode {
     friend class SCGraph;
 
     public:
-        NodeType node_type = NODE_BASE;
+        NodeType node_type;
 
     protected:
         SCGraph *scgraph = nullptr;     // assigned when inserted into SCGraph
@@ -44,13 +43,11 @@ class SCGraphNode {
 
 
 typedef enum SyscallStage {
-    STAGE_UNISSUED,
-    STAGE_PROGRESS,
-    STAGE_FINISHED
+    STAGE_NOTREADY,     // there are missing arguments, not ready for issuing
+    STAGE_UNISSUED,     // args are complete, not issued yet
+    STAGE_PROGRESS,     // issued async, completion not harvested yet
+    STAGE_FINISHED      // issued sync / issued async and completion harvested
 } SyscallStage;
-
-class SyscallNode;
-typedef void (*ArgLinkFunc)(SyscallNode *, SyscallNode *);
 
 // Parent class of a syscall node in the dependency graph.
 // Each syscall type is a child class that inherits from this class, and a
@@ -61,10 +58,9 @@ class SyscallNode : public SCGraphNode {
     friend class SCGraph;
 
     protected:
-        SCGraphNode *next = nullptr;
-        EdgeType next_dep = DEP_NONE;
-        ArgLinkFunc arg_link_func = nullptr;
-        SyscallStage stage = STAGE_UNISSUED;
+        SyscallStage stage = STAGE_NOTREADY;
+        SCGraphNode *next_node = nullptr;
+        EdgeType edge_type = EDGE_BASE;
 
     public:
         long rc = -1;
@@ -77,74 +73,43 @@ class SyscallNode : public SCGraphNode {
 
         long CallSync();
         void PrepAsync();
-        void CompAsync();
+        void CmplAsync();
 
         SyscallNode() = delete;
-        SyscallNode(NodeType node_type)
-                : SCGraphNode(node_type), next(nullptr),
-                  stage(STAGE_UNISSUED), rc(-1) {
-            assert(node_type == NODE_SYSCALL_PURE ||
-                   node_type == NODE_SYSCALL_SIDE);
-        }
+        SyscallNode(bool pure_sc, bool args_ready);
         virtual ~SyscallNode() {}
 
     public:
-        void SetNextDepOccurrence(SCGraphNode *node) {
-            assert(node != nullptr);
-            next = node;
-            next_dep = DEP_OCCURRENCE;
-        }
+        // Set the next node that this node points to.
+        void SetNext(SCGraphNode *node, bool weak_edge);
 
-        void SetNextDepArgument(SCGraphNode *node, ArgLinkFunc link_func) {
-            assert(node != nullptr);
-            next = node;
-            next_dep = DEP_ARGUMENT;
-            arg_link_func = link_func;
-        }
-
-        // The public API for applications to invoke a syscall in graph.
+        // Invoke this syscall, possibly pre-issuing the next few syscalls
+        // in graph.
         long Issue();
 };
 
 
-typedef int (*ConditionFunc)(void *);
-
-// Special branching node, must be associated with a condition function.
+// Special branching node.
+// Used only when there is some decision to be made during the execution of
+// a syscall graph, where the decision is not known at the time of building
+// the graph.
 class BranchNode : public SCGraphNode {
     friend class SCGraph;
     friend class SyscallNode;
 
     protected:
         std::vector<SCGraphNode *> children;
-        // Condition function, must return an index to child.
-        ConditionFunc condition_func = nullptr;
-        void *condition_arg = nullptr;
-        int branch_taken = -1;      // set after first exec of PickBranch
+        int decision = -1;      // set by SetDecision
 
-        SCGraphNode *PickBranch() {
-            if (branch_taken >= 0 && branch_taken < (int) children.size())
-                return children[branch_taken];
-            int child_idx = condition_func(condition_arg);
-            if (child_idx >= 0 && child_idx < (int) children.size()) {
-                branch_taken = child_idx;
-                return children[child_idx];
-            }
-            return nullptr;
-        }
+        SCGraphNode *PickBranch();
 
     public:
-        BranchNode() = delete;
-        BranchNode(ConditionFunc condition, void *arg)
-                : SCGraphNode(NODE_BRANCH), condition_func(condition),
-                  condition_arg(arg), branch_taken(-1) {
-            assert(condition_func != nullptr);
-        }
+        BranchNode();
         ~BranchNode() {}
 
-        void SetChildren(std::vector<SCGraphNode *> children_list) {
-            assert(children_list.size() > 0);
-            children = children_list;
-        }
+        // Set the next children nodes. Index of child in this vector
+        // should correspond to the decision int.
+        void SetChildren(std::vector<SCGraphNode *> children_list);
 };
 
 

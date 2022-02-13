@@ -1,4 +1,3 @@
-#include <iostream>
 #include <unordered_map>
 #include <assert.h>
 #include <liburing.h>
@@ -35,59 +34,19 @@ class SCGraph {
 
     public:
         SCGraph() = delete;
-        SCGraph(int sq_length, int pre_issue_depth)
-                : pre_issue_depth(pre_issue_depth) {
-            assert(pre_issue_depth >= 0);
-            assert(pre_issue_depth <= sq_length);
-
-            if (sq_length > 0) {
-                int ret = io_uring_queue_init(sq_length, &ring, /*flags*/ 0);
-                assert(ret == 0);
-                ring_initialized = true;
-            }
-        }
-
-        ~SCGraph() {
-            if (ring_initialized)
-                io_uring_queue_exit(&ring);
-        }
+        SCGraph(int sq_length, int pre_issue_depth);
+        ~SCGraph();
 
         // Add a new node into graph, effectively assigning the io_uring
         // instance to it.
-        bool AddNode(uint64_t id, SCGraphNode *node) {
-            if (nodes.find(id) != nodes.end())
-                return false;
-            assert(node != nullptr);
-            nodes.insert(std::make_pair(id, node));
-            node->scgraph = this;
-            return true;
-        }
+        bool AddNode(uint64_t id, SCGraphNode *node);
 
-        // Find a node using the identifier and issue the syscall. Must give
-        // an identifier of added syscall node.
-        long IssueSyscall(uint64_t id) const {
-            SCGraphNode *node = nodes.at(id);
-            assert(node != nullptr);
-            assert(node->node_type == NODE_SYSCALL_PURE ||
-                   node->node_type == NODE_SYSCALL_SIDE);
-            return static_cast<SyscallNode *>(node)->Issue();
-        }
+        // Find a syscall node using given identifier.
+        SyscallNode *GetSyscallNode(uint64_t id) const;
 
-        // Deconstruct all nodes added to graph.
-        void DeleteAllNodes() {
-            for (auto& [id, node] : nodes) {
-                if ((node->node_type == NODE_SYSCALL_PURE ||
-                     node->node_type == NODE_SYSCALL_SIDE)) {
-                    SyscallNode *syscall_node
-                        = static_cast<SyscallNode *>(node);
-                    // harvest in-progress syscall from uring
-                    if (syscall_node->stage == STAGE_PROGRESS)
-                        syscall_node->CompAsync();
-                }
-                delete node;
-            }
-            nodes.clear();
-        }
+        // Deconstruct all nodes added to graph. Will wait and drain all
+        // in-progress syscalls submitted to io_uring.
+        void DeleteAllNodes();
 };
 
 
