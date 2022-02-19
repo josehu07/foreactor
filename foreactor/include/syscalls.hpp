@@ -1,3 +1,4 @@
+#include <iostream>
 #include <string>
 #include <vector>
 
@@ -11,18 +12,16 @@
 namespace foreactor {
 
 
-class SyscallOpen : public SyscallNode {
+class SyscallOpen final : public SyscallNode {
     public:
         std::string filename;
         int flags;
         mode_t mode;
 
     private:
-        std::vector<bool> arg_ready;
-
-        long SyscallSync();
+        long SyscallSync(void *output_buf);
         void PrepUring(struct io_uring_sqe *sqe);
-        void ReflectResult();
+        void ReflectResult(void *output_buf);
 
     public:
         SyscallOpen() = delete;
@@ -30,43 +29,45 @@ class SyscallOpen : public SyscallNode {
         // SCGraph, in which case those they must be set before calling
         // Issue on this syscall node.
         SyscallOpen(std::string filename, int flags, mode_t mode,
-                    std::vector<bool> arg_ready);
-        // Syntax sugar for syscall nodes with all arguments ready.
-        SyscallOpen(std::string filename, int flags, mode_t mode);
+                    std::vector<bool> arg_ready
+                        = std::vector{true, true, true});
         ~SyscallOpen() {}
 
         // For setting arguments whose value was not ready at construction.
         void SetArgFilename(std::string filename_);
         void SetArgFlags(int flags_);
         void SetArgMode(mode_t mode_);
+
+        friend std::ostream& operator<<(std::ostream& s,
+                                        const SyscallOpen& n);
 };
 
-class SyscallPread : public SyscallNode {
+class SyscallPread final : public SyscallNode {
     public:
         int fd;
-        char *buf;
         size_t count;
         off_t offset;
 
     private:
-        std::vector<bool> arg_ready;
         char *internal_buf = nullptr;   // used when issued async
 
-        long SyscallSync();
+        long SyscallSync(void *output_buf);
         void PrepUring(struct io_uring_sqe *sqe);
-        void ReflectResult();
+        void ReflectResult(void *output_buf);
 
     public:
         SyscallPread() = delete;
-        SyscallPread(int fd, char *buf, size_t count, off_t offset,
-                     std::vector<bool> arg_ready);
-        SyscallPread(int fd, char *buf, size_t count, off_t offset);
+        SyscallPread(int fd, size_t count, off_t offset,
+                     std::vector<bool> arg_ready
+                        = std::vector{true, true, true});
         ~SyscallPread();
 
         void SetArgFd(int fd_);
-        void SetArgBuf(char * buf_);
         void SetArgCount(size_t count_);
         void SetArgOffset(off_t offset_);
+
+        friend std::ostream& operator<<(std::ostream& s,
+                                        const SyscallPread& n);
 };
 
 

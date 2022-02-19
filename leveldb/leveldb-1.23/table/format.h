@@ -12,6 +12,9 @@
 #include "leveldb/status.h"
 #include "leveldb/table_builder.h"
 
+#include <foreactor.hpp>
+namespace fa = foreactor;
+
 namespace leveldb {
 
 class Block;
@@ -87,7 +90,8 @@ struct BlockContents {
 // Read the block identified by "handle" from "file".  On failure
 // return non-OK.  On success fill *result and return OK.
 Status ReadBlock(RandomAccessFile* file, const ReadOptions& options,
-                 const BlockHandle& handle, BlockContents* result);
+                 const BlockHandle& handle, BlockContents* result,
+                 fa::SyscallPread* node_pread_data = nullptr);
 
 // Implementation details follow.  Clients should ignore,
 

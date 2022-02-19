@@ -7,6 +7,10 @@ LEVLEDB_SRC=leveldb-1.23
 LEVELDB_INC=-I./$(LEVLEDB_SRC)/include
 LEVELDB_LIB=./$(LEVLEDB_SRC)/build/libleveldb.a
 
+FOREACTOR_LIB=-L../foreactor -lforeactor -Wl,-rpath=../foreactor
+
+LIBURING_LIB=-L/home/jose/Repos/misc/liburing/src -luring -Wl,-rpath=/home/jose/Repos/misc/liburing/src
+
 
 .PHONY: all
 all: leveldb ycsbcli
@@ -16,11 +20,11 @@ all: leveldb ycsbcli
 leveldb:
 	mkdir -p $(LEVLEDB_SRC)/build
 	cd $(LEVLEDB_SRC)/build && \
-		cmake -DCMAKE_BUILD_TYPE=Release .. && \
+		cmake -DCMAKE_BUILD_TYPE=Release -DCMAKE_CXX_STANDARD=20 .. && \
 		make -j$(shell nproc)
 
 ycsbcli: leveldb $(YCSBCLI_SRC)
-	$(CC) $(CXXFLAGS) $(LEVELDB_INC) -o ycsbcli $(YCSBCLI_SRC) $(LEVELDB_LIB) -lpthread
+	$(CC) $(CXXFLAGS) $(LEVELDB_INC) -o ycsbcli $(YCSBCLI_SRC) $(LEVELDB_LIB) -lpthread $(FOREACTOR_LIB) $(LIBURING_LIB)
 
 
 .PHONY: clean

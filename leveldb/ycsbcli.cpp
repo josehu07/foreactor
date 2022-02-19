@@ -7,6 +7,7 @@
 #include <fstream>
 #include <random>
 #include <chrono>
+#include <limits>
 
 #include "cxxopts.hpp"
 
@@ -53,6 +54,9 @@ leveldb_open(const std::string db_location, size_t memtable_limit,
         std::cerr << status.ToString() << std::endl;
         exit(1);
     }
+
+    // Turn off BlockCache for reads.
+    read_options.fill_cache = false;
 
     return db;
 }
@@ -109,18 +113,15 @@ leveldb_stats(leveldb::DB *db)
 /** Run/load YCSB workload on a leveldb instance. */
 static uint
 do_ycsb(leveldb::DB *db, const std::vector<ycsb_req_t>& reqs,
-        const std::string value, double& microsecs)
+        const std::string value, std::vector<double>& microsecs)
 {
     leveldb::Status status;
     uint cnt = 0;
     std::string read_buf;
     read_buf.reserve(value.length());
 
-    // Prepare for timing.
-    auto time_start = std::chrono::high_resolution_clock::now();
-    microsecs = 0;
-
     for (auto& req : reqs) {
+        auto time_start = std::chrono::high_resolution_clock::now();
         switch (req.op) {
             case INSERT:
             case UPDATE: {
@@ -153,15 +154,18 @@ do_ycsb(leveldb::DB *db, const std::vector<ycsb_req_t>& reqs,
                     exit(1);
                 }
         }
+        auto time_end = std::chrono::high_resolution_clock::now();
 
-        assert(status.ok());
+        // Record all successful and failed requests.
         cnt++;
-    }
+        microsecs.push_back(std::chrono::duration<double, std::milli>(
+            time_end - time_start).count());
 
-    // Calculate time elapsed.
-    auto time_end = std::chrono::high_resolution_clock::now();
-    microsecs = std::chrono::duration<double, std::milli>(
-        time_end - time_start).count();
+        if (!status.ok()) {
+            std::cerr << "Error: req returned status: " << status.ToString()
+                      << std::endl;
+        }
+    }
 
     return cnt;
 }
@@ -225,11 +229,27 @@ main(int argc, char *argv[])
     leveldb::DB *db = leveldb_open(db_location, memtable_limit, filesize_limit);
 
     // Execute the actions of the YCSB trace.
-    double microsecs;
+    std::vector<double> microsecs;
     uint cnt = do_ycsb(db, ycsb_reqs, value, microsecs);
     std::cout << "Finished " << cnt << " requests." << std::endl;
-    if (microsecs > 0)
-        std::cout << "Time elapsed: " << microsecs << " us" << std::endl;
+    if (cnt > 0) {
+        assert(microsecs.size() == cnt);
+        std::cout << "Time elapsed:" << std::endl << "  [";
+        double avg_us = 0., max_us = std::numeric_limits<double>::min(),
+                            min_us = std::numeric_limits<double>::max();
+        for (double& us : microsecs) {
+            std::cout << " " << us << " ";
+            avg_us += us;
+            max_us = us > max_us ? us : max_us;
+            min_us = us < min_us ? us : min_us;
+        }
+        avg_us /= microsecs.size();
+        std::cout << "]" << std::endl;
+        std::cout << "Time elapsed stats:" << std::endl
+                  << "  avg  " << avg_us << "us" << std::endl
+                  << "  max  " << max_us << "us" << std::endl
+                  << "  min  " << min_us << "us" << std::endl;
+    }
 
     // Force compaction of everything in memory.
     // leveldb_compact(db);

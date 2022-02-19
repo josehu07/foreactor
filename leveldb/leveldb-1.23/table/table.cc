@@ -15,6 +15,9 @@
 #include "table/two_level_iterator.h"
 #include "util/coding.h"
 
+#include <foreactor.hpp>
+namespace fa = foreactor;
+
 namespace leveldb {
 
 struct Table::Rep {
@@ -151,7 +154,8 @@ static void ReleaseBlock(void* arg, void* h) {
 // Convert an index iterator value (i.e., an encoded BlockHandle)
 // into an iterator over the contents of the corresponding block.
 Iterator* Table::BlockReader(void* arg, const ReadOptions& options,
-                             const Slice& index_value) {
+                             const Slice& index_value,
+                             fa::SyscallPread* node_pread_data) {
   Table* table = reinterpret_cast<Table*>(arg);
   Cache* block_cache = table->rep_->options.block_cache;
   Block* block = nullptr;
@@ -174,7 +178,7 @@ Iterator* Table::BlockReader(void* arg, const ReadOptions& options,
       if (cache_handle != nullptr) {
         block = reinterpret_cast<Block*>(block_cache->Value(cache_handle));
       } else {
-        s = ReadBlock(table->rep_->file, options, handle, &contents);
+        s = ReadBlock(table->rep_->file, options, handle, &contents, node_pread_data);
         if (s.ok()) {
           block = new Block(contents);
           if (contents.cachable && options.fill_cache) {
@@ -184,7 +188,7 @@ Iterator* Table::BlockReader(void* arg, const ReadOptions& options,
         }
       }
     } else {
-      s = ReadBlock(table->rep_->file, options, handle, &contents);
+      s = ReadBlock(table->rep_->file, options, handle, &contents, node_pread_data);
       if (s.ok()) {
         block = new Block(contents);
       }
@@ -205,15 +209,21 @@ Iterator* Table::BlockReader(void* arg, const ReadOptions& options,
   return iter;
 }
 
+Iterator* Table::BlockReaderOrig(void* arg, const ReadOptions& options,
+                                 const Slice& index_value) {
+  return BlockReader(arg, options, index_value, nullptr);
+}
+
 Iterator* Table::NewIterator(const ReadOptions& options) const {
   return NewTwoLevelIterator(
       rep_->index_block->NewIterator(rep_->options.comparator),
-      &Table::BlockReader, const_cast<Table*>(this), options);
+      &Table::BlockReaderOrig, const_cast<Table*>(this), options);
 }
 
 Status Table::InternalGet(const ReadOptions& options, const Slice& k, void* arg,
                           void (*handle_result)(void*, const Slice&,
-                                                const Slice&)) {
+                                                const Slice&),
+                          fa::SyscallPread* node_pread_data) {
   Status s;
   Iterator* iiter = rep_->index_block->NewIterator(rep_->options.comparator);
   iiter->Seek(k);
@@ -225,7 +235,7 @@ Status Table::InternalGet(const ReadOptions& options, const Slice& k, void* arg,
         !filter->KeyMayMatch(handle.offset(), k)) {
       // Not found
     } else {
-      Iterator* block_iter = BlockReader(this, options, iiter->value());
+      Iterator* block_iter = BlockReader(this, options, iiter->value(), node_pread_data);
       block_iter->Seek(k);
       if (block_iter->Valid()) {
         (*handle_result)(arg, block_iter->key(), block_iter->value());
@@ -239,6 +249,32 @@ Status Table::InternalGet(const ReadOptions& options, const Slice& k, void* arg,
   }
   delete iiter;
   return s;
+}
+
+// [foreactor]
+bool Table::SearchBlockHandle(const Slice& k, BlockHandle& handle) {
+  Iterator* iiter = rep_->index_block->NewIterator(rep_->options.comparator);
+  iiter->Seek(k);
+  if (!iiter->Valid())
+    return false;
+  Slice index_value = iiter->value();
+  Status s = handle.DecodeFrom(&index_value);
+  return s.ok();
+}
+
+// [foreactor]
+int Table::GetFileFd() {
+  return rep_->file->GetFd();
+}
+
+// [foreactor]
+size_t Table::HandleToBlockSize(const BlockHandle& handle) {
+  return static_cast<size_t>(handle.size()) + kBlockTrailerSize;
+}
+
+// [foreactor]
+off_t Table::HandleToBlockOffset(const BlockHandle& handle) {
+  return handle.offset();
 }
 
 uint64_t Table::ApproximateOffsetOf(const Slice& key) const {

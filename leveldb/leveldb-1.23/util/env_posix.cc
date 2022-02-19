@@ -35,6 +35,9 @@
 #include "util/env_posix_test_helper.h"
 #include "util/posix_logger.h"
 
+#include <foreactor.hpp>
+namespace fa = foreactor;
+
 namespace leveldb {
 
 namespace {
@@ -46,6 +49,7 @@ int g_open_read_only_file_limit = -1;
 constexpr const int kDefaultMmapLimit = (sizeof(void*) >= 8) ? 1000 : 0;
 
 // Can be set using EnvPosixTestHelper::SetReadOnlyMMapLimit().
+// [foreactor]
 // int g_mmap_limit = kDefaultMmapLimit;
 int g_mmap_limit = 0;
 
@@ -170,7 +174,8 @@ class PosixRandomAccessFile final : public RandomAccessFile {
   }
 
   Status Read(uint64_t offset, size_t n, Slice* result,
-              char* scratch) const override {
+              char* scratch,
+              fa::SyscallPread* node_pread_data = nullptr) const override {
     int fd = fd_;
     if (!has_permanent_fd_) {
       fd = ::open(filename_.c_str(), O_RDONLY | kOpenBaseFlags);
@@ -182,7 +187,12 @@ class PosixRandomAccessFile final : public RandomAccessFile {
     assert(fd != -1);
 
     Status status;
-    ssize_t read_size = ::pread(fd, scratch, n, static_cast<off_t>(offset));
+    // [foreactor]
+    ssize_t read_size;
+    if (node_pread_data == nullptr)
+      read_size = ::pread(fd, scratch, n, static_cast<off_t>(offset));
+    else
+      read_size = node_pread_data->Issue(scratch);
     *result = Slice(scratch, (read_size < 0) ? 0 : read_size);
     if (read_size < 0) {
       // An error: return a non-ok status.
@@ -194,6 +204,11 @@ class PosixRandomAccessFile final : public RandomAccessFile {
       ::close(fd);
     }
     return status;
+  }
+
+  // [foreactor]
+  int GetFd() {
+    return fd_;
   }
 
  private:
@@ -230,7 +245,8 @@ class PosixMmapReadableFile final : public RandomAccessFile {
   }
 
   Status Read(uint64_t offset, size_t n, Slice* result,
-              char* scratch) const override {
+              char* scratch,
+              fa::SyscallPread* node_pread_data = nullptr) const override {
     if (offset + n > length_) {
       *result = Slice();
       return PosixError(filename_, EINVAL);
@@ -838,7 +854,7 @@ class SingletonEnv {
  public:
   SingletonEnv() {
 #if !defined(NDEBUG)
-    env_initialized_.store(true, std::memory_order::memory_order_relaxed);
+    env_initialized_.store(true, std::memory_order_relaxed);
 #endif  // !defined(NDEBUG)
     static_assert(sizeof(env_storage_) >= sizeof(EnvType),
                   "env_storage_ will not fit the Env");
@@ -855,7 +871,7 @@ class SingletonEnv {
 
   static void AssertEnvNotInitialized() {
 #if !defined(NDEBUG)
-    assert(!env_initialized_.load(std::memory_order::memory_order_relaxed));
+    assert(!env_initialized_.load(std::memory_order_relaxed));
 #endif  // !defined(NDEBUG)
   }
 

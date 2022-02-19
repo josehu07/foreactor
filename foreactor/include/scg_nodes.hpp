@@ -1,3 +1,4 @@
+#include <iostream>
 #include <vector>
 #include <assert.h>
 #include <liburing.h>
@@ -39,6 +40,9 @@ class SCGraphNode {
         SCGraphNode(NodeType node_type)
                 : node_type(node_type), scgraph(nullptr) {}
         virtual ~SCGraphNode() {}
+
+    public:
+        friend std::ostream& operator<<(std::ostream& s, const SCGraphNode& n);
 };
 
 
@@ -49,6 +53,12 @@ typedef enum SyscallStage {
     STAGE_FINISHED      // issued sync / issued async and completion harvested
 } SyscallStage;
 
+typedef enum SyscallType {
+    SC_BASE,
+    SC_OPEN,    // open
+    SC_PREAD    // pread
+} SyscallType;
+
 // Parent class of a syscall node in the dependency graph.
 // Each syscall type is a child class that inherits from this class, and a
 // dependency graph instance should be composed of instances of those
@@ -58,6 +68,8 @@ class SyscallNode : public SCGraphNode {
     friend class SCGraph;
 
     protected:
+        SyscallType sc_type = SC_BASE;
+        std::vector<bool> arg_ready;
         SyscallStage stage = STAGE_NOTREADY;
         SCGraphNode *next_node = nullptr;
         EdgeType edge_type = EDGE_BASE;
@@ -67,16 +79,16 @@ class SyscallNode : public SCGraphNode {
 
     protected:
         // Every child class must implement the following three functions.
-        virtual long SyscallSync() = 0;
+        virtual long SyscallSync(void *output_buf) = 0;
         virtual void PrepUring(struct io_uring_sqe *sqe) = 0;
-        virtual void ReflectResult() = 0;
+        virtual void ReflectResult(void *output_buf) = 0;
 
-        long CallSync();
         void PrepAsync();
         void CmplAsync();
 
         SyscallNode() = delete;
-        SyscallNode(bool pure_sc, bool args_ready);
+        SyscallNode(SyscallType sc_type, bool pure_sc,
+                    std::vector<bool> arg_ready);
         virtual ~SyscallNode() {}
 
     public:
@@ -85,7 +97,10 @@ class SyscallNode : public SCGraphNode {
 
         // Invoke this syscall, possibly pre-issuing the next few syscalls
         // in graph.
-        long Issue();
+        long Issue(void *output_buf = nullptr);
+
+        friend std::ostream& operator<<(std::ostream& s, const SyscallNode& n);
+        void PrintCommonInfo(std::ostream& s) const;
 };
 
 
@@ -93,7 +108,7 @@ class SyscallNode : public SCGraphNode {
 // Used only when there is some decision to be made during the execution of
 // a syscall graph, where the decision is not known at the time of building
 // the graph.
-class BranchNode : public SCGraphNode {
+class BranchNode final : public SCGraphNode {
     friend class SCGraph;
     friend class SyscallNode;
 
@@ -110,6 +125,8 @@ class BranchNode : public SCGraphNode {
         // Set the next children nodes. Index of child in this vector
         // should correspond to the decision int.
         void SetChildren(std::vector<SCGraphNode *> children_list);
+
+        friend std::ostream& operator<<(std::ostream& s, const BranchNode& n);
 };
 
 

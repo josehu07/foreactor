@@ -2,6 +2,7 @@
 #include <assert.h>
 #include <liburing.h>
 
+#include "io_uring.hpp"
 #include "scg_nodes.hpp"
 
 
@@ -18,9 +19,7 @@ class SCGraph {
     friend class BranchNode;
 
     private:
-        struct io_uring ring;
-        bool ring_initialized = false;
-
+        IOUring *ring = nullptr;
         std::unordered_map<uint64_t, SCGraphNode *> nodes;
 
     protected:
@@ -29,12 +28,12 @@ class SCGraph {
         int pre_issue_depth = 0;
 
         struct io_uring *Ring() {
-            return &ring;
+            return ring->Ring();
         }
 
     public:
         SCGraph() = delete;
-        SCGraph(int sq_length, int pre_issue_depth);
+        SCGraph(IOUring *ring, int pre_issue_depth);
         ~SCGraph();
 
         // Add a new node into graph, effectively assigning the io_uring
@@ -43,10 +42,6 @@ class SCGraph {
 
         // Find a syscall node using given identifier.
         SyscallNode *GetSyscallNode(uint64_t id) const;
-
-        // Deconstruct all nodes added to graph. Will wait and drain all
-        // in-progress syscalls submitted to io_uring.
-        void DeleteAllNodes();
 };
 
 

@@ -25,6 +25,9 @@
 #include "util/mutexlock.h"
 #include "util/testutil.h"
 
+#include <foreactor.hpp>
+namespace fa = foreactor;
+
 namespace leveldb {
 
 static std::string RandomString(Random* rnd, int len) {
@@ -214,7 +217,8 @@ class SpecialEnv : public EnvWrapper {
           : target_(target), counter_(counter) {}
       ~CountingFile() override { delete target_; }
       Status Read(uint64_t offset, size_t n, Slice* result,
-                  char* scratch) const override {
+                  char* scratch,
+                  fa::SyscallPread* node_pread_data = nullptr) const override {
         counter_->Increment();
         return target_->Read(offset, n, result, scratch);
       }

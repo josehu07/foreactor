@@ -15,6 +15,9 @@
 #include "leveldb/table.h"
 #include "port/port.h"
 
+#include <foreactor.hpp>
+namespace fa = foreactor;
+
 namespace leveldb {
 
 class Env;
@@ -38,10 +41,16 @@ class TableCache {
   // call (*handle_result)(arg, found_key, found_value).
   Status Get(const ReadOptions& options, uint64_t file_number,
              uint64_t file_size, const Slice& k, void* arg,
-             void (*handle_result)(void*, const Slice&, const Slice&));
+             void (*handle_result)(void*, const Slice&, const Slice&),
+             fa::SyscallPread* node_pread_data = nullptr);
 
   // Evict any entry for the specified file number
   void Evict(uint64_t file_number);
+
+  // [foreactor]
+  Cache::Handle* TryFindTable(uint64_t file_number);
+  Table* HandleToTable(Cache::Handle* handle);
+  void ReleaseHandle(Cache::Handle* handle);
 
  private:
   Status FindTable(uint64_t file_number, uint64_t file_size, Cache::Handle**);

@@ -21,6 +21,9 @@
 #include "leveldb/export.h"
 #include "leveldb/status.h"
 
+#include <foreactor.hpp>
+namespace fa = foreactor;
+
 // This workaround can be removed when leveldb::Env::DeleteFile is removed.
 #if defined(_WIN32)
 // On Windows, the method name DeleteFile (below) introduces the risk of
@@ -268,7 +271,13 @@ class LEVELDB_EXPORT RandomAccessFile {
   //
   // Safe for concurrent use by multiple threads.
   virtual Status Read(uint64_t offset, size_t n, Slice* result,
-                      char* scratch) const = 0;
+                      char* scratch,
+                      fa::SyscallPread* node_pread_data = nullptr) const = 0;
+
+  // [foreactor]
+  virtual int GetFd() {
+    return -1;
+  }
 };
 
 // A file abstraction for sequential writing.  The implementation

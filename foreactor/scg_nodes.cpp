@@ -1,15 +1,63 @@
+#include <iostream>
 #include <liburing.h>
 
 #include "scg_nodes.hpp"
 #include "scg_graph.hpp"
+#include "syscalls.hpp"
 
 
 namespace foreactor {
 
 
-SyscallNode::SyscallNode(bool pure_sc, bool args_ready)
+static bool AllArgsReady(std::vector<bool>& arg_ready) {
+    return std::all_of(arg_ready.begin(), arg_ready.end(),
+                       [](bool a) { return a; });
+}
+
+
+static std::string EdgeTypeStr(EdgeType edge_type) {
+    switch (edge_type) {
+        case EDGE_MUST: return "MUST";
+        case EDGE_WEAK: return "WEAK";
+        default:        return "UNKNOWN";
+    }
+}
+
+static std::string SyscallStageStr(SyscallStage stage) {
+    switch (stage) {
+        case STAGE_NOTREADY: return "NOTREADY";
+        case STAGE_UNISSUED: return "UNISSUED";
+        case STAGE_PROGRESS: return "PROGRESS";
+        case STAGE_FINISHED: return "FINISHED";
+        default:             return "UNKNOWN";
+    }
+}
+
+
+/////////////////
+// SCGraphNode //
+/////////////////
+
+std::ostream& operator<<(std::ostream& s, const SCGraphNode& n) {
+    switch (n.node_type) {
+        case NODE_SC_PURE:
+        case NODE_SC_SEFF: s << *static_cast<const SyscallNode *>(&n); break;
+        case NODE_BRANCH:  s << *static_cast<const BranchNode *>(&n);  break;
+        default:           s << "SCGraphNode{}";
+    }
+    return s;
+}
+
+
+/////////////////
+// SyscallNode //
+/////////////////
+
+SyscallNode::SyscallNode(SyscallType sc_type, bool pure_sc,
+                         std::vector<bool> arg_ready)
         : SCGraphNode(pure_sc ? NODE_SC_PURE : NODE_SC_SEFF),
-          stage(args_ready ? STAGE_UNISSUED : STAGE_NOTREADY),
+          sc_type(sc_type), arg_ready(arg_ready),
+          stage(AllArgsReady(arg_ready) ? STAGE_UNISSUED : STAGE_NOTREADY),
           next_node(nullptr), rc(-1) {
     assert(node_type == NODE_SC_PURE || node_type == NODE_SC_SEFF);
 }
@@ -20,11 +68,26 @@ void SyscallNode::SetNext(SCGraphNode *node, bool weak_edge) {
     edge_type = weak_edge ? EDGE_WEAK : EDGE_MUST;
 }
 
-
-long SyscallNode::CallSync() {
-    assert(stage == STAGE_UNISSUED);
-    return SyscallSync();
+std::ostream& operator<<(std::ostream& s, const SyscallNode& n) {
+    switch (n.sc_type) {
+        case SC_OPEN:  s << *static_cast<const SyscallOpen *>(&n);  break;
+        case SC_PREAD: s << *static_cast<const SyscallPread *>(&n); break;
+        default:       s << "SyscallNode{}";
+    }
+    return s;
 }
+
+void SyscallNode::PrintCommonInfo(std::ostream& s) const {
+    s << "arg_ready=";
+    for (bool ready : arg_ready)
+        s << (ready ? "T" : "F");
+    s << ","
+      << "stage=" << SyscallStageStr(stage) << ","
+      << "rc=" << rc << ","
+      << "next=" << next_node << ","
+      << "edge=" << EdgeTypeStr(edge_type);
+}
+
 
 void SyscallNode::PrepAsync() {
     assert(stage == STAGE_UNISSUED);
@@ -59,7 +122,7 @@ static bool EdgeForeactable(EdgeType edge, SyscallNode *next) {
            (edge == EDGE_WEAK && next->node_type == NODE_SC_PURE);
 }
 
-long SyscallNode::Issue() {
+long SyscallNode::Issue(void *output_buf) {
     // pre-issue the next few syscalls asynchronously
     if (scgraph != nullptr) {
         SCGraphNode *next = next_node;
@@ -104,7 +167,7 @@ long SyscallNode::Issue() {
     // handle myself
     if (stage == STAGE_UNISSUED) {
         // if not pre-issued
-        rc = CallSync();
+        rc = SyscallSync(output_buf);
         stage = STAGE_FINISHED;
     } else {
         // if has been pre-issued, process CQEs from io_uring until mine
@@ -112,12 +175,16 @@ long SyscallNode::Issue() {
         if (stage == STAGE_PROGRESS)
             CmplAsync();
         assert(stage == STAGE_FINISHED);
-        ReflectResult();
+        ReflectResult(output_buf);
     }
 
     return rc;
 }
 
+
+////////////////
+// BranchNode //
+////////////////
 
 BranchNode::BranchNode()
         : SCGraphNode(NODE_BRANCH), decision(-1) {
@@ -126,6 +193,18 @@ BranchNode::BranchNode()
 void BranchNode::SetChildren(std::vector<SCGraphNode *> children_list) {
     assert(children_list.size() > 1);
     children = children_list;
+}
+
+std::ostream& operator<<(std::ostream& s, const BranchNode& n) {
+    s << "BranchNode{"
+      << "decision=" << n.decision << ",children=[";
+    for (size_t i = 0; i < n.children.size(); ++i) {
+        s << n.children[i];
+        if (i < n.children.size() - 1)
+            s << ",";
+    }
+    s << "]}";
+    return s;
 }
 
 SCGraphNode *BranchNode::PickBranch() {

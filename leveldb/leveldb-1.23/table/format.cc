@@ -10,6 +10,9 @@
 #include "util/coding.h"
 #include "util/crc32c.h"
 
+#include <foreactor.hpp>
+namespace fa = foreactor;
+
 namespace leveldb {
 
 void BlockHandle::EncodeTo(std::string* dst) const {
@@ -62,7 +65,8 @@ Status Footer::DecodeFrom(Slice* input) {
 }
 
 Status ReadBlock(RandomAccessFile* file, const ReadOptions& options,
-                 const BlockHandle& handle, BlockContents* result) {
+                 const BlockHandle& handle, BlockContents* result,
+                 fa::SyscallPread* node_pread_data) {
   result->data = Slice();
   result->cachable = false;
   result->heap_allocated = false;
@@ -72,7 +76,8 @@ Status ReadBlock(RandomAccessFile* file, const ReadOptions& options,
   size_t n = static_cast<size_t>(handle.size());
   char* buf = new char[n + kBlockTrailerSize];
   Slice contents;
-  Status s = file->Read(handle.offset(), n + kBlockTrailerSize, &contents, buf);
+  Status s = file->Read(handle.offset(), n + kBlockTrailerSize, &contents, buf,
+                        node_pread_data);
   if (!s.ok()) {
     delete[] buf;
     return s;

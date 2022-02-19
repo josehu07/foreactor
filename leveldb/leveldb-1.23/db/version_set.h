@@ -24,6 +24,9 @@
 #include "port/port.h"
 #include "port/thread_annotations.h"
 
+#include <foreactor.hpp>
+namespace fa = foreactor;
+
 namespace leveldb {
 
 namespace log {
@@ -136,6 +139,10 @@ class Version {
   ~Version();
 
   Iterator* NewConcatenatingIterator(const ReadOptions&, int level) const;
+
+  // [foreactor]
+  void BuildGetSCGraph(fa::SCGraph *scgraph, const std::vector<FileMetaData*>& l0tables,
+                       const Slice& internal_key, uint64_t (*GenNodeId)(FileMetaData*));
 
   // Call func(arg, level, f) for every file that overlaps user_key in
   // order from newest to oldest.  If an invocation of func returns
@@ -268,6 +275,9 @@ class VersionSet {
     char buffer[100];
   };
   const char* LevelSummary(LevelSummaryStorage* scratch) const;
+
+  // [foreactor]
+  fa::IOUring fa_ring;
 
  private:
   class Builder;

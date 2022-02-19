@@ -7,18 +7,18 @@ FOREACTOR_OBJS=$(patsubst %.cpp, %.o, $(FOREACTOR_SRCS))
 FOREACTOR_INC=-I$(FOREACTOR_PATH)/include
 
 LIBURING_INC=-I/home/jose/Repos/misc/liburing/src/include
-LIBURING_LIB=-L/home/jose/Repos/misc/liburing/src -luring
+LIBURING_LIB=-L/home/jose/Repos/misc/liburing/src -luring -Wl,-rpath=/home/jose/Repos/misc/liburing/src
 
 
 .PHONY: all
 all: foreactor
 
 
-%.o: %.cpp
+%.o: %.cpp include/%.hpp
 	$(CC) -c -fPIC $(CXXFLAGS) $(FOREACTOR_INC) $(LIBURING_INC) $< -o $@ $(LIBURING_LIB)
 
 foreactor: $(FOREACTOR_OBJS)
-	$(CC) $^ -shared -o lib$@.so
+	$(CC) $^ -shared -o lib$@.so $(LIBURING_LIB)
 
 
 .PHONY: clean

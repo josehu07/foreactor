@@ -19,6 +19,12 @@
 #include "util/coding.h"
 #include "util/logging.h"
 
+#include <iostream>
+#include <foreactor.hpp>
+namespace fa = foreactor;
+#include <fcntl.h>
+#include "table/format.h"
+
 namespace leveldb {
 
 static size_t TargetFileSize(const Options* options) {
@@ -278,64 +284,64 @@ static bool NewestFirst(FileMetaData* a, FileMetaData* b) {
   return a->number > b->number;
 }
 
-void Version::BuildGetSCGraph(fa::SCGraph *scgraph, std::vector<FileMetaData*>& l0tables,
-                              uint64_t (*GenNodeId)(int, int, int)) {
+// [foreactor]
+void Version::BuildGetSCGraph(fa::SCGraph *scgraph, const std::vector<FileMetaData*>& l0tables,
+                              const Slice& internal_key, uint64_t (*GenNodeId)(FileMetaData*)) {
   fa::SyscallNode *last_node = nullptr;
   for (size_t i = 0; i < l0tables.size(); i++) {
-    Cache::Handle* handle = TableCache::TryFindTable(l0tables[i]->number);
-    Table* table = nullptr;
-    if (handle != nullptr)
-      table = reinterpret_cast<TableAndFile*>(handle)->table;
+    Cache::Handle* handle = vset_->table_cache_->TryFindTable(l0tables[i]->number);
+    Table* table = vset_->table_cache_->HandleToTable(handle);
 
     if (table == nullptr) {
       // need to open
-      auto node_open = new fa::SyscallOpen(TableFileName(dbname_, l0tables[i]->number),
-                                           kOpenBaseFlags,
-                                           O_RDONLY);
-      auto node_pread_footer = new fa::SyscallPread(-1,
-                                                    BUF,
-                                                    Footer::kEncodedLength,
-                                                    l0tables[i]->file_size - Footer::kEncodedLength,
-                                                    std::vector{false, true, true, true});
-      auto node_pread_index  = new fa::SyscallPread(-1,
-                                                    BUF,
-                                                    0,
-                                                    0,
-                                                    std::vector{false, true, false, false});
-      auto node_pread_data   = new fa::SyscallPread(-1,
-                                                    BUF,
-                                                    0,
-                                                    0,
-                                                    std::vector{false, true, false, false});
-      assert(scgraph->AddNode(GenNodeId(0, i, 0), node_open));
-      assert(scgraph->AddNode(GenNodeId(0, i, 1), node_pread_footer));
-      assert(scgraph->AddNode(GenNodeId(0, i, 2), node_pread_index));
-      assert(scgraph->AddNode(GenNodeId(0, i, 3), node_pread_data));
-      if (last_node != nullptr)
-        last_node->SetNext(node_open, /*weak_edge*/ true);
-      node_open->SetNext(node_pread_footer, /*weak_edge*/ false);
-      node_pread_footer->SetNext(node_pread_index, /*weak_edge*/ false);
-      node_pread_index->SetNext(node_pread_data, /*weak_edge*/ false);
-      last_node = node_pread_data;
+      // TODO: complete this branch
+      // auto node_open = new fa::SyscallOpen(TableFileName(vset_->dbname_, l0tables[i]->number),
+      //                                      0,
+      //                                      O_RDONLY);
+      // auto node_pread_footer = new fa::SyscallPread(-1,
+      //                                               Footer::kEncodedLength,
+      //                                               l0tables[i]->file_size - Footer::kEncodedLength,
+      //                                               std::vector{false, true, true});
+      // auto node_pread_index  = new fa::SyscallPread(-1,
+      //                                               0,
+      //                                               0,
+      //                                               std::vector{false, false, false});
+      // auto node_pread_data   = new fa::SyscallPread(-1,
+      //                                               0,
+      //                                               0,
+      //                                               std::vector{false, false, false});
+      // scgraph->AddNode(GenNodeId(0, i, 0), node_open);
+      // scgraph->AddNode(GenNodeId(0, i, 1), node_pread_footer);
+      // scgraph->AddNode(GenNodeId(0, i, 2), node_pread_index);
+      // scgraph->AddNode(GenNodeId(0, i, 3), node_pread_data);
+      // if (last_node != nullptr)
+      //   last_node->SetNext(node_open, /*weak_edge*/ true);
+      // node_open->SetNext(node_pread_footer, /*weak_edge*/ false);
+      // node_pread_footer->SetNext(node_pread_index, /*weak_edge*/ false);
+      // node_pread_index->SetNext(node_pread_data, /*weak_edge*/ false);
+      // last_node = node_pread_data;
     } else {
       // already open
-      auto node_pread_data = new fa::SyscallPread(table->rep_->file->fd_,
-                                                  BUF,
-                                                  BLOCK_SIZE,
-                                                  OFFSET);
-      assert(scgraph->AddNode(GenNodeId(0, i, 3), node_pread_data));
+      BlockHandle block_handle;
+      bool searched = table->SearchBlockHandle(internal_key, block_handle);
+      if (!searched)
+        continue;
+      auto node_pread_data = new fa::SyscallPread(table->GetFileFd(),
+                                                  table->HandleToBlockSize(block_handle),
+                                                  table->HandleToBlockOffset(block_handle));
+      scgraph->AddNode(reinterpret_cast<uint64_t>(l0tables[i]), node_pread_data);
       if (last_node != nullptr)
-        last_node->SetNext(node_pread, /*weak_edge*/ true);
+        last_node->SetNext(node_pread_data, /*weak_edge*/ true);
       last_node = node_pread_data;
     }
 
-    TableCache::ReleaseHandle(handle);
+    if (handle != nullptr)
+      vset_->table_cache_->ReleaseHandle(handle);
   }
 }
 
 void Version::ForEachOverlapping(Slice user_key, Slice internal_key, void* arg,
-                                 bool (*func)(void*, int, FileMetaData*),
-                                 bool do_foreactor_get) {
+                                 bool (*func)(void*, int, FileMetaData*)) {
   const Comparator* ucmp = vset_->icmp_.user_comparator();
 
   // Search level-0 in order from newest to oldest.
@@ -350,29 +356,10 @@ void Version::ForEachOverlapping(Slice user_key, Slice internal_key, void* arg,
   }
   if (!tmp.empty()) {
     std::sort(tmp.begin(), tmp.end(), NewestFirst);
-
-    fa::SCGraph *scgraph = nullptr;
-    auto GenNodeId = [](int level, int index, int nodeid) -> uint64_t {
-      // TODO: this is now too arbitrary
-      constexpr int LEVEL_BASE = 1000;
-      constexpr int NODES_BASE = 10;
-      return level * LEVEL_BASE + index * NODES_BASE + nodeid;
-    };
-
-    if (do_foreactor_get) {
-      scgraph = new fa::SCGraph(8, 4);
-      BuildGetSCGraph(scgraph, tmp, GenNodeId);
-    }
-
     for (uint32_t i = 0; i < tmp.size(); i++) {
       if (!(*func)(arg, 0, tmp[i])) {
         return;
       }
-    }
-
-    if (do_foreactor_get) {
-      scgraph->DeleteAllNodes();
-      delete scgraph;
     }
   }
 
@@ -401,6 +388,31 @@ Status Version::Get(const ReadOptions& options, const LookupKey& k,
   stats->seek_file = nullptr;
   stats->seek_file_level = -1;
 
+  // [foreactor]
+  // Search level-0 in order from newest to oldest.
+  const Comparator* ucmp = vset_->icmp_.user_comparator();
+  std::vector<FileMetaData*> tmp;
+  tmp.reserve(files_[0].size());
+  for (uint32_t i = 0; i < files_[0].size(); i++) {
+    FileMetaData* f = files_[0][i];
+    if (ucmp->Compare(k.user_key(), f->smallest.user_key()) >= 0 &&
+        ucmp->Compare(k.user_key(), f->largest.user_key()) <= 0) {
+      tmp.push_back(f);
+    }
+  }
+  if (!tmp.empty())
+    std::sort(tmp.begin(), tmp.end(), NewestFirst);
+
+  // [foreactor]
+  auto GenNodeId = [](FileMetaData* f) -> uint64_t {
+    // TODO: this is now too arbitrary
+    // constexpr int LEVEL_BASE = 1000;
+    // constexpr int NODES_BASE = 10;
+    return reinterpret_cast<uint64_t>(f);
+  };
+  fa::SCGraph* scgraph = new fa::SCGraph(&vset_->fa_ring, 8);
+  BuildGetSCGraph(scgraph, tmp, k.internal_key(), GenNodeId);
+
   struct State {
     Saver saver;
     GetStats* stats;
@@ -412,6 +424,9 @@ Status Version::Get(const ReadOptions& options, const LookupKey& k,
     VersionSet* vset;
     Status s;
     bool found;
+
+    // [foreactor]
+    fa::SCGraph* scgraph;
 
     static bool Match(void* arg, int level, FileMetaData* f) {
       State* state = reinterpret_cast<State*>(arg);
@@ -426,9 +441,14 @@ Status Version::Get(const ReadOptions& options, const LookupKey& k,
       state->last_file_read = f;
       state->last_file_read_level = level;
 
+      // [foreactor]
+      fa::SyscallPread* node_pread_data = static_cast<fa::SyscallPread*>(
+        state->scgraph->GetSyscallNode(reinterpret_cast<uint64_t>(f)));
+      // node_pread_data = nullptr;
       state->s = state->vset->table_cache_->Get(*state->options, f->number,
                                                 f->file_size, state->ikey,
-                                                &state->saver, SaveValue);
+                                                &state->saver, SaveValue,
+                                                node_pread_data);  // could be nullptr
       if (!state->s.ok()) {
         state->found = true;
         return false;
@@ -469,7 +489,13 @@ Status Version::Get(const ReadOptions& options, const LookupKey& k,
   state.saver.user_key = k.user_key();
   state.saver.value = value;
 
+  // [foreactor]
+  state.scgraph = scgraph;
+
   ForEachOverlapping(state.saver.user_key, state.ikey, &state, &State::Match);
+
+  // [foreactor]
+  delete scgraph;
 
   return state.found ? state.s : Status::NotFound(Slice());
 }
@@ -808,7 +834,8 @@ class VersionSet::Builder {
 VersionSet::VersionSet(const std::string& dbname, const Options* options,
                        TableCache* table_cache,
                        const InternalKeyComparator* cmp)
-    : env_(options->env),
+    : fa_ring(16),
+      env_(options->env),
       dbname_(dbname),
       options_(options),
       table_cache_(table_cache),

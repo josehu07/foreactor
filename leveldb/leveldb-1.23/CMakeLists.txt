@@ -277,6 +277,26 @@ if(HAVE_TCMALLOC)
   target_link_libraries(leveldb tcmalloc)
 endif(HAVE_TCMALLOC)
 
+# [foreactor]
+add_library(liburing SHARED IMPORTED)
+set_target_properties(liburing PROPERTIES
+  IMPORTED_LOCATION /home/jose/Repos/misc/liburing/src/liburing.so.2.2)
+target_link_libraries(leveldb liburing)
+target_include_directories(leveldb
+  PUBLIC
+    $<BUILD_INTERFACE:/home/jose/Repos/misc/liburing/src/include>
+    $<INSTALL_INTERFACE:>)
+
+# [foreactor]
+add_library(libforeactor SHARED IMPORTED)
+set_target_properties(libforeactor PROPERTIES
+  IMPORTED_LOCATION ${PROJECT_SOURCE_DIR}/../../foreactor/libforeactor.so)
+target_link_libraries(leveldb libforeactor)
+target_include_directories(leveldb
+  PUBLIC
+    $<BUILD_INTERFACE:${PROJECT_SOURCE_DIR}/../../foreactor/include>
+    $<INSTALL_INTERFACE:>)
+
 # Needed by port_stdcxx.h
 find_package(Threads REQUIRED)
 target_link_libraries(leveldb Threads::Threads)

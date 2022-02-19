@@ -16,6 +16,9 @@
 #include "port/thread_annotations.h"
 #include "util/mutexlock.h"
 
+#include <foreactor.hpp>
+namespace fa = foreactor;
+
 namespace leveldb {
 
 namespace {
@@ -189,7 +192,8 @@ class RandomAccessFileImpl : public RandomAccessFile {
   ~RandomAccessFileImpl() override { file_->Unref(); }
 
   Status Read(uint64_t offset, size_t n, Slice* result,
-              char* scratch) const override {
+              char* scratch,
+              fa::SyscallPread* node_pread_data = nullptr) const override {
     return file_->Read(offset, n, result, scratch);
   }
 

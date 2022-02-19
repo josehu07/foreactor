@@ -5,7 +5,7 @@ FOREACTOR_INC=-I../foreactor/include
 FOREACTOR_LIB=-L../foreactor -lforeactor -Wl,-rpath=../foreactor
 
 LIBURING_INC=-I/home/jose/Repos/misc/liburing/src/include
-LIBURING_LIB=-L/home/jose/Repos/misc/liburing/src -luring
+LIBURING_LIB=-L/home/jose/Repos/misc/liburing/src -luring -Wl,-rpath=/home/jose/Repos/misc/liburing/src
 
 
 .PHONY: all clean

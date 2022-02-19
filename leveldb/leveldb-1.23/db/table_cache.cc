@@ -9,6 +9,9 @@
 #include "leveldb/table.h"
 #include "util/coding.h"
 
+#include <foreactor.hpp>
+namespace fa = foreactor;
+
 namespace leveldb {
 
 struct TableAndFile {
@@ -75,6 +78,7 @@ Status TableCache::FindTable(uint64_t file_number, uint64_t file_size,
   return s;
 }
 
+// [foreactor]
 Cache::Handle* TableCache::TryFindTable(uint64_t file_number) {
   char buf[sizeof(file_number)];
   EncodeFixed64(buf, file_number);
@@ -83,6 +87,14 @@ Cache::Handle* TableCache::TryFindTable(uint64_t file_number) {
   return handle;
 }
 
+// [foreactor]
+Table* TableCache::HandleToTable(Cache::Handle* handle) {
+  if (handle == nullptr)
+    return nullptr;
+  return reinterpret_cast<TableAndFile*>(cache_->Value(handle))->table;
+}
+
+// [foreactor]
 void TableCache::ReleaseHandle(Cache::Handle* handle) {
   cache_->Release(handle);
 }
@@ -112,12 +124,13 @@ Iterator* TableCache::NewIterator(const ReadOptions& options,
 Status TableCache::Get(const ReadOptions& options, uint64_t file_number,
                        uint64_t file_size, const Slice& k, void* arg,
                        void (*handle_result)(void*, const Slice&,
-                                             const Slice&)) {
+                                             const Slice&),
+                       fa::SyscallPread* node_pread_data) {
   Cache::Handle* handle = nullptr;
   Status s = FindTable(file_number, file_size, &handle);
   if (s.ok()) {
     Table* t = reinterpret_cast<TableAndFile*>(cache_->Value(handle))->table;
-    s = t->InternalGet(options, k, arg, handle_result);
+    s = t->InternalGet(options, k, arg, handle_result, node_pread_data);
     cache_->Release(handle);
   }
   return s;
