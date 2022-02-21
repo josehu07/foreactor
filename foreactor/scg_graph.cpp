@@ -1,11 +1,32 @@
 #include <stdexcept>
 #include <liburing.h>
 
+#include "debug.hpp"
 #include "scg_nodes.hpp"
 #include "scg_graph.hpp"
 
 
 namespace foreactor {
+
+
+thread_local SCGraph *active_scgraph = nullptr;
+
+
+void RegisterSCGraph(SCGraph *scgraph, const IOUring *ring) {
+    assert(active_scgraph == nullptr);
+    assert(scgraph != nullptr);
+    assert(scgraph->ring == ring);
+    assert(scgraph->frontier != nullptr);
+    active_scgraph = scgraph;
+    DEBUG("registered SCGraph @ %p frontier %p as active\n",
+          scgraph, scgraph->frontier);
+}
+
+void UnregisterSCGraph() {
+    assert(active_scgraph != nullptr);
+    DEBUG("unregister SCGraph @ %p\n", active_scgraph);
+    active_scgraph = nullptr;
+}
 
 
 SCGraph::SCGraph(IOUring *ring, int pre_issue_depth)
@@ -30,33 +51,28 @@ SCGraph::~SCGraph() {
         }
         delete node;
     }
+
     nodes.clear();
 }
 
 
-bool SCGraph::AddNode(uint64_t id, SCGraphNode *node) {
-    if (nodes.find(id) != nodes.end())
-        return false;
+void SCGraph::AddNode(uint64_t id, SCGraphNode *node, bool is_start) {
+    assert(nodes.find(id) == nodes.end());
     assert(node != nullptr);
+
     nodes.insert(std::make_pair(id, node));
     node->scgraph = this;
-    return true;
-}
+    DEBUG("added node %s<%p>\n", StreamStr<SCGraphNode>(node).c_str(), node);
 
-// Find a syscall node using the identifier.
-SyscallNode *SCGraph::GetSyscallNode(uint64_t id) const {
-    SCGraphNode *node = nullptr;
-    try {
-        node = nodes.at(id);
-    } catch (const std::out_of_range& e) {
-        return nullptr;
+    if (is_start) {
+        assert(frontier == nullptr);
+        frontier = node;
+        DEBUG("inited frontier -> %p\n", frontier);
     }
-
-    assert(node != nullptr);
-    assert(node->node_type == NODE_SC_PURE ||
-           node->node_type == NODE_SC_SEFF);
-    return static_cast<SyscallNode *>(node);
 }
+
+
+// GetNode implementations inside header due to genericity.
 
 
 }

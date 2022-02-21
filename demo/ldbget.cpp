@@ -63,11 +63,76 @@ static void close_all(std::vector<std::vector<int>> files) {
 }
 
 
-void do_get_serial(bool check_result) {
+fa::SCGraph *build_get_scgraph(fa::IOUring *ring, int pre_issue_depth,
+                               std::vector<std::vector<int>>& files) {
+    auto GenNodeId = [](int level, int index, int op) -> uint64_t {
+        constexpr int fmax = NUM_LEVELS * FILES_PER_LEVEL;
+        int fid = level * FILES_PER_LEVEL + index;
+        return op * fmax + fid;
+    };
+
+    fa::SCGraph *scgraph = new fa::SCGraph(ring, pre_issue_depth);
+
+    fa::SyscallNode *last_node = nullptr;
+    // level-0 tables from latest to oldest
+    for (int index = FILES_PER_LEVEL - 1; index >= 0; --index) {
+        int fd = files[0][index];
+        auto node_branch = new fa::BranchNode(fd < 0    // decision actually known at the start
+                                              ? 0       // branch with open
+                                              : 1);     // branch without open
+        auto node_open = new fa::SyscallOpen(table_name(0, index), 0, O_RDONLY);
+        auto node_pread = new fa::SyscallPread(fd, FILE_SIZE, 0,
+                                               fd < 0
+                                               ? std::vector{false, true, true}
+                                               : std::vector{true,  true, true});
+        scgraph->AddNode(GenNodeId(0, index, 0), node_branch, /*is_start*/ index == FILES_PER_LEVEL - 1);
+        scgraph->AddNode(GenNodeId(0, index, 1), node_open);
+        scgraph->AddNode(GenNodeId(0, index, 2), node_pread);
+        if (last_node != nullptr)
+            last_node->SetNext(node_branch, /*weak_edge*/ true);
+        node_branch->SetChildren(std::vector<fa::SCGraphNode *>{node_open, node_pread});
+        node_open->SetNext(node_pread, /*weak_edge*/ false);
+        last_node = node_pread;
+    }
+    // levels 1 and beyond
+    for (int level = 1; level < NUM_LEVELS; ++level) {
+        int index = level % 8;    // simulate the calc of file in level
+        int fd = files[level][index];
+        auto node_branch = new fa::BranchNode(fd < 0    // decision actually known at the start
+                                              ? 0       // branch with open
+                                              : 1);     // branch without open
+        auto node_open = new fa::SyscallOpen(table_name(level, index), 0, O_RDONLY);
+        auto node_pread = new fa::SyscallPread(fd, FILE_SIZE, 0,
+                                               fd < 0
+                                               ? std::vector{false, true, true}
+                                               : std::vector{true,  true, true});
+        scgraph->AddNode(GenNodeId(level, index, 0), node_branch, /*is_start*/ index == FILES_PER_LEVEL - 1);
+        scgraph->AddNode(GenNodeId(level, index, 1), node_open);
+        scgraph->AddNode(GenNodeId(level, index, 2), node_pread);
+        if (last_node != nullptr)
+            last_node->SetNext(node_branch, /*weak_edge*/ true);
+        node_branch->SetChildren(std::vector<fa::SCGraphNode *>{node_open, node_pread});
+        node_open->SetNext(node_pread, /*weak_edge*/ false);
+        last_node = node_pread;
+    }
+
+    return scgraph;
+}
+
+void do_leveldb_get(bool foreactor, int pre_issue_depth, fa::IOUring *ring,
+                    bool check_result) {
     auto files = open_selective();
 
-    // make the syscalls to mimic LevelDB::Get
+    // build the syscall graph
     auto t1 = std::chrono::high_resolution_clock::now();
+    fa::SCGraph *scgraph = nullptr;
+    if (foreactor) {
+        scgraph = build_get_scgraph(ring, pre_issue_depth, files);
+        fa::RegisterSCGraph(scgraph, ring);
+    }
+
+    // make the syscalls to mimic LevelDB::Get
+    auto t2 = std::chrono::high_resolution_clock::now();
     // level-0 tables from latest to oldest, not hit
     for (int index = FILES_PER_LEVEL - 1; index >= 0; --index) {
         if (files[0][index] < 0)
@@ -75,8 +140,13 @@ void do_get_serial(bool check_result) {
         ssize_t ret = pread(files[0][index], READ_BUF, FILE_SIZE, 0);
         if (check_result) {
             assert(ret == FILE_SIZE);
-            result_serial.push_back(new char[FILE_SIZE]);
-            memcpy(result_serial.back(), READ_BUF, FILE_SIZE);
+            if (!foreactor) {
+                result_serial.push_back(new char[FILE_SIZE]);
+                memcpy(result_serial.back(), READ_BUF, FILE_SIZE);
+            } else {
+                result_foreactor.push_back(new char[FILE_SIZE]);
+                memcpy(result_foreactor.back(), READ_BUF, FILE_SIZE);
+            }
         }
     }
     // key found at level-1
@@ -87,152 +157,55 @@ void do_get_serial(bool check_result) {
         ssize_t ret = pread(files[level][index], READ_BUF, FILE_SIZE, 0);
         if (check_result) {
             assert(ret == FILE_SIZE);
-            result_serial.push_back(new char[FILE_SIZE]);
-            memcpy(result_serial.back(), READ_BUF, FILE_SIZE);
-        }
-    }
-    auto t2 = std::chrono::high_resolution_clock::now();
-
-    if (!check_result) {
-        std::chrono::duration<double, std::milli> time_finish_syscalls = t2 - t1;
-        std::cout << "Serial - total time: " << time_finish_syscalls.count() << " ms" << std::endl;
-    }
-
-    close_all(files);
-}
-
-
-void build_get_scgraph(fa::SCGraph *scgraph, std::vector<std::vector<int>>& files,
-                       uint64_t (*GenNodeId)(int, int, int)) {
-    fa::SyscallNode *last_node = nullptr;
-    // level-0 tables from latest to oldest
-    for (int index = FILES_PER_LEVEL - 1; index >= 0; --index) {
-        int fd = files[0][index];
-        if (fd < 0) {
-            // need to open
-            auto node_open = new fa::SyscallOpen(table_name(0, index), 0, O_RDONLY);
-            auto node_pread = new fa::SyscallPread(-1, FILE_SIZE, 0,
-                                                   std::vector{false, true, true});
-            assert(scgraph->AddNode(GenNodeId(0, index, 0), node_open));
-            assert(scgraph->AddNode(GenNodeId(0, index, 1), node_pread));
-            if (last_node != nullptr)
-                last_node->SetNext(node_open, /*weak_edge*/ true);
-            node_open->SetNext(node_pread, /*weak_edge*/ false);
-            last_node = node_pread;
-        } else {
-            // already open
-            auto node_pread = new fa::SyscallPread(fd, FILE_SIZE, 0);
-            assert(scgraph->AddNode(GenNodeId(0, index, 1), node_pread));
-            if (last_node != nullptr)
-                last_node->SetNext(node_pread, /*weak_edge*/ true);
-            last_node = node_pread;
-        }
-    }
-    // levels 1 and beyond
-    for (int level = 1; level < NUM_LEVELS; ++level) {
-        int index = level % 8;    // simulate the calc of file in level
-        int fd = files[level][index];
-        if (fd < 0) {
-            // need to open
-            auto node_open = new fa::SyscallOpen(table_name(level, index), 0, O_RDONLY);
-            auto node_pread = new fa::SyscallPread(-1, FILE_SIZE, 0,
-                                                   std::vector{false, true, true});
-            assert(scgraph->AddNode(GenNodeId(level, index, 0), node_open));
-            assert(scgraph->AddNode(GenNodeId(level, index, 1), node_pread));
-            if (last_node != nullptr)
-                last_node->SetNext(node_open, /*weak_edge*/ true);
-            node_open->SetNext(node_pread, /*weak_edge*/ false);
-            last_node = node_pread;
-        } else {
-            // already open
-            auto node_pread = new fa::SyscallPread(fd, FILE_SIZE, 0);
-            assert(scgraph->AddNode(GenNodeId(level, index, 1), node_pread));
-            if (last_node != nullptr)
-                last_node->SetNext(node_pread, /*weak_edge*/ true);
-            last_node = node_pread;
-        }
-    }
-}
-
-void do_get_foreactor(int pre_issue_depth, fa::IOUring *ring, bool check_result) {
-    auto files = open_selective();
-
-    auto GenNodeId = [](int level, int index, int op) -> uint64_t {
-        constexpr int fmax = NUM_LEVELS * FILES_PER_LEVEL;
-        int fid = level * FILES_PER_LEVEL + index;
-        return op * fmax + fid;
-    };
-
-    // build the syscall graph
-    auto t1 = std::chrono::high_resolution_clock::now();    
-    fa::SCGraph scgraph(ring, pre_issue_depth);
-    build_get_scgraph(&scgraph, files, GenNodeId);
-
-    // make the syscalls to mimic LevelDB::Get
-    auto t2 = std::chrono::high_resolution_clock::now();
-    // level-0 tables from latest to oldest, not hit
-    for (int index = FILES_PER_LEVEL - 1; index >= 0; --index) {
-        auto *node_pread = static_cast<fa::SyscallPread *>(
-            scgraph.GetSyscallNode(GenNodeId(0, index, 1)));
-        if (files[0][index] < 0) {
-            auto *node_open = static_cast<fa::SyscallOpen *>(
-                scgraph.GetSyscallNode(GenNodeId(0, index, 0)));
-            files[0][index] = node_open->Issue();
-            node_pread->SetArgFd(files[0][index]);
-        }
-        ssize_t ret = node_pread->Issue(READ_BUF);
-        if (check_result) {
-            assert(ret == FILE_SIZE);
-            result_foreactor.push_back(new char[FILE_SIZE]);
-            memcpy(result_foreactor.back(), READ_BUF, FILE_SIZE);
-        }
-    }
-    // key found at level-1
-    for (int level = 1; level < 2; ++level) {
-        int index = level % 8;    // simulate the calc of file in level
-        auto *node_pread = static_cast<fa::SyscallPread *>(
-            scgraph.GetSyscallNode(GenNodeId(level, index, 1)));
-        if (files[level][index] < 0) {
-            auto *node_open = static_cast<fa::SyscallOpen *>(
-                scgraph.GetSyscallNode(GenNodeId(level, index, 0)));
-            files[level][index] = node_open->Issue();
-            node_pread->SetArgFd(files[level][index]);
-        }
-        ssize_t ret = node_pread->Issue(READ_BUF);
-        if (check_result) {
-            assert(ret == FILE_SIZE);
-            result_foreactor.push_back(new char[FILE_SIZE]);
-            memcpy(result_foreactor.back(), READ_BUF, FILE_SIZE);
+            if (!foreactor) {
+                result_serial.push_back(new char[FILE_SIZE]);
+                memcpy(result_serial.back(), READ_BUF, FILE_SIZE);
+            } else {
+                result_foreactor.push_back(new char[FILE_SIZE]);
+                memcpy(result_foreactor.back(), READ_BUF, FILE_SIZE);
+            }
         }
     }
     auto t3 = std::chrono::high_resolution_clock::now();
 
-    if (check_result) {
-        std::cout << "  check result ";
-        for (size_t i = 0; i < result_serial.size(); ++i) {
-            if (i >= result_foreactor.size()) {
-                std::cout << "FAILED, " << i << "-th read not found" << std::endl;
-                return;
-            }
-            if (memcmp(result_serial[i], result_foreactor[i], FILE_SIZE) != 0) {
-                std::cout << "FAILED, " << i << "-th read data mismatch" << std::endl;
-                return;
-            }
+    if (!foreactor) {
+        if (!check_result) {
+            std::chrono::duration<double, std::milli> time_finish_syscalls = t3 - t1;
+            std::cout << "Serial - total time: " << time_finish_syscalls.count() << " ms" << std::endl;
         }
-        std::cout << "PASSED" << std::endl;
-        for (char *data : result_foreactor)
-            delete[] data;
-        result_foreactor.clear();
     } else {
-        std::chrono::duration<double, std::milli> time_build_intention = t2 - t1;
-        std::chrono::duration<double, std::milli> time_finish_syscalls = t3 - t2;
-        std::cout << "foreactor (" << pre_issue_depth << ") - total time: "
-            << time_build_intention.count() + time_finish_syscalls.count() << " ms" << std::endl;
-        std::cout << "  build scgraph:   " << time_build_intention.count() << " ms" << std::endl;
-        std::cout << "  finish syscalls: " << time_finish_syscalls.count() << " ms" << std::endl;
+        if (check_result) {
+            std::cout << "  check result ";
+            for (size_t i = 0; i < result_serial.size(); ++i) {
+                if (i >= result_foreactor.size()) {
+                    std::cout << "FAILED, " << i << "-th read not found" << std::endl;
+                    return;
+                }
+                if (memcmp(result_serial[i], result_foreactor[i], FILE_SIZE) != 0) {
+                    std::cout << "FAILED, " << i << "-th read data mismatch" << std::endl;
+                    return;
+                }
+            }
+            std::cout << "PASSED" << std::endl;
+            for (char *data : result_foreactor)
+                delete[] data;
+            result_foreactor.clear();
+        } else {
+            std::chrono::duration<double, std::milli> time_build_intention = t2 - t1;
+            std::chrono::duration<double, std::milli> time_finish_syscalls = t3 - t2;
+            std::cout << "foreactor (" << pre_issue_depth << ") - total time: "
+                << time_build_intention.count() + time_finish_syscalls.count() << " ms" << std::endl;
+            std::cout << "  build scgraph:   " << time_build_intention.count() << " ms" << std::endl;
+            std::cout << "  finish syscalls: " << time_finish_syscalls.count() << " ms" << std::endl;
+        }
     }
 
     close_all(files);
+    if (foreactor) {
+        assert(scgraph != nullptr);
+        fa::UnregisterSCGraph();
+        delete scgraph;
+    }
 }
 
 
@@ -242,17 +215,17 @@ int main(void) {
     fa::IOUring ring(16);
 
     std::cout << "Correctness check --" << std::endl;
-    do_get_serial(true);
-    do_get_foreactor(4, &ring, true);
+    do_leveldb_get(/*foreactor*/ false, 0, nullptr, /*check_result*/ true);
+    do_leveldb_get(/*foreactor*/ true,  4, &ring,   /*check_result*/ true);
     std::cout << std::endl;
 
     std::cout << "Performance timing --" << std::endl;
     drop_caches();
-    do_get_serial(false);
+    do_leveldb_get(/*foreactor*/ false, 0, nullptr, /*check_result*/ false);
     drop_caches();
-    do_get_foreactor(2, &ring, false);
+    do_leveldb_get(/*foreactor*/ true,  2, &ring,   /*check_result*/ false);
     drop_caches();
-    do_get_foreactor(4, &ring, false);
+    do_leveldb_get(/*foreactor*/ true,  4, &ring,   /*check_result*/ false);
     drop_caches();
-    do_get_foreactor(8, &ring, false);
+    do_leveldb_get(/*foreactor*/ true,  8, &ring,   /*check_result*/ false);
 }

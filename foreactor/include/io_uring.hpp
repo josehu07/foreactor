@@ -9,18 +9,17 @@
 namespace foreactor {
 
 
-class SCGraph;
+class SCGraph;      // forward declaration
 
 
+// Each IOUring instance is a pair of io_uring SQ/CQ queues.
 class IOUring {
     friend class SCGraph;
 
     private:
         struct io_uring ring;
         bool ring_initialized = false;
-
-    protected:
-        int sq_length = 0;
+        const int sq_length = 0;
 
         struct io_uring *Ring() {
             return &ring;

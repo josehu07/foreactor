@@ -1,6 +1,8 @@
 #include <iostream>
 #include <string>
 #include <vector>
+#include <fcntl.h>
+#include <unistd.h>
 
 #include "scg_nodes.hpp"
 
@@ -13,12 +15,11 @@ namespace foreactor {
 
 
 class SyscallOpen final : public SyscallNode {
-    public:
-        std::string filename;
+    private:
+        std::string pathname;
         int flags;
         mode_t mode;
 
-    private:
         long SyscallSync(void *output_buf);
         void PrepUring(struct io_uring_sqe *sqe);
         void ReflectResult(void *output_buf);
@@ -28,27 +29,33 @@ class SyscallOpen final : public SyscallNode {
         // Arguments could be not ready at the point of constructing the
         // SCGraph, in which case those they must be set before calling
         // Issue on this syscall node.
-        SyscallOpen(std::string filename, int flags, mode_t mode,
+        SyscallOpen(std::string pathname, int flags, mode_t mode,
                     std::vector<bool> arg_ready
                         = std::vector{true, true, true});
         ~SyscallOpen() {}
 
         // For setting arguments whose value was not ready at construction.
-        void SetArgFilename(std::string filename_);
+        void SetArgPathname(std::string pathname_);
         void SetArgFlags(int flags_);
         void SetArgMode(mode_t mode_);
+
+        // For validating argument values at the time of syscall hijacking,
+        // to verify that the arguments recorded (and probably used in async
+        // submissions) have the same value as fed by the invocation.
+        // For syscalls that have non-ready arguments until the timepoint of
+        // invocation, this function will install their values.
+        void CheckArgs(const char *pathname_, int flags_, mode_t mode_);
 
         friend std::ostream& operator<<(std::ostream& s,
                                         const SyscallOpen& n);
 };
 
 class SyscallPread final : public SyscallNode {
-    public:
+    private:
         int fd;
         size_t count;
         off_t offset;
 
-    private:
         char *internal_buf = nullptr;   // used when issued async
 
         long SyscallSync(void *output_buf);
@@ -65,6 +72,8 @@ class SyscallPread final : public SyscallNode {
         void SetArgFd(int fd_);
         void SetArgCount(size_t count_);
         void SetArgOffset(off_t offset_);
+
+        void CheckArgs(int fd_, size_t count_, off_t offset_);
 
         friend std::ostream& operator<<(std::ostream& s,
                                         const SyscallPread& n);

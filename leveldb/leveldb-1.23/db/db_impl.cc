@@ -99,6 +99,7 @@ Options SanitizeOptions(const std::string& dbname,
   result.comparator = icmp;
   result.filter_policy = (src.filter_policy != nullptr) ? ipolicy : nullptr;
   ClipToRange(&result.max_open_files, 64 + kNumNonTableCacheFiles, 50000);
+  // [foreactor] commented out to allow very small database images
   // ClipToRange(&result.write_buffer_size, 64 << 10, 1 << 30);
   // ClipToRange(&result.max_file_size, 1 << 20, 1 << 30);
   ClipToRange(&result.block_size, 1 << 10, 4 << 20);
@@ -688,7 +689,8 @@ void DBImpl::BackgroundCall() {
   } else if (!bg_error_.ok()) {
     // No more background work after a background error.
   } else {
-    BackgroundCompaction();
+    // [foreactor] FIXME!
+    // BackgroundCompaction();
   }
 
   background_compaction_scheduled_ = false;

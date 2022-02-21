@@ -31,10 +31,10 @@ class SCGraphNode {
     friend class SCGraph;
 
     public:
-        NodeType node_type;
+        const NodeType node_type;
 
     protected:
-        SCGraph *scgraph = nullptr;     // assigned when inserted into SCGraph
+        SCGraph *scgraph = nullptr;
 
         SCGraphNode() = delete;
         SCGraphNode(NodeType node_type)
@@ -67,17 +67,16 @@ typedef enum SyscallType {
 class SyscallNode : public SCGraphNode {
     friend class SCGraph;
 
-    protected:
-        SyscallType sc_type = SC_BASE;
-        std::vector<bool> arg_ready;
+    public:
+        const SyscallType sc_type = SC_BASE;
         SyscallStage stage = STAGE_NOTREADY;
+
+    protected:
+        std::vector<bool> arg_ready;
         SCGraphNode *next_node = nullptr;
         EdgeType edge_type = EDGE_BASE;
-
-    public:
         long rc = -1;
 
-    protected:
         // Every child class must implement the following three functions.
         virtual long SyscallSync(void *output_buf) = 0;
         virtual void PrepUring(struct io_uring_sqe *sqe) = 0;
@@ -95,12 +94,22 @@ class SyscallNode : public SCGraphNode {
         // Set the next node that this node points to.
         void SetNext(SCGraphNode *node, bool weak_edge);
 
+        // Set argument installation dependencies to fill not-ready argument
+        // values in some later syscall node.
+        // TODO: finish this
+        // void CalcArg(SCGraphNode *node, CalcArgFunc func);
+
         // Invoke this syscall, possibly pre-issuing the next few syscalls
-        // in graph.
+        // in graph. Must be invoked on current frontier node only.
         long Issue(void *output_buf = nullptr);
 
-        friend std::ostream& operator<<(std::ostream& s, const SyscallNode& n);
         void PrintCommonInfo(std::ostream& s) const;
+        friend std::ostream& operator<<(std::ostream& s, const SyscallNode& n);
+
+        static inline bool AllArgsReady(std::vector<bool>& arg_ready) {
+            return std::all_of(arg_ready.begin(), arg_ready.end(),
+                               [](bool a) { return a; });
+        }
 };
 
 
@@ -112,19 +121,25 @@ class BranchNode final : public SCGraphNode {
     friend class SCGraph;
     friend class SyscallNode;
 
-    protected:
+    private:
         std::vector<SCGraphNode *> children;
         int decision = -1;      // set by SetDecision
 
         SCGraphNode *PickBranch();
 
     public:
-        BranchNode();
+        BranchNode(int decision = -1);
         ~BranchNode() {}
 
         // Set the next children nodes. Index of child in this vector
         // should correspond to the decision int.
         void SetChildren(std::vector<SCGraphNode *> children_list);
+
+        // Append child node to children list.
+        void AppendChild(SCGraphNode *child);
+
+        // Install the decision made.
+        void SetDecision(int decision_);
 
         friend std::ostream& operator<<(std::ostream& s, const BranchNode& n);
 };

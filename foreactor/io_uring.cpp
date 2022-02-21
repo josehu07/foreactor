@@ -1,5 +1,6 @@
 #include <liburing.h>
 
+#include "debug.hpp"
 #include "io_uring.hpp"
 
 
@@ -12,14 +13,21 @@ IOUring::IOUring(int sq_length)
 
     if (sq_length > 0) {
         int ret = io_uring_queue_init(sq_length, &ring, /*flags*/ 0);
-        assert(ret == 0);
+        if (ret != 0) {
+            DEBUG("initilize IOUring failed %d\n", ret);
+            return;
+        }
+
         ring_initialized = true;
+        DEBUG("initialized IOUring @ %p sq_length %d\n", &ring, sq_length);
     }
 }
 
 IOUring::~IOUring() {
-    if (ring_initialized)
+    if (ring_initialized) {
         io_uring_queue_exit(&ring);
+        DEBUG("destroyed IOUring @ %p\n", &ring);
+    }
 }
 
 

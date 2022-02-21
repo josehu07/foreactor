@@ -1,6 +1,6 @@
 # Foreactor: Guided Async I/O for Any Application
 
-TODO
+TODO (kernel version, etc.)
 
 
 ## Build Instructions
@@ -11,7 +11,7 @@ First, build and install `liburing`, a collection of helpers over io_uring:
 git clone https://github.com/axboe/liburing.git
 cd liburing
 make
-#sudo make install  # FIXME
+sudo make install
 cd ..
 ```
 
@@ -19,7 +19,7 @@ Next, build the `foreactor` library:
 
 ```bash
 cd foreactor
-make
+make clean && make
 cd ..
 ```
 
@@ -27,7 +27,7 @@ Finally, for each application of interest, go into the corresponding folder (whi
 
 ```bash
 cd demo
-make
+make clean && make
 ./makedb
 ./ldbget
 ```

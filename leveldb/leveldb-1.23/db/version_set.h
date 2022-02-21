@@ -141,8 +141,8 @@ class Version {
   Iterator* NewConcatenatingIterator(const ReadOptions&, int level) const;
 
   // [foreactor]
-  void BuildGetSCGraph(fa::SCGraph *scgraph, const std::vector<FileMetaData*>& l0tables,
-                       const Slice& internal_key, uint64_t (*GenNodeId)(FileMetaData*));
+  fa::SCGraph *BuildGetSCGraph(const std::vector<FileMetaData*>& l0tables,
+                               const Slice& internal_key, int pre_issue_depth);
 
   // Call func(arg, level, f) for every file that overlaps user_key in
   // order from newest to oldest.  If an invocation of func returns

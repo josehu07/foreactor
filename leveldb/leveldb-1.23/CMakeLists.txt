@@ -301,16 +301,6 @@ target_include_directories(leveldb
 find_package(Threads REQUIRED)
 target_link_libraries(leveldb Threads::Threads)
 
-# flags to allow ikhnaie tracing under debugging mode
-if(IKHNAIE_TRACING)
-  target_compile_options(leveldb PUBLIC
-    -ggdb
-    -gpubnames
-    -fno-omit-frame-pointer
-    -fkeep-inline-functions
-    -fkeep-static-functions)
-endif(IKHNAIE_TRACING)
-
 add_executable(leveldbutil
   "db/leveldbutil.cc"
 )

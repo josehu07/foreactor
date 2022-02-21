@@ -1,5 +1,5 @@
 CC=g++
-CXXFLAGS=-Wall -Werror -O3
+CXXFLAGS=-Wall -Werror -O3 -DNDEBUG
 
 YCSBCLI_SRC=ycsbcli.cpp cxxopts.hpp
 
@@ -8,8 +8,6 @@ LEVELDB_INC=-I./$(LEVLEDB_SRC)/include
 LEVELDB_LIB=./$(LEVLEDB_SRC)/build/libleveldb.a
 
 FOREACTOR_LIB=-L../foreactor -lforeactor -Wl,-rpath=../foreactor
-
-LIBURING_LIB=-L/home/jose/Repos/misc/liburing/src -luring -Wl,-rpath=/home/jose/Repos/misc/liburing/src
 
 
 .PHONY: all
@@ -24,7 +22,7 @@ leveldb:
 		make -j$(shell nproc)
 
 ycsbcli: leveldb $(YCSBCLI_SRC)
-	$(CC) $(CXXFLAGS) $(LEVELDB_INC) -o ycsbcli $(YCSBCLI_SRC) $(LEVELDB_LIB) -lpthread $(FOREACTOR_LIB) $(LIBURING_LIB)
+	$(CC) $(CXXFLAGS) $(LEVELDB_INC) -o ycsbcli $(YCSBCLI_SRC) $(LEVELDB_LIB) -lpthread $(FOREACTOR_LIB)
 
 
 .PHONY: clean

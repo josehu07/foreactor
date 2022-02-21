@@ -16,6 +16,11 @@
 #include "leveldb/slice.h"
 
 
+static void drop_caches(void) {
+    system("sudo sync; sudo sh -c 'echo 3 > /proc/sys/vm/drop_caches'");
+}
+
+
 typedef enum {
     READ,
     INSERT,
@@ -54,9 +59,6 @@ leveldb_open(const std::string db_location, size_t memtable_limit,
         std::cerr << status.ToString() << std::endl;
         exit(1);
     }
-
-    // Turn off BlockCache for reads.
-    read_options.fill_cache = false;
 
     return db;
 }
@@ -113,7 +115,8 @@ leveldb_stats(leveldb::DB *db)
 /** Run/load YCSB workload on a leveldb instance. */
 static uint
 do_ycsb(leveldb::DB *db, const std::vector<ycsb_req_t>& reqs,
-        const std::string value, std::vector<double>& microsecs)
+        const std::string value, bool do_drop_caches,
+        std::vector<double>& microsecs)
 {
     leveldb::Status status;
     uint cnt = 0;
@@ -158,13 +161,16 @@ do_ycsb(leveldb::DB *db, const std::vector<ycsb_req_t>& reqs,
 
         // Record all successful and failed requests.
         cnt++;
-        microsecs.push_back(std::chrono::duration<double, std::milli>(
+        microsecs.push_back(std::chrono::duration<double, std::micro>(
             time_end - time_start).count());
 
         if (!status.ok()) {
             std::cerr << "Error: req returned status: " << status.ToString()
                       << std::endl;
         }
+
+        if (do_drop_caches)
+            drop_caches();
     }
 
     return cnt;
@@ -176,6 +182,8 @@ main(int argc, char *argv[])
 {
     std::string db_location, ycsb_filename;
     size_t value_size, memtable_limit, filesize_limit;
+    int pre_issue_depth;
+    bool do_drop_caches = false;
 
     cxxopts::Options cmd_args("leveldb ycsb trace exec client");
     cmd_args.add_options()
@@ -183,9 +191,13 @@ main(int argc, char *argv[])
             ("d,directory", "directory of db", cxxopts::value<std::string>(db_location)->default_value("./dbdir"))
             ("v,value_size", "size of value", cxxopts::value<size_t>(value_size)->default_value("64"))
             ("f,ycsb", "YCSB trace filename", cxxopts::value<std::string>(ycsb_filename)->default_value(""))
-            ("s,sync", "force write sync", cxxopts::value<bool>()->default_value("false"))
             ("mlim", "memtable size limit", cxxopts::value<size_t>(memtable_limit)->default_value("4194304"))
-            ("flim", "sstable filesize limit", cxxopts::value<size_t>(filesize_limit)->default_value("2097152"));
+            ("flim", "sstable filesize limit", cxxopts::value<size_t>(filesize_limit)->default_value("2097152"))
+            ("write_sync", "force write sync", cxxopts::value<bool>()->default_value("false"))
+            ("no_fill_cache", "no block cache for gets", cxxopts::value<bool>()->default_value("false"))
+            ("drop_caches", "do drop_caches between ops", cxxopts::value<bool>()->default_value("false"))
+            ("use_foreactor", "use foreactor library if set", cxxopts::value<bool>()->default_value("false"))
+            ("pre_issue_depth", "foreactor pre_issue_depth", cxxopts::value<int>(pre_issue_depth)->default_value("0"));
     auto result = cmd_args.parse(argc, argv);
 
     if (result.count("help")) {
@@ -195,6 +207,18 @@ main(int argc, char *argv[])
 
     if (result.count("sync"))
         write_options.sync = true;
+
+    if (result.count("no_fill_cache"))
+        read_options.fill_cache = false;
+
+    if (result.count("drop_caches"))
+        do_drop_caches = true;
+
+    if (result.count("use_foreactor"))
+        read_options.use_foreactor = true;
+
+    if (pre_issue_depth >= 0)
+        read_options.foreactor_depth = pre_issue_depth;
 
     // Read in YCSB workload trace.
     std::vector<ycsb_req_t> ycsb_reqs;
@@ -230,25 +254,26 @@ main(int argc, char *argv[])
 
     // Execute the actions of the YCSB trace.
     std::vector<double> microsecs;
-    uint cnt = do_ycsb(db, ycsb_reqs, value, microsecs);
-    std::cout << "Finished " << cnt << " requests." << std::endl;
+    uint cnt = do_ycsb(db, ycsb_reqs, value, do_drop_caches, microsecs);
+    std::cout << "Finished " << cnt << " requests." << std::endl << std::endl;
     if (cnt > 0) {
         assert(microsecs.size() == cnt);
         std::cout << "Time elapsed:" << std::endl << "  [";
-        double avg_us = 0., max_us = std::numeric_limits<double>::min(),
+        double sum_us = 0., max_us = std::numeric_limits<double>::min(),
                             min_us = std::numeric_limits<double>::max();
         for (double& us : microsecs) {
             std::cout << " " << us << " ";
-            avg_us += us;
+            sum_us += us;
             max_us = us > max_us ? us : max_us;
             min_us = us < min_us ? us : min_us;
         }
-        avg_us /= microsecs.size();
-        std::cout << "]" << std::endl;
+        double avg_us = sum_us / microsecs.size();
+        std::cout << "]" << std::endl << std::endl;
         std::cout << "Time elapsed stats:" << std::endl
-                  << "  avg  " << avg_us << "us" << std::endl
-                  << "  max  " << max_us << "us" << std::endl
-                  << "  min  " << min_us << "us" << std::endl;
+                  << "  sum  " << sum_us << " us" << std::endl
+                  << "  avg  " << avg_us << " us" << std::endl
+                  << "  max  " << max_us << " us" << std::endl
+                  << "  min  " << min_us << " us" << std::endl;
     }
 
     // Force compaction of everything in memory.

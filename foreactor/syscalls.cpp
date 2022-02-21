@@ -7,25 +7,23 @@
 #include <unistd.h>
 #include <liburing.h>
 
+#include "debug.hpp"
 #include "scg_nodes.hpp"
+#include "posix_itf.hpp"
 #include "syscalls.hpp"
 
 
 namespace foreactor {
 
 
-static bool AllArgsReady(std::vector<bool>& arg_ready) {
-    return std::all_of(arg_ready.begin(), arg_ready.end(),
-                       [](bool a) { return a; });
-}
-
 template <typename T>
 static void SetArg(SyscallStage& stage, std::vector<bool>& arg_ready,
                    int arg_index, T& arg_field, T arg_value) {
+    assert(arg_index >= 0 && arg_index < arg_ready.size());
     assert(!arg_ready[arg_index] && stage == STAGE_NOTREADY);
     arg_field = arg_value;
     arg_ready[arg_index] = true;
-    if (AllArgsReady(arg_ready))
+    if (SyscallNode::AllArgsReady(arg_ready))
         stage = STAGE_UNISSUED;
 }
 
@@ -34,16 +32,16 @@ static void SetArg(SyscallStage& stage, std::vector<bool>& arg_ready,
 // open //
 //////////
 
-SyscallOpen::SyscallOpen(std::string filename, int flags, mode_t mode,
+SyscallOpen::SyscallOpen(std::string pathname, int flags, mode_t mode,
                          std::vector<bool> arg_ready)
         : SyscallNode(SC_OPEN, /*pure_sc*/ false, arg_ready),
-          filename(filename), flags(flags), mode(mode) {
+          pathname(pathname), flags(flags), mode(mode) {
     assert(arg_ready.size() == 3);
 }
 
 std::ostream& operator<<(std::ostream& s, const SyscallOpen& n) {
     s << "SyscallOpen{"
-      << "filename=" << n.filename << ","
+      << "pathname=\"" << n.pathname << "\","
       << "flags=" << n.flags << ","
       << "mode" << n.mode << ",";
     n.PrintCommonInfo(s);
@@ -53,11 +51,11 @@ std::ostream& operator<<(std::ostream& s, const SyscallOpen& n) {
 
 long SyscallOpen::SyscallSync(void *output_buf) {
     (void) output_buf;      // unused
-    return open(filename.c_str(), flags, mode);
+    return posix::open(pathname.c_str(), flags, mode);
 }
 
 void SyscallOpen::PrepUring(struct io_uring_sqe *sqe) {
-    io_uring_prep_openat(sqe, AT_FDCWD, filename.c_str(), flags, mode);
+    io_uring_prep_openat(sqe, AT_FDCWD, pathname.c_str(), flags, mode);
 }
 
 void SyscallOpen::ReflectResult(void *output_buf) {
@@ -65,8 +63,8 @@ void SyscallOpen::ReflectResult(void *output_buf) {
     return;
 }
 
-void SyscallOpen::SetArgFilename(std::string filename_) {
-    SetArg(stage, arg_ready, 0, filename, filename_);
+void SyscallOpen::SetArgPathname(std::string pathname_) {
+    SetArg(stage, arg_ready, 0, pathname, pathname_);
 }
 
 void SyscallOpen::SetArgFlags(int flags_) {
@@ -75,6 +73,19 @@ void SyscallOpen::SetArgFlags(int flags_) {
 
 void SyscallOpen::SetArgMode(mode_t mode_) {
     SetArg(stage, arg_ready, 2, mode, mode_);
+}
+
+void SyscallOpen::CheckArgs(const char *pathname_, int flags_, mode_t mode_) {
+    assert(pathname_ != nullptr);
+    if (stage == STAGE_NOTREADY) {
+        assert(arg_ready.size() == 3);
+        if (!arg_ready[0]) SetArgPathname(std::string(pathname_));
+        if (!arg_ready[1]) SetArgFlags(flags_);
+        if (!arg_ready[2]) SetArgMode(mode_);
+    }
+    assert(strcmp(pathname_, pathname.c_str()) == 0);
+    assert(flags_ == flags);
+    assert(mode_ == mode);
 }
 
 
@@ -111,7 +122,7 @@ std::ostream& operator<<(std::ostream& s, const SyscallPread& n) {
 long SyscallPread::SyscallSync(void *output_buf) {
     assert(output_buf != nullptr);
     char *buf = reinterpret_cast<char *>(output_buf);
-    return pread(fd, buf, count, offset);
+    return posix::pread(fd, buf, count, offset);
 }
 
 void SyscallPread::PrepUring(struct io_uring_sqe *sqe) {
@@ -131,11 +142,23 @@ void SyscallPread::SetArgFd(int fd_) {
 }
 
 void SyscallPread::SetArgCount(size_t count_) {
-    SetArg(stage, arg_ready, 2, count, count_);
+    SetArg(stage, arg_ready, 1, count, count_);
 }
 
 void SyscallPread::SetArgOffset(off_t offset_) {
-    SetArg(stage, arg_ready, 3, offset, offset_);
+    SetArg(stage, arg_ready, 2, offset, offset_);
+}
+
+void SyscallPread::CheckArgs(int fd_, size_t count_, off_t offset_) {
+    if (stage == STAGE_NOTREADY) {
+        assert(arg_ready.size() == 3);
+        if (!arg_ready[0]) SetArgFd(fd_);
+        if (!arg_ready[1]) SetArgCount(count_);
+        if (!arg_ready[2]) SetArgOffset(offset_);
+    }
+    assert(fd_ == fd);
+    assert(count_ == count);
+    assert(offset_ == offset);
 }
 
 

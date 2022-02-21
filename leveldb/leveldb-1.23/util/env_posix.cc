@@ -35,9 +35,6 @@
 #include "util/env_posix_test_helper.h"
 #include "util/posix_logger.h"
 
-#include <foreactor.hpp>
-namespace fa = foreactor;
-
 namespace leveldb {
 
 namespace {
@@ -49,7 +46,7 @@ int g_open_read_only_file_limit = -1;
 constexpr const int kDefaultMmapLimit = (sizeof(void*) >= 8) ? 1000 : 0;
 
 // Can be set using EnvPosixTestHelper::SetReadOnlyMMapLimit().
-// [foreactor]
+// [foreactor] disable mmap for RandomAccessFiles
 // int g_mmap_limit = kDefaultMmapLimit;
 int g_mmap_limit = 0;
 
@@ -174,8 +171,7 @@ class PosixRandomAccessFile final : public RandomAccessFile {
   }
 
   Status Read(uint64_t offset, size_t n, Slice* result,
-              char* scratch,
-              fa::SyscallPread* node_pread_data = nullptr) const override {
+              char* scratch) const override {
     int fd = fd_;
     if (!has_permanent_fd_) {
       fd = ::open(filename_.c_str(), O_RDONLY | kOpenBaseFlags);
@@ -187,12 +183,7 @@ class PosixRandomAccessFile final : public RandomAccessFile {
     assert(fd != -1);
 
     Status status;
-    // [foreactor]
-    ssize_t read_size;
-    if (node_pread_data == nullptr)
-      read_size = ::pread(fd, scratch, n, static_cast<off_t>(offset));
-    else
-      read_size = node_pread_data->Issue(scratch);
+    ssize_t read_size = ::pread(fd, scratch, n, static_cast<off_t>(offset));
     *result = Slice(scratch, (read_size < 0) ? 0 : read_size);
     if (read_size < 0) {
       // An error: return a non-ok status.
@@ -245,8 +236,7 @@ class PosixMmapReadableFile final : public RandomAccessFile {
   }
 
   Status Read(uint64_t offset, size_t n, Slice* result,
-              char* scratch,
-              fa::SyscallPread* node_pread_data = nullptr) const override {
+              char* scratch) const override {
     if (offset + n > length_) {
       *result = Slice();
       return PosixError(filename_, EINVAL);

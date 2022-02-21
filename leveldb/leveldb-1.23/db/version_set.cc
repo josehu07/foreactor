@@ -19,9 +19,10 @@
 #include "util/coding.h"
 #include "util/logging.h"
 
-#include <iostream>
+// [foreactor]
 #include <foreactor.hpp>
 namespace fa = foreactor;
+#include <iostream>
 #include <fcntl.h>
 #include "table/format.h"
 
@@ -285,59 +286,66 @@ static bool NewestFirst(FileMetaData* a, FileMetaData* b) {
 }
 
 // [foreactor]
-void Version::BuildGetSCGraph(fa::SCGraph *scgraph, const std::vector<FileMetaData*>& l0tables,
-                              const Slice& internal_key, uint64_t (*GenNodeId)(FileMetaData*)) {
-  fa::SyscallNode *last_node = nullptr;
-  for (size_t i = 0; i < l0tables.size(); i++) {
-    Cache::Handle* handle = vset_->table_cache_->TryFindTable(l0tables[i]->number);
+fa::SCGraph* Version::BuildGetSCGraph(const std::vector<FileMetaData*>& tables,
+                                      const Slice& internal_key,
+                                      int pre_issue_depth) {
+  auto GenNodeId = [](FileMetaData* f, int op) -> uint64_t {
+    // TODO: this is now arbitrary
+    return reinterpret_cast<uint64_t>(f) + static_cast<uint64_t>(op);
+  };
+  fa::SCGraph* scgraph = new fa::SCGraph(&vset_->fa_ring, pre_issue_depth);
+
+  fa::SyscallPread *last_pread_data = nullptr;
+  for (size_t i = 0; i < tables.size(); i++) {
+    Cache::Handle* handle = vset_->table_cache_->TryFindTable(tables[i]->number);
     Table* table = vset_->table_cache_->HandleToTable(handle);
 
+    auto node_branch_open = new fa::BranchNode(table == nullptr
+                                               ? 0     // need open
+                                               : 1);   // already open
+    auto node_open = new fa::SyscallOpen(TableFileName(vset_->dbname_, tables[i]->number),
+                                         O_CLOEXEC,
+                                         O_RDONLY);
+    auto node_pread_footer = new fa::SyscallPread(-1,
+                                                  Footer::kEncodedLength,
+                                                  tables[i]->file_size - Footer::kEncodedLength,
+                                                  std::vector{false, true, true});
+    auto node_pread_index = new fa::SyscallPread(-1,
+                                                 0,
+                                                 0,
+                                                 std::vector{false, false, false});
+    fa::SyscallPread* node_pread_data = nullptr;
     if (table == nullptr) {
-      // need to open
-      // TODO: complete this branch
-      // auto node_open = new fa::SyscallOpen(TableFileName(vset_->dbname_, l0tables[i]->number),
-      //                                      0,
-      //                                      O_RDONLY);
-      // auto node_pread_footer = new fa::SyscallPread(-1,
-      //                                               Footer::kEncodedLength,
-      //                                               l0tables[i]->file_size - Footer::kEncodedLength,
-      //                                               std::vector{false, true, true});
-      // auto node_pread_index  = new fa::SyscallPread(-1,
-      //                                               0,
-      //                                               0,
-      //                                               std::vector{false, false, false});
-      // auto node_pread_data   = new fa::SyscallPread(-1,
-      //                                               0,
-      //                                               0,
-      //                                               std::vector{false, false, false});
-      // scgraph->AddNode(GenNodeId(0, i, 0), node_open);
-      // scgraph->AddNode(GenNodeId(0, i, 1), node_pread_footer);
-      // scgraph->AddNode(GenNodeId(0, i, 2), node_pread_index);
-      // scgraph->AddNode(GenNodeId(0, i, 3), node_pread_data);
-      // if (last_node != nullptr)
-      //   last_node->SetNext(node_open, /*weak_edge*/ true);
-      // node_open->SetNext(node_pread_footer, /*weak_edge*/ false);
-      // node_pread_footer->SetNext(node_pread_index, /*weak_edge*/ false);
-      // node_pread_index->SetNext(node_pread_data, /*weak_edge*/ false);
-      // last_node = node_pread_data;
+      node_pread_data = new fa::SyscallPread(-1,
+                                             0,
+                                             0,
+                                             std::vector{false, false, false});
     } else {
-      // already open
       BlockHandle block_handle;
       bool searched = table->SearchBlockHandle(internal_key, block_handle);
-      if (!searched)
-        continue;
-      auto node_pread_data = new fa::SyscallPread(table->GetFileFd(),
-                                                  table->HandleToBlockSize(block_handle),
-                                                  table->HandleToBlockOffset(block_handle));
-      scgraph->AddNode(reinterpret_cast<uint64_t>(l0tables[i]), node_pread_data);
-      if (last_node != nullptr)
-        last_node->SetNext(node_pread_data, /*weak_edge*/ true);
-      last_node = node_pread_data;
+      assert(searched);
+      node_pread_data = new fa::SyscallPread(table->GetFileFd(),
+                                             table->HandleToBlockSize(block_handle),
+                                             table->HandleToBlockOffset(block_handle));
     }
+    scgraph->AddNode(GenNodeId(tables[i], 0), node_branch_open, i == 0);
+    scgraph->AddNode(GenNodeId(tables[i], 1), node_open);
+    scgraph->AddNode(GenNodeId(tables[i], 2), node_pread_footer);
+    scgraph->AddNode(GenNodeId(tables[i], 3), node_pread_index);
+    scgraph->AddNode(GenNodeId(tables[i], 5), node_pread_data);
+    if (last_pread_data != nullptr)
+      last_pread_data->SetNext(node_branch_open, /*weak_edge*/ true);
+    node_branch_open->SetChildren(std::vector<fa::SCGraphNode*>{node_open, node_pread_data});
+    node_open->SetNext(node_pread_footer, /*weak_edge*/ false);
+    node_pread_footer->SetNext(node_pread_index, /*weak_edge*/ false);
+    node_pread_index->SetNext(node_pread_data, /*weak_edge*/ false);
+    last_pread_data = node_pread_data;
 
     if (handle != nullptr)
       vset_->table_cache_->ReleaseHandle(handle);
   }
+
+  return scgraph;
 }
 
 void Version::ForEachOverlapping(Slice user_key, Slice internal_key, void* arg,
@@ -389,29 +397,40 @@ Status Version::Get(const ReadOptions& options, const LookupKey& k,
   stats->seek_file_level = -1;
 
   // [foreactor]
-  // Search level-0 in order from newest to oldest.
-  const Comparator* ucmp = vset_->icmp_.user_comparator();
-  std::vector<FileMetaData*> tmp;
-  tmp.reserve(files_[0].size());
-  for (uint32_t i = 0; i < files_[0].size(); i++) {
-    FileMetaData* f = files_[0][i];
-    if (ucmp->Compare(k.user_key(), f->smallest.user_key()) >= 0 &&
-        ucmp->Compare(k.user_key(), f->largest.user_key()) <= 0) {
-      tmp.push_back(f);
+  fa::SCGraph* scgraph = nullptr;
+  if (options.use_foreactor) {
+    assert(options.foreactor_depth >= 0);
+    // Search level-0 in order from newest to oldest.
+    const Comparator* ucmp = vset_->icmp_.user_comparator();
+    std::vector<FileMetaData*> tmp;
+    tmp.reserve(files_[0].size());
+    for (uint32_t i = 0; i < files_[0].size(); i++) {
+      FileMetaData* f = files_[0][i];
+      if (ucmp->Compare(k.user_key(), f->smallest.user_key()) >= 0 &&
+          ucmp->Compare(k.user_key(), f->largest.user_key()) <= 0) {
+        tmp.push_back(f);
+      }
     }
+    if (!tmp.empty())
+      std::sort(tmp.begin(), tmp.end(), NewestFirst);
+    // Search other levels.
+    for (int level = 1; level < config::kNumLevels; level++) {
+      size_t num_files = files_[level].size();
+      if (num_files == 0) continue;
+      // Binary search to find earliest index whose largest key >= internal_key.
+      uint32_t index = FindFile(vset_->icmp_, files_[level], k.internal_key());
+      if (index < num_files) {
+        FileMetaData* f = files_[level][index];
+        if (ucmp->Compare(k.user_key(), f->smallest.user_key()) < 0) {
+          // All of "f" is past any data for user_key
+        } else {
+          tmp.push_back(f);
+        }
+      }
+    }
+    scgraph = BuildGetSCGraph(tmp, k.internal_key(), options.foreactor_depth);
+    fa::RegisterSCGraph(scgraph, &vset_->fa_ring);
   }
-  if (!tmp.empty())
-    std::sort(tmp.begin(), tmp.end(), NewestFirst);
-
-  // [foreactor]
-  auto GenNodeId = [](FileMetaData* f) -> uint64_t {
-    // TODO: this is now too arbitrary
-    // constexpr int LEVEL_BASE = 1000;
-    // constexpr int NODES_BASE = 10;
-    return reinterpret_cast<uint64_t>(f);
-  };
-  fa::SCGraph* scgraph = new fa::SCGraph(&vset_->fa_ring, 8);
-  BuildGetSCGraph(scgraph, tmp, k.internal_key(), GenNodeId);
 
   struct State {
     Saver saver;
@@ -424,9 +443,6 @@ Status Version::Get(const ReadOptions& options, const LookupKey& k,
     VersionSet* vset;
     Status s;
     bool found;
-
-    // [foreactor]
-    fa::SCGraph* scgraph;
 
     static bool Match(void* arg, int level, FileMetaData* f) {
       State* state = reinterpret_cast<State*>(arg);
@@ -441,14 +457,9 @@ Status Version::Get(const ReadOptions& options, const LookupKey& k,
       state->last_file_read = f;
       state->last_file_read_level = level;
 
-      // [foreactor]
-      fa::SyscallPread* node_pread_data = static_cast<fa::SyscallPread*>(
-        state->scgraph->GetSyscallNode(reinterpret_cast<uint64_t>(f)));
-      // node_pread_data = nullptr;
       state->s = state->vset->table_cache_->Get(*state->options, f->number,
                                                 f->file_size, state->ikey,
-                                                &state->saver, SaveValue,
-                                                node_pread_data);  // could be nullptr
+                                                &state->saver, SaveValue);
       if (!state->s.ok()) {
         state->found = true;
         return false;
@@ -489,13 +500,14 @@ Status Version::Get(const ReadOptions& options, const LookupKey& k,
   state.saver.user_key = k.user_key();
   state.saver.value = value;
 
-  // [foreactor]
-  state.scgraph = scgraph;
-
   ForEachOverlapping(state.saver.user_key, state.ikey, &state, &State::Match);
 
   // [foreactor]
-  delete scgraph;
+  if (options.use_foreactor) {
+    assert(scgraph != nullptr);
+    fa::UnregisterSCGraph();
+    delete scgraph;
+  }
 
   return state.found ? state.s : Status::NotFound(Slice());
 }
@@ -834,7 +846,7 @@ class VersionSet::Builder {
 VersionSet::VersionSet(const std::string& dbname, const Options* options,
                        TableCache* table_cache,
                        const InternalKeyComparator* cmp)
-    : fa_ring(16),
+    : fa_ring(16),    // [foreactor]
       env_(options->env),
       dbname_(dbname),
       options_(options),

@@ -10,9 +10,6 @@
 #include "leveldb/export.h"
 #include "leveldb/iterator.h"
 
-#include <foreactor.hpp>
-namespace fa = foreactor;
-
 namespace leveldb {
 
 class Block;
@@ -71,9 +68,7 @@ class LEVELDB_EXPORT Table {
   friend class TableCache;
   struct Rep;
 
-  static Iterator* BlockReader(void*, const ReadOptions&, const Slice&,
-                               fa::SyscallPread* node_pread_data);
-  static Iterator* BlockReaderOrig(void*, const ReadOptions&, const Slice&);
+  static Iterator* BlockReader(void*, const ReadOptions&, const Slice&);
 
   explicit Table(Rep* rep) : rep_(rep) {}
 
@@ -82,8 +77,7 @@ class LEVELDB_EXPORT Table {
   // that key is not present.
   Status InternalGet(const ReadOptions&, const Slice& key, void* arg,
                      void (*handle_result)(void* arg, const Slice& k,
-                                           const Slice& v),
-                     fa::SyscallPread* node_pread_data = nullptr);
+                                           const Slice& v));
 
   void ReadMeta(const Footer& footer);
   void ReadFilter(const Slice& filter_handle_value);
