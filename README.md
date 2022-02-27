@@ -33,6 +33,11 @@ make clean && make
 ```
 
 
+## Making a New Plugin
+
+TODO
+
+
 ## TODO List
 
 - [ ] internal buffer cleanup

@@ -1,5 +1,5 @@
 CC=g++
-CXXFLAGS=-Wall -Werror -O3 -DNDEBUG
+CXXFLAGS=-Wall -Werror -std=c++20 -O3 -DNDEBUG
 
 YCSBCLI_SRC=ycsbcli.cpp cxxopts.hpp
 

@@ -258,17 +258,17 @@ main(int argc, char *argv[])
     std::cout << "Finished " << cnt << " requests." << std::endl << std::endl;
     if (cnt > 0) {
         assert(microsecs.size() == cnt);
-        std::cout << "Time elapsed:" << std::endl << "  [";
+        // std::cout << "Time elapsed:" << std::endl << "  [";
         double sum_us = 0., max_us = std::numeric_limits<double>::min(),
                             min_us = std::numeric_limits<double>::max();
         for (double& us : microsecs) {
-            std::cout << " " << us << " ";
+            // std::cout << " " << us << " ";
             sum_us += us;
             max_us = us > max_us ? us : max_us;
             min_us = us < min_us ? us : min_us;
         }
         double avg_us = sum_us / microsecs.size();
-        std::cout << "]" << std::endl << std::endl;
+        // std::cout << "]" << std::endl << std::endl;
         std::cout << "Time elapsed stats:" << std::endl
                   << "  sum  " << sum_us << " us" << std::endl
                   << "  avg  " << avg_us << " us" << std::endl

@@ -1,23 +1,23 @@
 CC=g++
-CXXFLAGS=-O3 -DNDEBUG -Werror -Wno-unused-variable -std=c++20 -D_GNU_SOURCE
+CXXFLAGS=-Wall -Werror -std=c++20 -D_GNU_SOURCE -O3 -DNDEBUG -DNTIMER
 
-FOREACTOR_PATH=$(shell dirname $(realpath $(lastword $(MAKEFILE_LIST))))
-FOREACTOR_SRCS=$(wildcard $(FOREACTOR_PATH)/*.cpp)
-FOREACTOR_OBJS=$(patsubst %.cpp, %.o, $(FOREACTOR_SRCS))
-FOREACTOR_INC=-I$(FOREACTOR_PATH)/include
+FA_SRCS:=$(wildcard core/*.cpp)
+FA_SRCS+=$(wildcard utils/*.cpp)
+FA_OBJS:=$(patsubst %.cpp,%.o,$(FA_SRCS))
+FA_INCL:=-I./include -I./utils
 
 
 .PHONY: all
-all: foreactor
+all: libforeactor.so
 
 
 %.o: %.cpp
-	$(CC) -c -fPIC $(CXXFLAGS) $(FOREACTOR_INC) $< -o $@ -luring -ldl
+	$(CC) $(CXXFLAGS) -c -fPIC $(FA_INCL) $< -o $@ -luring -ldl
 
-foreactor: $(FOREACTOR_OBJS)
-	$(CC) $^ -shared -o lib$@.so -luring -ldl
+libforeactor.so: $(FA_OBJS)
+	$(CC) $(CXXFLAGS) -fPIC -shared $^ -o $@ -luring -ldl
 
 
 .PHONY: clean
 clean:
-	rm -f *.o lib*.so
+	rm -f $(FA_OBJS) lib*.so

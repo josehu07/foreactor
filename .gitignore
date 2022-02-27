@@ -1,1 +1,3 @@
+*.o
+lib*.so
 liburing/

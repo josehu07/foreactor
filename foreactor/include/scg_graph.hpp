@@ -35,6 +35,7 @@ class SCGraph {
     friend class BranchNode;
 
     private:
+        unsigned graph_id;
         IOUring * const ring = nullptr;
         std::unordered_map<uint64_t, SCGraphNode *> nodes;
 
@@ -51,7 +52,7 @@ class SCGraph {
 
     public:
         SCGraph() = delete;
-        SCGraph(IOUring *ring, int pre_issue_depth);
+        SCGraph(unsigned graph_id, IOUring *ring, int pre_issue_depth);
         ~SCGraph();
 
         // Add a new node into graph.
