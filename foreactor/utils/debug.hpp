@@ -1,0 +1,63 @@
+#include <string>
+#include <iostream>
+#include <sstream>
+#include <assert.h>
+#include <stdio.h>
+#include <string.h>
+#include <stdarg.h>
+#include <stdlib.h>
+
+
+#ifndef __FOREACTOR_DEBUG_H__
+#define __FOREACTOR_DEBUG_H__
+
+
+// DEBUG() and assert() are not active if NDEBUG is defined
+#ifdef NDEBUG
+
+#define DEBUG(msg, ...)
+
+#else
+
+#define DEBUG(msg, ...)                              \
+    do {                                             \
+        const char *tmp = strrchr(__FILE__, '/');    \
+        const char *file = tmp ? tmp + 1 : __FILE__; \
+        fprintf(stderr, "[%15s:%-4d@t:%-6d]  " msg,  \
+                file, __LINE__, tid, ##__VA_ARGS__); \
+    } while (0)
+
+#endif
+
+
+#define PANIC_IF(cond, msg, ...)                         \
+    do {                                                 \
+        if (cond) {                                      \
+            const char *tmp = strrchr(__FILE__, '/');    \
+            const char *file = tmp ? tmp + 1 : __FILE__; \
+            fprintf(stderr, "[%15s:%-4d@t:%-6d]  " msg,  \
+                    file, __LINE__, tid, ##__VA_ARGS__); \
+            exit(-1);                                    \
+        }                                                \
+    } while (0)
+
+
+namespace foreactor {
+
+
+// thread ID
+extern thread_local const pid_t tid;
+
+
+template <typename T>
+static std::string StreamStr(T *item) {
+    std::ostringstream ss;
+    ss << *item;
+    return ss.str();
+}
+
+
+}
+
+
+#endif
