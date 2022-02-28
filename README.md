@@ -1,4 +1,4 @@
-# Foreactor: Guided Async I/O for Any Application
+# Foreactor: Transparent Async Syscalls for Any Application
 
 TODO (kernel version, etc.)
 
@@ -23,19 +23,16 @@ make clean && make
 cd ..
 ```
 
-Finally, for each application of interest, go into the corresponding folder (which contains its foreactor-patched source code), then follow the README down there. Example:
-
-```bash
-cd demo
-make clean && make
-./makedb
-./ldbget
-```
+Finally, for each application of interest, go into the corresponding folder (which contains its foreactor-patched source code), then follow the README down there.
 
 
 ## Making a New Plugin
 
 TODO
+
+```bash
+objdump -t path/to/original/app/file.o | grep funcname_keyword
+```
 
 
 ## TODO List

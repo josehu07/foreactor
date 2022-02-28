@@ -1,13 +1,14 @@
 CC=g++
 CXXFLAGS=-Wall -Werror -std=c++20 -O3 -DNDEBUG
 
-YCSBCLI_SRC=ycsbcli.cpp cxxopts.hpp
+LDB_DIR:=leveldb-src
+LDB_INCL:=-I./$(LDB_DIR)/include
+LDB_DLIB:=-L./$(LDB_DIR)/build -lleveldb -Wl,-rpath=./$(LDB_DIR)/build
 
-LEVLEDB_SRC=leveldb-1.23
-LEVELDB_INC=-I./$(LEVLEDB_SRC)/include
-LEVELDB_LIB=./$(LEVLEDB_SRC)/build/libleveldb.a
+CLI_SRCS:=$(wildcard ./ycsbcli-src/*.cpp)
+CLI_OBJS:=$(patsubst %.cpp,%.o,$(CLI_SRCS))
 
-FOREACTOR_LIB=-L../foreactor -lforeactor -Wl,-rpath=../foreactor
+FA_DLIB:=-L../foreactor -lforeactor -Wl,-rpath=../foreactor
 
 
 .PHONY: all
@@ -16,16 +17,20 @@ all: leveldb ycsbcli
 
 .PHONY: leveldb
 leveldb:
-	mkdir -p $(LEVLEDB_SRC)/build
-	cd $(LEVLEDB_SRC)/build && \
+	mkdir -p $(LDB_DIR)/build
+	cd $(LDB_DIR)/build && \
 		cmake -DCMAKE_BUILD_TYPE=Release -DCMAKE_CXX_STANDARD=20 .. && \
 		make -j$(shell nproc)
 
-ycsbcli: leveldb $(YCSBCLI_SRC)
-	$(CC) $(CXXFLAGS) $(LEVELDB_INC) -o ycsbcli $(YCSBCLI_SRC) $(LEVELDB_LIB) -lpthread $(FOREACTOR_LIB)
+
+$(CLI_OBJS): %.o: %.cpp
+	$(CC) $(CXXFLAGS) -c $(LDB_INCL) $< -o $@ -lpthread $(LDB_DLIB) $(FA_DLIB)
+
+ycsbcli: leveldb $(CLI_OBJS)
+	$(CC) $(CXXFLAGS) $(CLI_OBJS) -o $@ -lpthread $(LDB_DLIB) $(FA_DLIB)
 
 
 .PHONY: clean
 clean:
-	rm -rf $(LEVLEDB_SRC)/build
-	rm -f ycsbcli
+	rm -rf $(LDB_DIR)/build
+	rm -f $(CLI_OBJS) ycsbcli

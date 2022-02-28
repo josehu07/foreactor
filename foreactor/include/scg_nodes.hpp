@@ -11,8 +11,10 @@
 namespace foreactor {
 
 
-class SCGraph;
+class SCGraph;  // forward declaration
 
+
+// Types of nodes on graph.
 typedef enum NodeType {
     NODE_BASE,
     NODE_SC_PURE,   // pure syscall with no state changes, e.g., pread
@@ -20,13 +22,16 @@ typedef enum NodeType {
     NODE_BRANCH     // special branching control flow
 } NodeType;
 
+// Types of edges between nodes.
 typedef enum EdgeType {
     EDGE_BASE,
     EDGE_MUST,      // if predecessor occurs, the successor must occur
     EDGE_WEAK       // early exit could happen on this edge
 } EdgeType;
 
+
 // Parent class of a node in the dependency graph.
+// Never do direct instantiation of this parent class.
 class SCGraphNode {
     friend class SCGraph;
 
@@ -46,6 +51,7 @@ class SCGraphNode {
 };
 
 
+// Stages of a SyscallNode.
 typedef enum SyscallStage {
     STAGE_NOTREADY,     // there are missing arguments, not ready for issuing
     STAGE_UNISSUED,     // args are complete, not issued yet
@@ -53,11 +59,13 @@ typedef enum SyscallStage {
     STAGE_FINISHED      // issued sync / issued async and completion harvested
 } SyscallStage;
 
+// Concrete syscall types of SyscallNode.
 typedef enum SyscallType {
     SC_BASE,
     SC_OPEN,    // open
     SC_PREAD    // pread
 } SyscallType;
+
 
 // Parent class of a syscall node in the dependency graph.
 // Each syscall type is a child class that inherits from this class, and a
@@ -91,6 +99,14 @@ class SyscallNode : public SCGraphNode {
         virtual ~SyscallNode() {}
 
     public:
+        void PrintCommonInfo(std::ostream& s) const;
+        friend std::ostream& operator<<(std::ostream& s, const SyscallNode& n);
+
+        static inline bool AllArgsReady(std::vector<bool>& arg_ready) {
+            return std::all_of(arg_ready.begin(), arg_ready.end(),
+                               [](bool a) { return a; });
+        }
+
         // Set the next node that this node points to.
         void SetNext(SCGraphNode *node, bool weak_edge);
 
@@ -102,14 +118,6 @@ class SyscallNode : public SCGraphNode {
         // Invoke this syscall, possibly pre-issuing the next few syscalls
         // in graph. Must be invoked on current frontier node only.
         long Issue(void *output_buf = nullptr);
-
-        void PrintCommonInfo(std::ostream& s) const;
-        friend std::ostream& operator<<(std::ostream& s, const SyscallNode& n);
-
-        static inline bool AllArgsReady(std::vector<bool>& arg_ready) {
-            return std::all_of(arg_ready.begin(), arg_ready.end(),
-                               [](bool a) { return a; });
-        }
 };
 
 
@@ -131,6 +139,8 @@ class BranchNode final : public SCGraphNode {
         BranchNode(int decision = -1);
         ~BranchNode() {}
 
+        friend std::ostream& operator<<(std::ostream& s, const BranchNode& n);
+
         // Set the next children nodes. Index of child in this vector
         // should correspond to the decision int.
         void SetChildren(std::vector<SCGraphNode *> children_list);
@@ -140,8 +150,6 @@ class BranchNode final : public SCGraphNode {
 
         // Install the decision made.
         void SetDecision(int decision_);
-
-        friend std::ostream& operator<<(std::ostream& s, const BranchNode& n);
 };
 
 

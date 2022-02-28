@@ -1,11 +1,11 @@
 CC=g++
 CXXFLAGS=-Wall -Werror -std=c++20 -O3 -DNDEBUG
 
-APP_SRCS:=$(wildcard ./src/*.cpp)
+APP_SRCS:=$(wildcard ./demoapp-src/*.cpp)
 APP_OBJS:=$(patsubst %.cpp,%.o,$(APP_SRCS))
-APP_INCL:=-I./src
+APP_INCL:=-I./demoapp-src
 
-PLG_SRCS:=$(wildcard ./plugin/*.cpp)
+PLG_SRCS:=$(wildcard ./demoapp-plugin/*.cpp)
 PLG_OBJS:=$(patsubst %.cpp,%.o,$(PLG_SRCS))
 
 FA_INCL:=-I../foreactor/include

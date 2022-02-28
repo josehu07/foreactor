@@ -12,7 +12,12 @@
 #define __FOREACTOR_DEBUG_H__
 
 
-// DEBUG() and assert() are not active if NDEBUG is defined
+///////////////////
+// DEBUG() macro //
+///////////////////
+
+// `DEBUG()` and `assert()` are not active if NDEBUG is defined at
+// compilation time by the build system.
 #ifdef NDEBUG
 
 #define DEBUG(msg, ...)
@@ -30,6 +35,15 @@
 #endif
 
 
+//////////////////////
+// PANIC_IF() macro //
+//////////////////////
+
+// Use `assert()` on conditions that should never occur and that indicate
+// a fault of the library/plugin programmer.
+//
+// Use `PANIC_IF()` on conditions that indicate wrong input from users,
+// e.g., wrong env variable input.
 #define PANIC_IF(cond, msg, ...)                         \
     do {                                                 \
         if (cond) {                                      \

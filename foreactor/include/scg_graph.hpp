@@ -18,7 +18,6 @@ namespace foreactor {
 // current frontier of the SCGraph on its thread to locate its node.
 extern thread_local SCGraph *active_scgraph;
 
-
 // Register this SCGraph as active on my thread. The SCGraph must have
 // been initialized and associated with the given IOUring queue pair.
 void RegisterSCGraph(SCGraph *scgraph, const IOUring *ring);

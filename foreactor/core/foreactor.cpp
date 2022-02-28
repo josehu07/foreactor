@@ -1,5 +1,7 @@
 #include <iostream>
 #include <string>
+#include <unordered_map>
+#include <unordered_set>
 #include <unistd.h>
 #include <stdlib.h>
 
@@ -11,27 +13,18 @@
 namespace foreactor {
 
 
+//////////////////////////////////////////
+// Parse foreactor config env variables //
+//////////////////////////////////////////
+
+bool EnvParsed = false;
 bool UseForeactor = false;
 
 static std::unordered_map<unsigned, int> uring_queue_lens;
 static std::unordered_map<unsigned, int> pre_issue_depths;
 
-int EnvUringQueueLen(unsigned graph_id) {
-    PANIC_IF(uring_queue_lens.find(graph_id) == uring_queue_lens.end(),
-             "graph_id %u not found in uring_queue_lens\n", graph_id);
-    return uring_queue_lens[graph_id];
-}
 
-int EnvPreIssueDepth(unsigned graph_id) {
-    PANIC_IF(pre_issue_depths.find(graph_id) == pre_issue_depths.end(),
-             "graph_id %u not found in pre_issue_depths\n", graph_id);
-    return pre_issue_depths[graph_id];
-}
-
-
-bool EnvParsed = false;
-
-void ParseEnvValues() {
+static void ParseEnvValues() {
     assert(!EnvParsed);
 
     // parse environment variables to config foreactor
@@ -90,6 +83,53 @@ void ParseEnvValues() {
 }
 
 
+static int EnvUringQueueLen(unsigned graph_id) {
+    PANIC_IF(uring_queue_lens.find(graph_id) == uring_queue_lens.end(),
+             "graph_id %u not found in uring_queue_lens\n", graph_id);
+    return uring_queue_lens[graph_id];
+}
+
+static int EnvPreIssueDepth(unsigned graph_id) {
+    PANIC_IF(pre_issue_depths.find(graph_id) == pre_issue_depths.end(),
+             "graph_id %u not found in pre_issue_depths\n", graph_id);
+    return pre_issue_depths[graph_id];
+}
+
+
+//////////////////////////////////
+// Syntax sugar for plugin code //
+//////////////////////////////////
+
+SCGraph *WrapperFuncEnter(IOUring *ring, unsigned graph_id) {
+    if (!EnvParsed)
+        ParseEnvValues();
+    if (UseForeactor && !ring->IsInitialized())
+        ring->Initialize(EnvUringQueueLen(graph_id));
+
+    SCGraph *scgraph = nullptr;
+    if (UseForeactor) {
+        scgraph = new SCGraph(graph_id, ring, EnvPreIssueDepth(graph_id));
+        RegisterSCGraph(scgraph, ring);
+    }
+
+    return scgraph;
+}
+
+void WrapperFuncLeave(SCGraph *scgraph) {
+    if (UseForeactor) {
+        assert(scgraph != nullptr);
+        UnregisterSCGraph();
+        delete scgraph;
+    } else {
+        assert(scgraph == nullptr);
+    }
+}
+
+
+///////////////////////////////////////////
+// Shared library constructor/destructor //
+///////////////////////////////////////////
+
 // Called when the shared library is first loaded.
 void __attribute__((constructor)) foreactor_ctor() {
     DEBUG("foreactor library loaded: timer %s\n",
@@ -100,7 +140,6 @@ void __attribute__((constructor)) foreactor_ctor() {
 #endif
           );
 }
-
 
 // Called when the shared library is unloaded.
 void __attribute__((destructor)) foreactor_dtor() {

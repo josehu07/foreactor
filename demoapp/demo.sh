@@ -1,7 +1,8 @@
 #!/usr/bin/bash
 
 
-ROOT_PATH=$(realpath ..)
+ROOT_PATH=$(dirname $(dirname $(realpath $0)))
+cd ${ROOT_PATH}/demoapp/
 
 
 make clean && make
@@ -22,7 +23,7 @@ rm dump-*.txt
 
 
 echo
-echo "Performance bench --"
+echo "Performance bench (page cache on) --"
 
 echo " demoapp run original..."
 ./demoapp run
@@ -30,4 +31,16 @@ echo " demoapp run original..."
 for DEPTH in 0 1 2 4 8; do
     echo " demoapp run w/ foreactor, pre_issue_depth = ${DEPTH}..."
     LD_PRELOAD=${ROOT_PATH}/foreactor/libforeactor.so USE_FOREACTOR=yes QUEUE_0=32 DEPTH_0=${DEPTH} ./demoapp run
+done
+
+
+echo
+echo "Performance bench (drop_caches) --"
+
+echo " demoapp run original..."
+./demoapp run --drop_caches
+
+for DEPTH in 0 1 2 4 8; do
+    echo " demoapp run w/ foreactor, pre_issue_depth = ${DEPTH}..."
+    LD_PRELOAD=${ROOT_PATH}/foreactor/libforeactor.so USE_FOREACTOR=yes QUEUE_0=32 DEPTH_0=${DEPTH} ./demoapp run --drop_caches
 done

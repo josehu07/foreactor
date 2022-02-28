@@ -14,6 +14,7 @@
 namespace foreactor {
 
 
+// open
 class SyscallOpen final : public SyscallNode {
     private:
         std::string pathname;
@@ -34,6 +35,9 @@ class SyscallOpen final : public SyscallNode {
                         = std::vector{true, true, true});
         ~SyscallOpen() {}
 
+        friend std::ostream& operator<<(std::ostream& s,
+                                        const SyscallOpen& n);
+
         // For setting arguments whose value was not ready at construction.
         void SetArgPathname(std::string pathname_);
         void SetArgFlags(int flags_);
@@ -45,11 +49,10 @@ class SyscallOpen final : public SyscallNode {
         // For syscalls that have non-ready arguments until the timepoint of
         // invocation, this function will install their values.
         void CheckArgs(const char *pathname_, int flags_, mode_t mode_);
-
-        friend std::ostream& operator<<(std::ostream& s,
-                                        const SyscallOpen& n);
 };
 
+
+// pread
 class SyscallPread final : public SyscallNode {
     private:
         int fd;
@@ -69,14 +72,14 @@ class SyscallPread final : public SyscallNode {
                         = std::vector{true, true, true});
         ~SyscallPread();
 
+        friend std::ostream& operator<<(std::ostream& s,
+                                        const SyscallPread& n);
+
         void SetArgFd(int fd_);
         void SetArgCount(size_t count_);
         void SetArgOffset(off_t offset_);
 
         void CheckArgs(int fd_, size_t count_, off_t offset_);
-
-        friend std::ostream& operator<<(std::ostream& s,
-                                        const SyscallPread& n);
 };
 
 

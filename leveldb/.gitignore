@@ -3,8 +3,11 @@
 .vscode
 .DS_Store
 
+*.o
+*.so
+
 # Build directory.
-leveldb-1.23/build/
-leveldb-1.23/out/
+leveldb-src/build/
+leveldb-src/out/
 
 ycsbcli

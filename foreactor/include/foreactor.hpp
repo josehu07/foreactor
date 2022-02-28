@@ -1,4 +1,6 @@
-// Application/plugin only needs to include <foreactor.hpp>.
+//
+// Application/plugin only needs to include this header file, <foreactor.hpp>.
+//
 
 
 #include "io_uring.hpp"
@@ -15,17 +17,29 @@
 namespace foreactor {
 
 
-// Parsed from environment variables when the library is loaded.
-//   USE_FOREACTOR=yes      (any other string means no)
-//   QUEUE_{SCGRAPH_ID}=32  (> 0, >= PRE_ISSUE_DEPTH, <= 1024)
-//   DEPTH_{SCGRAPH_ID}=16  (>= 0, <= URING_QUEUE_LEN)
-extern bool UseForeactor;
-int EnvUringQueueLen(unsigned graph_id);
-int EnvPreIssueDepth(unsigned graph_id);
-
-// Should be called by a plugin upon its first attempt to use foreactor.
+// The foreactor library expects the following environment variables:
+// 
+//   USE_FOREACTOR=yes       (any other string means no)
+//
+//   if USE_FOREACTOR is not present in env, or if its value is not the
+//   string yes, then foreactor will not be active; in this case, the
+//   following two sets of env variables will have no effect
+//   
+//   QUEUE_{SCGRAPH_ID}=num  (> 0, >= PRE_ISSUE_DEPTH, <= 1024)
+//   DEPTH_{SCGRAPH_ID}=num  (>= 0, <= URING_QUEUE_LEN)
+//   
+//   if USE_FOREACTOR is present and has the string value yes, then these
+//   two groups of env variables must be present for each wrapped function
+//   (i.e., SCGraph type) involved in the application; for example, giving
+//   QUEUE_0=32 and DEPTH_0=8 says that the IOUring queue length for SCGraph
+//   type 0 is 32 and the pre-issuing depth is set to be 8
 extern bool EnvParsed;
-void ParseEnvValues();
+extern bool UseForeactor;
+
+
+// Syntax sugars to make plugin code cleaner.
+SCGraph *WrapperFuncEnter(IOUring *ring, unsigned graph_id);
+void WrapperFuncLeave(SCGraph *scgraph);
 
 
 }

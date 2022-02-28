@@ -31,9 +31,9 @@ static std::string SyscallStageStr(SyscallStage stage) {
 }
 
 
-/////////////////
-// SCGraphNode //
-/////////////////
+////////////////////////////////
+// SCGraphNode implementation //
+////////////////////////////////
 
 std::ostream& operator<<(std::ostream& s, const SCGraphNode& n) {
     switch (n.node_type) {
@@ -46,9 +46,9 @@ std::ostream& operator<<(std::ostream& s, const SCGraphNode& n) {
 }
 
 
-/////////////////
-// SyscallNode //
-/////////////////
+////////////////////////////////
+// SyscallNode implementation //
+////////////////////////////////
 
 SyscallNode::SyscallNode(SyscallType sc_type, bool pure_sc,
                          std::vector<bool> arg_ready)
@@ -64,6 +64,7 @@ void SyscallNode::SetNext(SCGraphNode *node, bool weak_edge) {
     next_node = node;
     edge_type = weak_edge ? EDGE_WEAK : EDGE_MUST;
 }
+
 
 std::ostream& operator<<(std::ostream& s, const SyscallNode& n) {
     switch (n.sc_type) {
@@ -125,6 +126,8 @@ static bool IsForeactable(EdgeType edge, SyscallNode *next, bool instable) {
     return !(edge == EDGE_WEAK && next->node_type == NODE_SC_SEFF);
 }
 
+// The Issue() method contains the core logic of foreactor's syscall
+// pre-issuing algorithm.
 long SyscallNode::Issue(void *output_buf) {
     // can only call issue on frontier node
     assert(scgraph != nullptr);
@@ -173,10 +176,10 @@ long SyscallNode::Issue(void *output_buf) {
     }
 
     if (num_prepared > 0) {
-        TIMER_START("uring-submit");
+        TIMER_START("g"+std::to_string(scgraph->graph_id)+"-ring-submit");
         int num_submitted __attribute__((unused)) =
             io_uring_submit(scgraph->Ring());
-        TIMER_PAUSE("uring-submit");
+        TIMER_PAUSE("g"+std::to_string(scgraph->graph_id)+"-ring-submit");
         DEBUG("submitted %d / %d entries to SQ\n",
               num_submitted, num_prepared);
         assert(num_submitted == num_prepared);
@@ -188,17 +191,21 @@ long SyscallNode::Issue(void *output_buf) {
         // if not pre-issued
         DEBUG("sync-call %s<%p>\n",
               StreamStr<SyscallNode>(this).c_str(), this);
+        TIMER_START("g"+std::to_string(scgraph->graph_id)+"-sync-call");
         rc = SyscallSync(output_buf);
         stage = STAGE_FINISHED;
+        TIMER_PAUSE("g"+std::to_string(scgraph->graph_id)+"-sync-call");
         DEBUG("sync-call finished rc %ld\n", rc);
     } else {
         // if has been pre-issued, process CQEs from io_uring until mine
         // completion is seen
         DEBUG("ring-cmpl %s<%p>\n",
               StreamStr<SyscallNode>(this).c_str(), this);
+        TIMER_START("g"+std::to_string(scgraph->graph_id)+"-ring-cmpl");
         if (stage == STAGE_PROGRESS)
             CmplAsync();
         assert(stage == STAGE_FINISHED);
+        TIMER_PAUSE("g"+std::to_string(scgraph->graph_id)+"-ring-cmpl");
         DEBUG("ring-cmpl finished rc %ld\n", rc);
         ReflectResult(output_buf);
         DEBUG("ring-cmpl result reflected\n");
@@ -212,9 +219,9 @@ long SyscallNode::Issue(void *output_buf) {
 }
 
 
-////////////////
-// BranchNode //
-////////////////
+///////////////////////////////
+// BranchNode implementation //
+///////////////////////////////
 
 BranchNode::BranchNode(int decision)
         : SCGraphNode(NODE_BRANCH), decision(decision) {
@@ -230,6 +237,7 @@ void BranchNode::AppendChild(SCGraphNode *child) {
     assert(child != nullptr);
     children.push_back(child);
 }
+
 
 std::ostream& operator<<(std::ostream& s, const BranchNode& n) {
     s << "BranchNode{"

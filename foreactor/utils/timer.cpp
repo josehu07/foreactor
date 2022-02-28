@@ -11,7 +11,7 @@
 namespace foreactor {
 
 
-thread_local std::unordered_map<std::string, Timer> timers;
+std::unordered_map<std::string, Timer> timers;
 
 
 static std::string TimeUnitStr(TimeUnit unit) {
@@ -24,6 +24,10 @@ static std::string TimeUnitStr(TimeUnit unit) {
     }
 }
 
+
+//////////////////////////
+// Timer implementation //
+//////////////////////////
 
 void Timer::Reset() {
     start_tps.clear();
