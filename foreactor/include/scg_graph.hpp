@@ -1,4 +1,4 @@
-#include <unordered_map>
+#include <unordered_set>
 #include <assert.h>
 #include <liburing.h>
 
@@ -36,7 +36,7 @@ class SCGraph {
     private:
         unsigned graph_id;
         IOUring * const ring = nullptr;
-        std::unordered_map<uint64_t, SCGraphNode *> nodes;
+        std::unordered_set<SCGraphNode *> nodes;
 
         // How many syscalls we try to issue ahead of time.
         // Must be no larger than the length of SQ of uring.
@@ -49,13 +49,17 @@ class SCGraph {
             return ring->Ring();
         }
 
+        std::string TimerNameStr(std::string timer) {
+            return "g" + std::to_string(graph_id) + "-" + timer;
+        }
+
     public:
         SCGraph() = delete;
         SCGraph(unsigned graph_id, IOUring *ring, int pre_issue_depth);
         ~SCGraph();
 
         // Add a new node into graph.
-        void AddNode(uint64_t id, SCGraphNode *node, bool is_start = false);
+        void AddNode(SCGraphNode *node, bool is_start = false);
 
         // Get current frontier node.
         // Return type must be one of those listed in syscalls.hpp.
@@ -80,31 +84,6 @@ class SCGraph {
             assert(frontier->node_type == NODE_SC_PURE ||
                    frontier->node_type == NODE_SC_SEFF);
             return static_cast<NodeT *>(frontier);
-        }
-
-        // Find a syscall node using given identifier. Typically, this method
-        // is not needed -- syscall invocations will be hijacked by the
-        // library and its corresponding SyscallNode is located at current
-        // frontier of the SCGraph.
-        // Return type must be one of those listed in syscalls.hpp.
-        template <typename NodeT>
-        NodeT *GetNodeById(uint64_t id) const {
-            static_assert(std::is_base_of<SyscallNode, NodeT>::value,
-                          "NodeT must be derived from SyscallNode");
-            static_assert(!std::is_same<SyscallNode, NodeT>::value,
-                          "NodeT cannot be the base SyscallNode");
-
-            SCGraphNode *node = nullptr;
-            try {
-                node = nodes.at(id);
-            } catch (const std::out_of_range& e) {
-                return nullptr;
-            }
-
-            assert(node != nullptr);
-            assert(node->node_type == NODE_SC_PURE ||
-                   node->node_type == NODE_SC_SEFF);
-            return static_cast<NodeT *>(node);
         }
 
         friend void RegisterSCGraph(SCGraph *scgraph, const IOUring *ring);
