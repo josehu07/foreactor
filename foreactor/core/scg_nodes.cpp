@@ -51,12 +51,12 @@ std::ostream& operator<<(std::ostream& s, const SCGraphNode& n) {
 ////////////////////////////////
 
 SyscallNode::SyscallNode(SyscallType sc_type, bool pure_sc,
-                         std::vector<bool> arg_ready)
+                         ValuePool<SyscallStage> *stage, ValuePool<long> *rc)
         : SCGraphNode(pure_sc ? NODE_SC_PURE : NODE_SC_SEFF),
-          sc_type(sc_type),
-          stage(AllArgsReady(arg_ready) ? STAGE_UNISSUED : STAGE_NOTREADY),
-          arg_ready(arg_ready), next_node(nullptr), rc(-1) {
+          next_node(nullptr), sc_type(sc_type), stage(stage), rc(-1) {
     assert(node_type == NODE_SC_PURE || node_type == NODE_SC_SEFF);
+    assert(stage != nullptr);
+    assert(rc != nullptr);
 }
 
 void SyscallNode::SetNext(SCGraphNode *node, bool weak_edge) {
@@ -76,29 +76,33 @@ std::ostream& operator<<(std::ostream& s, const SyscallNode& n) {
 }
 
 void SyscallNode::PrintCommonInfo(std::ostream& s) const {
-    s << "arg_ready=";
-    for (bool ready : arg_ready)
-        s << (ready ? "T" : "F");
-    s << ","
-      << "stage=" << SyscallStageStr(stage) << ","
+    s << "stage=" << stage << ","
       << "rc=" << rc << ","
       << "next=" << next_node << ","
       << "edge=" << EdgeTypeStr(edge_type);
 }
 
 
-void SyscallNode::PrepAsync() {
-    assert(stage == STAGE_UNISSUED);
+// The io_uring entry's data field should store both the SyscallNode pointer
+// and the issuing epoch.
+typedef struct NodeAndEpoch {
+    SyscallNode *node;
+    Epoch
+}
+
+void SyscallNode::PrepAsync(EpochList *epoch) {
+    assert(stage->GetValue(epoch) == STAGE_UNISSUED);
     assert(scgraph != nullptr);
     struct io_uring_sqe *sqe = io_uring_get_sqe(scgraph->Ring());
     assert(sqe != nullptr);
+
     // SQE data is the pointer to the SyscallNode instance
     io_uring_sqe_set_data(sqe, this);
-    // io_uring_sqe_set_flags(sqe, IOSQE_IO_LINK);
-    PrepUring(sqe);
+    
+    PrepUring(epoch, sqe);
 }
 
-void SyscallNode::CmplAsync() {
+void SyscallNode::CmplAsync(EpochList *epoch) {
     assert(scgraph != nullptr);
     struct io_uring_cqe *cqe;
     while (true) {
@@ -107,11 +111,14 @@ void SyscallNode::CmplAsync() {
             DEBUG("wait CQE failed %d\n", ret);
             assert(false);
         }
+
         SyscallNode *node = reinterpret_cast<SyscallNode *>(
             io_uring_cqe_get_data(cqe));
-        node->rc = cqe->res;
-        node->stage = STAGE_FINISHED;
+        
+        node->rc->SetValue(epoch,  cqe->res);
+        node->stage->SetValue(epoch,  STAGE_FINISHED);
         io_uring_cqe_seen(scgraph->Ring(), cqe);
+        
         if (node == this)
             break;
     }

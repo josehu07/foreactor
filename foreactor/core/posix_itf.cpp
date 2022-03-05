@@ -61,7 +61,7 @@ int open(const char *pathname, int flags, ...) {
         assert(node != nullptr);
         assert(node->sc_type == SC_OPEN);
         node->CheckArgs(epoch, pathname, flags, mode);
-        DEBUG("open<%p>->Issue()\n", node);             // FIXME: print epoch
+        DEBUG("open<%p>->Issue(%p)\n", node, epoch);
         return static_cast<int>(node->Issue(epoch));
     }
 }
@@ -82,7 +82,7 @@ ssize_t pread(int fd, void *buf, size_t count, off_t offset) {
         assert(node != nullptr);
         assert(node->sc_type == SC_PREAD);
         node->CheckArgs(epoch, fd, count, offset);
-        DEBUG("pread<%p>->Issue(%p)\n", node, buf);     // FIXME: print epoch
+        DEBUG("pread<%p>->Issue(%p, %p)\n", node, epoch, buf);
         return static_cast<ssize_t>(node->Issue(epoch, buf));
     }
 }

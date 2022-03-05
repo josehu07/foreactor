@@ -18,9 +18,9 @@ namespace foreactor {
 // For plugins to register/unregister current active SCGraph //
 ///////////////////////////////////////////////////////////////
 
-thread_local SCGraphBase *active_scgraph = nullptr;
+thread_local SCGraph *active_scgraph = nullptr;
 
-void RegisterSCGraph(SCGraphBase *scgraph) {
+void RegisterSCGraph(SCGraph *scgraph) {
     assert(active_scgraph == nullptr);
     assert(scgraph != nullptr);
 
@@ -38,43 +38,17 @@ void UnregisterSCGraph() {
 }
 
 
-///////////////////////////////////////
-// SCGraph base class implementation //
-///////////////////////////////////////
-
-SCGraphBase::SCGraphBase(unsigned graph_id, unsigned max_dims)
-        : graph_id(graph_id), max_dims(max_dims) {
-    assert(max_dims <= 2);      // may set to higher if necessary
-}
-
-
 ////////////////////////////
 // SCGraph implementation //
 ////////////////////////////
 
-template <unsigned D>
-SCGraph<D>::SCGraph(unsigned graph_id)
-        : SCGraphBase(graph_id, D) {
+SCGraph::SCGraph(unsigned graph_id, EpochList *frontier_epoch)
+        : graph_id(graph_id), frontier_epoch(frontier_epoch) {
     graph_built = false;
     ring_associated = false;
 }
 
-template <unsigned D>
-SCGraph<D>::SCGraph(unsigned graph_id, IOUring *ring, int pre_issue_depth)
-        : SCGraphBase(graph_id, D), ring(ring),
-          pre_issue_depth(pre_issue_depth) {
-    assert(ring != nullptr);
-    assert(ring->ring_initialized);
-
-    assert(pre_issue_depth >= 0);
-    assert(pre_issue_depth <= ring->sq_length);
-
-    graph_built = false;
-    ring_associated = true;
-}
-
-template <unsigned D>
-SCGraph<D>::~SCGraph() {
+SCGraph::~SCGraph() {
     // show sync-call, ring-cmpl, ring-submit, etc. timers, then reset them
     TIMER_PRINT(TimerNameStr("build"),       TIME_MICRO);
     TIMER_PRINT(TimerNameStr("clean"),       TIME_MICRO);
@@ -89,8 +63,7 @@ SCGraph<D>::~SCGraph() {
 }
 
 
-template <unsigned D>
-void SCGraph<D>::AssociateRing(IOUring *ring_, int pre_issue_depth_) {
+void SCGraph::AssociateRing(IOUring *ring_, int pre_issue_depth_) {
     assert(ring_ != nullptr);
     assert(ring_->ring_initialized);
 
@@ -103,27 +76,23 @@ void SCGraph<D>::AssociateRing(IOUring *ring_, int pre_issue_depth_) {
     DEBUG("associate SCGraph %u to IOUring %p\n", graph_id, ring);
 }
 
-template <unsigned D>
-bool SCGraph<D>::IsRingAssociated() const {
+bool SCGraph::IsRingAssociated() const {
     return ring_associated;
 }
 
 
-template <unsigned D>
-void SCGraph<D>::SetBuilt() {
+void SCGraph::SetBuilt() {
     graph_built = true;
     TIMER_PAUSE(TimerNameStr("build"));
     DEBUG("built SCGraph %u\n", graph_id);
 }
 
-template <unsigned D>
-bool SCGraph<D>::IsBuilt() const {
+bool SCGraph::IsBuilt() const {
     return graph_built;
 }
 
 
-template <unsigned D>
-void SCGraph<D>::CleanNodes() {
+void SCGraph::CleanNodes() {
     TIMER_START(TimerNameStr("clean"));
     for (auto& node : nodes) {
         if ((node->node_type == NODE_SC_PURE ||
@@ -144,8 +113,7 @@ void SCGraph<D>::CleanNodes() {
 }
 
 
-template <unsigned D>
-void SCGraph<D>::AddNode(SCGraphNode *node, bool is_start) {
+void SCGraph::AddNode(SCGraphNode *node, bool is_start) {
     assert(node != nullptr);
     assert(nodes.find(node) == nodes.end());
 

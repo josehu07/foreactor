@@ -77,47 +77,44 @@ class SyscallNode : public SCGraphNode {
 
     public:
         const SyscallType sc_type = SC_BASE;
-        SyscallStage stage = STAGE_NOTREADY;
 
     protected:
-        std::vector<bool> arg_ready;
+        // Fields that stay the same across loops.
         SCGraphNode *next_node = nullptr;
         EdgeType edge_type = EDGE_BASE;
-        long rc = -1;
+
+        // Fields that may vary across loops.
+        ValuePool<SyscallStage> *stage;
+        ValuePool<long> *rc;
 
         // Every child class must implement the following three functions.
-        virtual long SyscallSync(void *output_buf) = 0;
-        virtual void PrepUring(struct io_uring_sqe *sqe) = 0;
-        virtual void ReflectResult(void *output_buf) = 0;
+        virtual long SyscallSync(EpochList *epoch, void *output_buf) = 0;
+        virtual void PrepUring(EpochList *epoch, struct io_uring_sqe *sqe) = 0;
+        virtual void ReflectResult(EpochList *epoch, void *output_buf) = 0;
 
-        void PrepAsync();
-        void CmplAsync();
+        void PrepAsync(EpochList *epoch);
+        void CmplAsync(EpochList *epoch);
 
         SyscallNode() = delete;
         SyscallNode(SyscallType sc_type, bool pure_sc,
-                    std::vector<bool> arg_ready);
+                    ValuePool<SyscallStage> *stage, ValuePool<long> *rc);
         virtual ~SyscallNode() {}
 
     public:
         void PrintCommonInfo(std::ostream& s) const;
         friend std::ostream& operator<<(std::ostream& s, const SyscallNode& n);
 
-        static inline bool AllArgsReady(std::vector<bool>& arg_ready) {
-            return std::all_of(arg_ready.begin(), arg_ready.end(),
-                               [](bool a) { return a; });
-        }
-
         // Set the next node that this node points to.
         void SetNext(SCGraphNode *node, bool weak_edge);
 
         // Set argument installation dependencies to fill not-ready argument
         // values in some later syscall node.
-        // TODO: finish this
+        // FIXME: finish this
         // void CalcArg(SCGraphNode *node, CalcArgFunc func);
 
         // Invoke this syscall, possibly pre-issuing the next few syscalls
         // in graph. Must be invoked on current frontier node only.
-        long Issue(void *output_buf = nullptr);
+        long Issue(EpochList *epoch, void *output_buf = nullptr);
 };
 
 
@@ -130,26 +127,27 @@ class BranchNode final : public SCGraphNode {
     friend class SyscallNode;
 
     private:
+        // Fields that stay the same across loops.
         std::vector<SCGraphNode *> children;
-        int decision = -1;      // set by SetDecision
 
-        SCGraphNode *PickBranch();
+        // Fields that may vary across loops.
+        ValuePool<int> *decision;
+
+        // Pick a child node based on decision. If the edge crossed is a
+        // back-pointing edge, increments the corresponding epoch number
+        // in epoch.
+        SCGraphNode *PickBranch(EpochList *epoch);
 
     public:
-        BranchNode(int decision = -1);
+        BranchNode() = delete;
+        BranchNode(ValuePool<int> *decision);
         ~BranchNode() {}
 
         friend std::ostream& operator<<(std::ostream& s, const BranchNode& n);
 
-        // Set the next children nodes. Index of child in this vector
+        // Append child node to children list. Index of child in this vector
         // should correspond to the decision int.
-        void SetChildren(std::vector<SCGraphNode *> children_list);
-
-        // Append child node to children list.
         void AppendChild(SCGraphNode *child);
-
-        // Install the decision made.
-        void SetDecision(int decision_);
 };
 
 

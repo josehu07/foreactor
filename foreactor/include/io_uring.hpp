@@ -28,7 +28,6 @@ class IOUring {
 
     public:
         IOUring();
-        IOUring(int sq_length);
         ~IOUring();
 
         void Initialize(int sq_length);

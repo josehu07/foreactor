@@ -101,7 +101,7 @@ static int EnvPreIssueDepth(unsigned graph_id) {
 // Syntax sugar for plugin code //
 //////////////////////////////////
 
-void WrapperFuncEnter(SCGraphBase *scgraph, IOUring *ring, unsigned graph_id) {
+void WrapperFuncEnter(SCGraph *scgraph, IOUring *ring, unsigned graph_id) {
     assert(scgraph != nullptr);
     assert(ring != nullptr);
 
@@ -118,7 +118,7 @@ void WrapperFuncEnter(SCGraphBase *scgraph, IOUring *ring, unsigned graph_id) {
     }
 }
 
-void WrapperFuncLeave(SCGraphBase *scgraph) {
+void WrapperFuncLeave(SCGraph *scgraph) {
     if (UseForeactor) {
         assert(scgraph != nullptr);
         assert(scgraph->IsBuilt());

@@ -17,26 +17,6 @@ IOUring::IOUring()
     ring_initialized = false;
 }
 
-IOUring::IOUring(int sq_length)
-        : sq_length(sq_length) {
-    ring_initialized = false;
-
-    TIMER_START("uring-init");
-    if (sq_length > 0) {
-        int ret = io_uring_queue_init(sq_length, &ring, /*flags*/ 0);
-        if (ret != 0) {
-            DEBUG("initilize IOUring failed %d\n", ret);
-            return;
-        }
-
-        ring_initialized = true;
-        DEBUG("initialized IOUring @ %p sq_length %d\n", &ring, sq_length);
-    }
-    TIMER_PAUSE("uring-init");
-    TIMER_PRINT("uring-init", TIME_MICRO);
-    TIMER_RESET("uring-init");
-}
-
 IOUring::~IOUring() {
     TIMER_START("uring-exit");
     if (ring_initialized) {
