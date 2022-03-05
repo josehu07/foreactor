@@ -5,6 +5,7 @@
 #include <unistd.h>
 
 #include "scg_nodes.hpp"
+#include "value_pool.hpp"
 
 
 #ifndef __FOREACTOR_SYSCALLS_H__

@@ -8,6 +8,7 @@
 #include "scg_graph.hpp"
 #include "syscalls.hpp"
 #include "posix_itf.hpp"
+#include "value_pool.hpp"
 
 
 #ifndef __FOREACTOR_FOREACTOR_H__

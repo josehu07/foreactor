@@ -5,7 +5,7 @@ TODO (kernel version, etc.)
 
 ## Build Instructions
 
-First, build and install `liburing`, a collection of helpers over io_uring:
+Build and install `liburing`, a collection of helpers over io_uring:
 
 ```bash
 git clone https://github.com/axboe/liburing.git
@@ -15,7 +15,7 @@ sudo make install
 cd ..
 ```
 
-Next, build the `foreactor` library:
+Build the `foreactor` library:
 
 ```bash
 cd foreactor

@@ -1,10 +1,14 @@
+#include <tuple>
+#include <unordered_set>
 #include <stdexcept>
+#include <assert.h>
 #include <liburing.h>
 
 #include "debug.hpp"
 #include "timer.hpp"
 #include "scg_nodes.hpp"
 #include "scg_graph.hpp"
+#include "value_pool.hpp"
 
 
 namespace foreactor {
@@ -14,9 +18,9 @@ namespace foreactor {
 // For plugins to register/unregister current active SCGraph //
 ///////////////////////////////////////////////////////////////
 
-thread_local SCGraph *active_scgraph = nullptr;
+thread_local SCGraphBase *active_scgraph = nullptr;
 
-void RegisterSCGraph(SCGraph *scgraph) {
+void RegisterSCGraph(SCGraphBase *scgraph) {
     assert(active_scgraph == nullptr);
     assert(scgraph != nullptr);
 
@@ -34,18 +38,31 @@ void UnregisterSCGraph() {
 }
 
 
+///////////////////////////////////////
+// SCGraph base class implementation //
+///////////////////////////////////////
+
+SCGraphBase::SCGraphBase(unsigned graph_id, unsigned max_dims)
+        : graph_id(graph_id), max_dims(max_dims) {
+    assert(max_dims <= 2);      // may set to higher if necessary
+}
+
+
 ////////////////////////////
 // SCGraph implementation //
 ////////////////////////////
 
-SCGraph::SCGraph(unsigned graph_id)
-        : graph_id(graph_id) {
+template <unsigned D>
+SCGraph<D>::SCGraph(unsigned graph_id)
+        : SCGraphBase(graph_id, D) {
     graph_built = false;
     ring_associated = false;
 }
 
-SCGraph::SCGraph(unsigned graph_id, IOUring *ring, int pre_issue_depth)
-        : graph_id(graph_id), ring(ring), pre_issue_depth(pre_issue_depth) {
+template <unsigned D>
+SCGraph<D>::SCGraph(unsigned graph_id, IOUring *ring, int pre_issue_depth)
+        : SCGraphBase(graph_id, D), ring(ring),
+          pre_issue_depth(pre_issue_depth) {
     assert(ring != nullptr);
     assert(ring->ring_initialized);
 
@@ -56,7 +73,8 @@ SCGraph::SCGraph(unsigned graph_id, IOUring *ring, int pre_issue_depth)
     ring_associated = true;
 }
 
-SCGraph::~SCGraph() {
+template <unsigned D>
+SCGraph<D>::~SCGraph() {
     // show sync-call, ring-cmpl, ring-submit, etc. timers, then reset them
     TIMER_PRINT(TimerNameStr("build"),       TIME_MICRO);
     TIMER_PRINT(TimerNameStr("clean"),       TIME_MICRO);
@@ -71,7 +89,8 @@ SCGraph::~SCGraph() {
 }
 
 
-void SCGraph::AssociateRing(IOUring *ring_, int pre_issue_depth_) {
+template <unsigned D>
+void SCGraph<D>::AssociateRing(IOUring *ring_, int pre_issue_depth_) {
     assert(ring_ != nullptr);
     assert(ring_->ring_initialized);
 
@@ -84,38 +103,27 @@ void SCGraph::AssociateRing(IOUring *ring_, int pre_issue_depth_) {
     DEBUG("associate SCGraph %u to IOUring %p\n", graph_id, ring);
 }
 
-bool SCGraph::IsRingAssociated() const {
+template <unsigned D>
+bool SCGraph<D>::IsRingAssociated() const {
     return ring_associated;
 }
 
 
-void SCGraph::AddNode(SCGraphNode *node, bool is_start) {
-    assert(node != nullptr);
-    assert(nodes.find(node) == nodes.end());
-
-    nodes.insert(node);
-    node->scgraph = this;
-    DEBUG("added node %s<%p>\n", StreamStr<SCGraphNode>(node).c_str(), node);
-
-    if (is_start) {
-        assert(frontier == nullptr);
-        frontier = node;
-        DEBUG("inited frontier -> %p\n", frontier);
-    }
-}
-
-
-void SCGraph::SetBuilt() {
+template <unsigned D>
+void SCGraph<D>::SetBuilt() {
     graph_built = true;
     TIMER_PAUSE(TimerNameStr("build"));
     DEBUG("built SCGraph %u\n", graph_id);
 }
 
-bool SCGraph::IsBuilt() const {
+template <unsigned D>
+bool SCGraph<D>::IsBuilt() const {
     return graph_built;
 }
 
-void SCGraph::CleanNodes() {
+
+template <unsigned D>
+void SCGraph<D>::CleanNodes() {
     TIMER_START(TimerNameStr("clean"));
     for (auto& node : nodes) {
         if ((node->node_type == NODE_SC_PURE ||
@@ -133,6 +141,23 @@ void SCGraph::CleanNodes() {
     graph_built = false;
     TIMER_PAUSE(TimerNameStr("clean"));
     DEBUG("cleaned SCGraph %u\n", graph_id);
+}
+
+
+template <unsigned D>
+void SCGraph<D>::AddNode(SCGraphNode *node, bool is_start) {
+    assert(node != nullptr);
+    assert(nodes.find(node) == nodes.end());
+
+    nodes.insert(node);
+    node->scgraph = this;
+    DEBUG("added node %s<%p>\n", StreamStr<SCGraphNode>(node).c_str(), node);
+
+    if (is_start) {
+        assert(frontier == nullptr);
+        frontier = node;
+        DEBUG("inited frontier -> %p\n", frontier);
+    }
 }
 
 

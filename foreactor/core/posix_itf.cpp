@@ -1,3 +1,4 @@
+#include <tuple>
 #include <fcntl.h>
 #include <unistd.h>
 #include <dlfcn.h>
@@ -9,6 +10,7 @@
 #include "scg_graph.hpp"
 #include "syscalls.hpp"
 #include "posix_itf.hpp"
+#include "value_pool.hpp"
 
 
 namespace foreactor::posix {
@@ -55,12 +57,12 @@ int open(const char *pathname, int flags, ...) {
         return posix::open(pathname, flags, mode);
     } else {
         DEBUG("foreactor::open(\"%s\", %d, %u)\n", pathname, flags, mode);
-        auto *node = active_scgraph->GetFrontier<SyscallOpen>();
+        auto [node, epoch] = active_scgraph->GetFrontier<SyscallOpen>();
         assert(node != nullptr);
         assert(node->sc_type == SC_OPEN);
-        node->CheckArgs(pathname, flags, mode);
-        DEBUG("open<%p>->Issue()\n", node);
-        return static_cast<int>(node->Issue());
+        node->CheckArgs(epoch, pathname, flags, mode);
+        DEBUG("open<%p>->Issue()\n", node);             // FIXME: print epoch
+        return static_cast<int>(node->Issue(epoch));
     }
 }
 
@@ -76,12 +78,12 @@ ssize_t pread(int fd, void *buf, size_t count, off_t offset) {
         return posix::pread(fd, buf, count, offset);
     } else {
         DEBUG("foreactor::pread(%d, %lu, %ld)\n", fd, count, offset);
-        auto *node = active_scgraph->GetFrontier<SyscallPread>();
+        auto [node, epoch] = active_scgraph->GetFrontier<SyscallPread>();
         assert(node != nullptr);
         assert(node->sc_type == SC_PREAD);
-        node->CheckArgs(fd, count, offset);
-        DEBUG("pread<%p>->Issue(%p)\n", node, buf);
-        return static_cast<ssize_t>(node->Issue(buf));
+        node->CheckArgs(epoch, fd, count, offset);
+        DEBUG("pread<%p>->Issue(%p)\n", node, buf);     // FIXME: print epoch
+        return static_cast<ssize_t>(node->Issue(epoch, buf));
     }
 }
 
