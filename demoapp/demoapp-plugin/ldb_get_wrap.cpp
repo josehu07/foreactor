@@ -18,15 +18,12 @@ thread_local fa::IOUring ring;
 // SCGraph builder //
 /////////////////////
 
+static constexpr unsigned ldb_get_graph_id = 0;
+thread_local fa::SCGraph scgraph(ldb_get_graph_id);
+
 void build_ldb_get_scgraph(fa::SCGraph *scgraph,
                            std::vector<std::vector<int>>& files) {
     assert(scgraph != nullptr);
-
-    auto GenNodeId = [](int level, int index, int op) -> uint64_t {
-        constexpr int fmax = NUM_LEVELS * FILES_PER_LEVEL;
-        int fid = level * FILES_PER_LEVEL + index;
-        return op * fmax + fid;
-    };
 
     fa::SyscallNode *last_node = nullptr;
     // level-0 tables from latest to oldest
@@ -40,15 +37,17 @@ void build_ldb_get_scgraph(fa::SCGraph *scgraph,
                                                fd < 0
                                                ? std::vector{false, true, true}
                                                : std::vector{true,  true, true});
-        scgraph->AddNode(GenNodeId(0, index, 0), node_branch, /*is_start*/ index == FILES_PER_LEVEL - 1);
-        scgraph->AddNode(GenNodeId(0, index, 1), node_open);
-        scgraph->AddNode(GenNodeId(0, index, 2), node_pread);
+        scgraph->AddNode(node_branch, /*is_start*/ index == FILES_PER_LEVEL - 1);
+        scgraph->AddNode(node_open);
+        scgraph->AddNode(node_pread);
         if (last_node != nullptr)
             last_node->SetNext(node_branch, /*weak_edge*/ true);
         node_branch->SetChildren(std::vector<fa::SCGraphNode *>{node_open, node_pread});
         node_open->SetNext(node_pread, /*weak_edge*/ false);
         last_node = node_pread;
     }
+
+    scgraph->SetBuilt();
 }
 
 
@@ -71,15 +70,15 @@ extern "C" std::vector<std::string> __real__Z7ldb_getB5cxx11RSt6vectorIS_IiSaIiE
 
 extern "C" std::vector<std::string> __wrap__Z7ldb_getB5cxx11RSt6vectorIS_IiSaIiEESaIS1_EE(
         std::vector<std::vector<int>>& files) {
-    fa::SCGraph *scgraph = fa::WrapperFuncEnter(&ring, /*graph_id*/ 0);
+    fa::WrapperFuncEnter(&scgraph, &ring, ldb_get_graph_id);
 
     // Build SCGraph if using foreactor.
     if (fa::UseForeactor)
-        build_ldb_get_scgraph(scgraph, files);
+        build_ldb_get_scgraph(&scgraph, files);
 
     // Call the original function.
     auto ret = __real__Z7ldb_getB5cxx11RSt6vectorIS_IiSaIiEESaIS1_EE(files);
 
-    fa::WrapperFuncLeave(scgraph);
+    fa::WrapperFuncLeave(&scgraph);
     return ret;
 }

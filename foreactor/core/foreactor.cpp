@@ -100,26 +100,29 @@ static int EnvPreIssueDepth(unsigned graph_id) {
 // Syntax sugar for plugin code //
 //////////////////////////////////
 
-SCGraph *WrapperFuncEnter(IOUring *ring, unsigned graph_id) {
+void WrapperFuncEnter(SCGraph *scgraph, IOUring *ring, unsigned graph_id) {
+    assert(scgraph != nullptr);
+    assert(ring != nullptr);
+
     if (!EnvParsed)
         ParseEnvValues();
     if (UseForeactor && !ring->IsInitialized())
         ring->Initialize(EnvUringQueueLen(graph_id));
+    if (UseForeactor && !scgraph->IsRingAssociated())
+        scgraph->AssociateRing(ring, EnvPreIssueDepth(graph_id));
 
-    SCGraph *scgraph = nullptr;
     if (UseForeactor) {
-        scgraph = new SCGraph(graph_id, ring, EnvPreIssueDepth(graph_id));
-        RegisterSCGraph(scgraph, ring);
+        RegisterSCGraph(scgraph);
+        assert(!scgraph->IsBuilt());
     }
-
-    return scgraph;
 }
 
 void WrapperFuncLeave(SCGraph *scgraph) {
     if (UseForeactor) {
         assert(scgraph != nullptr);
+        assert(scgraph->IsBuilt());
+        scgraph->CleanNodes();
         UnregisterSCGraph();
-        delete scgraph;
     } else {
         assert(scgraph == nullptr);
     }

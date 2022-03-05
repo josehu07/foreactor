@@ -20,7 +20,7 @@ extern thread_local SCGraph *active_scgraph;
 
 // Register this SCGraph as active on my thread. The SCGraph must have
 // been initialized and associated with the given IOUring queue pair.
-void RegisterSCGraph(SCGraph *scgraph, const IOUring *ring);
+void RegisterSCGraph(SCGraph *scgraph);
 
 // Unregister the currently active scgraph.
 void UnregisterSCGraph();
@@ -34,32 +34,46 @@ class SCGraph {
     friend class BranchNode;
 
     private:
-        unsigned graph_id;
-        IOUring * const ring = nullptr;
+        const unsigned graph_id;
+        bool graph_built = false;
+        bool ring_associated = false;
+        IOUring *ring = nullptr;
         std::unordered_set<SCGraphNode *> nodes;
 
         // How many syscalls we try to issue ahead of time.
         // Must be no larger than the length of SQ of uring.
-        const int pre_issue_depth = 0;
+        int pre_issue_depth = 0;
 
         // Current frontier node during execution.
         SCGraphNode *frontier = nullptr;
 
         struct io_uring *Ring() const {
+            assert(ring_associated);
             return ring->Ring();
         }
 
-        std::string TimerNameStr(std::string timer) {
+        std::string TimerNameStr(std::string timer) const {
             return "g" + std::to_string(graph_id) + "-" + timer;
         }
 
     public:
         SCGraph() = delete;
+        SCGraph(unsigned graph_id);
         SCGraph(unsigned graph_id, IOUring *ring, int pre_issue_depth);
         ~SCGraph();
 
-        // Add a new node into graph.
+        // Associate the graph to an IOUring instance.
+        void AssociateRing(IOUring *ring, int pre_issue_depth);
+        bool IsRingAssociated() const;
+
+        // Add a new node into graph -- used at graph building.
         void AddNode(SCGraphNode *node, bool is_start = false);
+
+        // Set to "built" at the entrance of hijacked function, cleaned at
+        // the exit.
+        void SetBuilt();
+        bool IsBuilt() const;
+        void CleanNodes();
 
         // Get current frontier node.
         // Return type must be one of those listed in syscalls.hpp.
@@ -86,7 +100,7 @@ class SCGraph {
             return static_cast<NodeT *>(frontier);
         }
 
-        friend void RegisterSCGraph(SCGraph *scgraph, const IOUring *ring);
+        friend void RegisterSCGraph(SCGraph *scgraph);
         friend void UnregisterSCGraph();
 };
 

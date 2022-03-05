@@ -79,7 +79,7 @@ void run_ldb_get(bool dump_result, bool do_drop_caches = false) {
     drop_caches();
 
     std::vector<double> elapsed_us;
-    for (int i = 0; i < 3; ++i) {
+    for (int i = 0; i < 5; ++i) {
         if (do_drop_caches)     // drain page cache before each run?
             drop_caches();
         auto t1 = std::chrono::high_resolution_clock::now();

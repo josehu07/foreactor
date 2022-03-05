@@ -38,7 +38,7 @@ extern bool UseForeactor;
 
 
 // Syntax sugars to make plugin code cleaner.
-SCGraph *WrapperFuncEnter(IOUring *ring, unsigned graph_id);
+void WrapperFuncEnter(SCGraph *scgraph, IOUring *ring, unsigned graph_id);
 void WrapperFuncLeave(SCGraph *scgraph);
 
 
