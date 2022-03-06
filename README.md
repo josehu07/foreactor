@@ -37,8 +37,8 @@ objdump -t path/to/original/app/file.o | grep funcname_keyword
 
 ## TODO List
 
-- [ ] internal buffer cleanup
-- [ ] pre/post-syscall inject logic
+- [ ] internal buffer GC
+- [ ] control point inject logic
 - [ ] io_uring fixed buffers
 - [ ] io_uring SQ polling
 - [ ] config & options on/off

@@ -1,7 +1,14 @@
 #include <vector>
 #include <assert.h>
+#include <string.h>
 
 #include "value_pool.hpp"
+
+
+// Ugly code...
+// If someone knows a better way to "auto-generate" a base class that can be
+// used to hold template derived classes and do dynamic dispatching on the
+// template arguments, please let me know!
 
 
 namespace foreactor {
@@ -11,18 +18,98 @@ namespace foreactor {
 // EpochList base class implementation //
 /////////////////////////////////////////
 
-EpochList::EpochList(unsigned max_dims)
+EpochListBase::EpochListBase(unsigned max_dims)
         : max_dims(max_dims) {
     assert(max_dims <= 2);      // may set to higher if necessary
 }
 
 
-inline size_t EpochList::GetEpoch(int dim_idx) const {
-    return static_cast<EpochListDim<max_dims> *>(this)->GetEpoch(dim_idx);
+std::ostream& operator<<(std::ostream& s, const EpochListBase& e) {
+    switch (e.max_dims) {
+    case 0:
+        s << *static_cast<const EpochList<0> *>(&e);
+        break;
+    case 1:
+        s << *static_cast<const EpochList<1> *>(&e);
+        break;
+    case 2:
+        s << *static_cast<const EpochList<2> *>(&e);
+        break;
+    default:
+        break;      // not reached
+    }
+    return s;
 }
 
-inline void EpochList::IncrementEpoch(int dim_idx) {
-    static_cast<EpochListDim<max_dims> *>(this)->IncrementEpoch(dim_idx);
+
+EpochListBase *EpochListBase::Copy(EpochListBase *epoch) {
+    EpochListBase *ret = nullptr;
+    switch (epoch->max_dims) {
+    case 0:
+        ret = new EpochList<0>();
+        memcpy(static_cast<void *>(ret), static_cast<void *>(epoch),
+               sizeof(EpochList<0>));
+        break;
+    case 1:
+        ret = new EpochList<1>();
+        memcpy(static_cast<void *>(ret), static_cast<void *>(epoch),
+               sizeof(EpochList<1>));
+        break;
+    case 2:
+        ret = new EpochList<2>();
+        memcpy(static_cast<void *>(ret), static_cast<void *>(epoch),
+               sizeof(EpochList<2>));
+        break;
+    default:
+        break;      // not reached
+    }
+    return ret;
+}
+
+void EpochListBase::Delete(EpochListBase *epoch) {
+    switch (epoch->max_dims) {
+    case 0:
+        delete static_cast<EpochList<0> *>(epoch);
+        break;
+    case 1:
+        delete static_cast<EpochList<1> *>(epoch);
+        break;
+    case 2:
+        delete static_cast<EpochList<2> *>(epoch);
+        break;
+    default:
+        break;      // not reached
+    }
+}
+
+
+inline size_t EpochListBase::GetEpoch(int dim_idx) const {
+    switch (max_dims) {
+    case 0:
+        return static_cast<const EpochList<0> *>(this)->GetEpoch(dim_idx);
+    case 1:
+        return static_cast<const EpochList<1> *>(this)->GetEpoch(dim_idx);
+    case 2:
+        return static_cast<const EpochList<2> *>(this)->GetEpoch(dim_idx);
+    default:
+        return 0;   // not reached
+    }
+}
+
+inline void EpochListBase::IncrementEpoch(int dim_idx) {
+    switch (max_dims) {
+    case 0:
+        static_cast<EpochList<0> *>(this)->IncrementEpoch(dim_idx);
+        break;
+    case 1:
+        static_cast<EpochList<1> *>(this)->IncrementEpoch(dim_idx);
+        break;
+    case 2:
+        static_cast<EpochList<2> *>(this)->IncrementEpoch(dim_idx);
+        break;
+    default:
+        break;      // not reached
+    }
 }
 
 
@@ -31,21 +118,34 @@ inline void EpochList::IncrementEpoch(int dim_idx) {
 //////////////////////////////
 
 template <unsigned D>
-EpochListDim<D>::EpochListDim()
-        : EpochList(D) {
-    for (int i = 0; i < D; ++i)
+EpochList<D>::EpochList()
+        : EpochListBase(D) {
+    for (unsigned i = 0; i < D; ++i)
         epochs[i] = 0;
 }
 
 
 template <unsigned D>
-inline size_t EpochListDim<D>::GetEpoch(int dim_idx) const {
+std::ostream& operator<<(std::ostream& s, const EpochList<D>& e) {
+    s << "epoch[";
+    for (unsigned i = 0; i < D; ++i) {
+        s << e.epochs[i];
+        if (D > 0 && i < D - 1)
+            s << ",";
+    }
+    s << "]";
+    return s;
+}
+
+
+template <unsigned D>
+inline size_t EpochList<D>::GetEpoch(int dim_idx) const {
     assert(dim_idx >= 0 && dim_idx < D);
     return epochs[dim_idx];
 }
 
 template <unsigned D>
-inline void EpochListDim<D>::IncrementEpoch(int dim_idx) {
+inline void EpochList<D>::IncrementEpoch(int dim_idx) {
     assert(dim_idx >= 0 && dim_idx < D);
     epochs[dim_idx]++;
 }
@@ -56,7 +156,7 @@ inline void EpochListDim<D>::IncrementEpoch(int dim_idx) {
 /////////////////////////////////////////
 
 template <typename T>
-ValuePool<T>::ValuePool(unsigned max_dims, unsigned num_dims)
+ValuePoolBase<T>::ValuePoolBase(unsigned max_dims, unsigned num_dims)
         : max_dims(max_dims), num_dims(num_dims) {
     assert(max_dims <= 2);      // may set to higher if necessary
     assert(num_dims <= max_dims);
@@ -64,52 +164,288 @@ ValuePool<T>::ValuePool(unsigned max_dims, unsigned num_dims)
 
 
 template <typename T>
-inline bool ValuePool<T>::GetReady(EpochList *epoch) const {
-    return static_cast<ValuePoolDim<T, max_dims, num_dims> *>(this)->GetReady(
-        static_cast<EpochListDim<max_dims> *>(epoch));
+std::ostream& operator<<(std::ostream& s, const ValuePoolBase<T>& p) {
+    switch (p.max_dims) {
+    case 0:
+        switch (p.num_dims) {
+        case 0:
+            s << *static_cast<const ValuePool<T, 0, 0> *>(&p);
+            break;
+        default:
+            break;      // not reached
+        }
+        break;
+    case 1:
+        switch (p.num_dims) {
+        case 0:
+            s << *static_cast<const ValuePool<T, 1, 0> *>(&p);
+            break;
+        case 1:
+            s << *static_cast<const ValuePool<T, 1, 1> *>(&p);
+            break;
+        default:
+            break;      // not reached
+        }
+        break;
+    case 2:
+        switch (p.num_dims) {
+        case 0:
+            s << *static_cast<const ValuePool<T, 2, 0> *>(&p);
+            break;
+        case 1:
+            s << *static_cast<const ValuePool<T, 2, 1> *>(&p);
+            break;
+        case 2:
+            s << *static_cast<const ValuePool<T, 2, 2> *>(&p);
+            break;
+        default:
+            break;      // not reached
+        }
+        break;
+    default:
+        break;      // not reached
+    }
+    return s;
+}
+
+
+template <typename T>
+inline bool ValuePoolBase<T>::GetReady(EpochListBase *epoch) const {
+    switch (max_dims) {
+    case 0:
+        switch (num_dims) {
+        case 0:
+            return static_cast<ValuePool<T, 0, 0> *>(this)->GetReady(
+                   static_cast<EpochList<0> *>(epoch));
+        default:
+            return false;   // not reached
+        }
+        break;
+    case 1:
+        switch (num_dims) {
+        case 0:
+            return static_cast<ValuePool<T, 1, 0> *>(this)->GetReady(
+                   static_cast<EpochList<0> *>(epoch));
+        case 1:
+            return static_cast<ValuePool<T, 1, 1> *>(this)->GetReady(
+                   static_cast<EpochList<0> *>(epoch));
+        default:
+            return false;   // not reached
+        }
+        break;
+    case 2:
+        switch (num_dims) {
+        case 0:
+            return static_cast<ValuePool<T, 2, 0> *>(this)->GetReady(
+                   static_cast<EpochList<0> *>(epoch));
+        case 1:
+            return static_cast<ValuePool<T, 2, 1> *>(this)->GetReady(
+                   static_cast<EpochList<0> *>(epoch));
+        case 2:
+            return static_cast<ValuePool<T, 2, 2> *>(this)->GetReady(
+                   static_cast<EpochList<0> *>(epoch));
+        default:
+            return false;   // not reached
+        }
+    default:
+        return false;   // not reached
+    }
 }
 
 template <typename T>
-inline T ValuePool<T>::GetValue(EpochList *epoch) const {
-    return static_cast<ValuePoolDim<T, max_dims, num_dims> *>(this)->GetValue(
-        static_cast<EpochListDim<max_dims> *>(epoch));
+inline T& ValuePoolBase<T>::GetValue(EpochListBase *epoch) const {
+    switch (max_dims) {
+    case 0:
+        switch (num_dims) {
+        case 0:
+            return static_cast<ValuePool<T, 0, 0> *>(this)->GetValue(
+                   static_cast<EpochList<0> *>(epoch));
+        default:
+            return static_cast<ValuePool<T, 0, 0> *>(this)->GetValue(
+                   static_cast<EpochList<0> *>(epoch));      // not reached
+        }
+        break;
+    case 1:
+        switch (num_dims) {
+        case 0:
+            return static_cast<ValuePool<T, 1, 0> *>(this)->GetValue(
+                   static_cast<EpochList<1> *>(epoch));
+        case 1:
+            return static_cast<ValuePool<T, 1, 1> *>(this)->GetValue(
+                   static_cast<EpochList<1> *>(epoch));
+        default:
+            return static_cast<ValuePool<T, 0, 0> *>(this)->GetValue(
+                   static_cast<EpochList<0> *>(epoch));      // not reached
+        }
+        break;
+    case 2:
+        switch (num_dims) {
+        case 0:
+            return static_cast<ValuePool<T, 2, 0> *>(this)->GetValue(
+                   static_cast<EpochList<2> *>(epoch));
+        case 1:
+            return static_cast<ValuePool<T, 2, 1> *>(this)->GetValue(
+                   static_cast<EpochList<2> *>(epoch));
+        case 2:
+            return static_cast<ValuePool<T, 2, 2> *>(this)->GetValue(
+                   static_cast<EpochList<2> *>(epoch));
+        default:
+            return static_cast<ValuePool<T, 0, 0> *>(this)->GetValue(
+                   static_cast<EpochList<0> *>(epoch));      // not reached
+        }
+    default:
+        return static_cast<ValuePool<T, 0, 0> *>(this)->GetValue(
+               static_cast<EpochList<0> *>(epoch));      // not reached
+    }
+}
+
+
+template <typename T>
+inline void ValuePoolBase<T>::SetValue(EpochListBase *epoch, T value) {
+    switch (max_dims) {
+    case 0:
+        switch (num_dims) {
+        case 0:
+            static_cast<ValuePool<T, 0, 0> *>(this)->SetValue(
+            static_cast<EpochList<0> *>(epoch), value);
+            break;
+        default:
+            break;      // not reached
+        }
+        break;
+    case 1:
+        switch (num_dims) {
+        case 0:
+            static_cast<ValuePool<T, 1, 0> *>(this)->SetValue(
+            static_cast<EpochList<0> *>(epoch), value);
+            break;
+        case 1:
+            static_cast<ValuePool<T, 1, 1> *>(this)->SetValue(
+            static_cast<EpochList<0> *>(epoch), value);
+            break;
+        default:
+            break;      // not reached
+        }
+        break;
+    case 2:
+        switch (num_dims) {
+        case 0:
+            static_cast<ValuePool<T, 2, 0> *>(this)->SetValue(
+            static_cast<EpochList<0> *>(epoch), value);
+            break;
+        case 1:
+            static_cast<ValuePool<T, 2, 1> *>(this)->SetValue(
+            static_cast<EpochList<0> *>(epoch), value);
+            break;
+        case 2:
+            static_cast<ValuePool<T, 2, 2> *>(this)->SetValue(
+            static_cast<EpochList<0> *>(epoch), value);
+            break;
+        default:
+            break;      // not reached
+        }
+    default:
+        break;      // not reached
+    }
 }
 
 template <typename T>
-inline T *ValuePool<T>::PtrValue(EpochList *epoch) const {
-    return static_cast<ValuePoolDim<T, max_dims, num_dims> *>(this)->PtrValue(
-        static_cast<EpochListDim<max_dims> *>(epoch));
-}
-
-
-template <typename T>
-inline void ValuePool<T>::SetValue(EpochList *epoch, T value) {
-    static_cast<ValuePoolDim<T, max_dims, num_dims> *>(this)->SetValue(
-        static_cast<EpochListDim<max_dims> *>(epoch), value);
-}
-
-template <typename T>
-inline void ValuePool<T>::SetValueBatch(T& values) {
+inline void ValuePoolBase<T>::SetValueBatch(T& values) {
     assert(num_dims == 0);
-    static_cast<ValuePoolDim<T, max_dims, 0> *>(this)->SetValuebatch(values);
+    switch (max_dims) {
+    case 0:
+        static_cast<ValuePool<T, 0, 0> *>(this)->SetValuebatch(values);
+        break;
+    case 1:
+        static_cast<ValuePool<T, 1, 0> *>(this)->SetValuebatch(values);
+        break;
+    case 2:
+        static_cast<ValuePool<T, 2, 0> *>(this)->SetValuebatch(values);
+        break;
+    default:
+        break;      // not reached
+    }
+    
 }
 
 template <typename T>
-inline void ValuePool<T>::SetValueBatch(std::vector<T>& values) {
+inline void ValuePoolBase<T>::SetValueBatch(std::vector<T>& values) {
     assert(num_dims == 1);
-    static_cast<ValuePoolDim<T, max_dims, 1> *>(this)->SetValuebatch(values);
+    switch (max_dims) {
+    case 0:
+        static_cast<ValuePool<T, 0, 1> *>(this)->SetValuebatch(values);
+        break;
+    case 1:
+        static_cast<ValuePool<T, 1, 1> *>(this)->SetValuebatch(values);
+        break;
+    case 2:
+        static_cast<ValuePool<T, 2, 1> *>(this)->SetValuebatch(values);
+        break;
+    default:
+        break;      // not reached
+    }
 }
 
 template <typename T>
-inline void ValuePool<T>::SetValueBatch(std::vector<std::vector<T>>& values) {
+inline void ValuePoolBase<T>::SetValueBatch(std::vector<std::vector<T>>& values) {
     assert(num_dims == 2);
-    static_cast<ValuePoolDim<T, max_dims, 2> *>(this)->SetValuebatch(values);
+    switch (max_dims) {
+    case 0:
+        static_cast<ValuePool<T, 0, 2> *>(this)->SetValuebatch(values);
+        break;
+    case 1:
+        static_cast<ValuePool<T, 1, 2> *>(this)->SetValuebatch(values);
+        break;
+    case 2:
+        static_cast<ValuePool<T, 2, 2> *>(this)->SetValuebatch(values);
+        break;
+    default:
+        break;      // not reached
+    }
 }
 
 
 template <typename T>
-inline void ValuePool<T>::ClearValues() {
-    static_cast<ValuePoolDim<T, max_dims, num_dims> *>(this)->ClearValues();
+inline void ValuePoolBase<T>::ClearValues(bool do_delete) {
+    switch (max_dims) {
+    case 0:
+        switch (num_dims) {
+        case 0:
+            static_cast<ValuePool<T, 0, 0> *>(this)->ClearValues(do_delete);
+            break;
+        default:
+            break;      // not reached
+        }
+        break;
+    case 1:
+        switch (num_dims) {
+        case 0:
+            static_cast<ValuePool<T, 1, 0> *>(this)->ClearValues(do_delete);
+            break;
+        case 1:
+            static_cast<ValuePool<T, 1, 1> *>(this)->ClearValues(do_delete);
+            break;
+        default:
+            break;      // not reached
+        }
+        break;
+    case 2:
+        switch (num_dims) {
+        case 0:
+            static_cast<ValuePool<T, 2, 0> *>(this)->ClearValues(do_delete);
+            break;
+        case 1:
+            static_cast<ValuePool<T, 2, 1> *>(this)->ClearValues(do_delete);
+            break;
+        case 2:
+            static_cast<ValuePool<T, 2, 2> *>(this)->ClearValues(do_delete);
+            break;
+        default:
+            break;      // not reached
+        }
+    default:
+        break;      // not reached
+    }
 }
 
 
@@ -118,8 +454,8 @@ inline void ValuePool<T>::ClearValues() {
 //////////////////////////////
 
 template <typename T, unsigned MaxD, unsigned NumD>
-ValuePoolDim<T, MaxD, NumD>::ValuePoolDim(std::vector<int> dim_idx_)
-        : ValuePool(MaxD, NumD) {
+ValuePool<T, MaxD, NumD>::ValuePool(std::vector<int> dim_idx_)
+        : ValuePoolBase<T>(MaxD, NumD) {
     assert(dim_idx_.size() == NumD);
     for (int i = 0; i < NumD; ++i) {
         dim_idx[i] = dim_idx_[i];
@@ -129,8 +465,51 @@ ValuePoolDim<T, MaxD, NumD>::ValuePoolDim(std::vector<int> dim_idx_)
 
 
 template <typename T, unsigned MaxD, unsigned NumD>
-inline bool ValuePoolDim<T, MaxD, NumD>::GetReady(
-        EpochListDim<MaxD> *epoch) const {
+std::ostream& operator<<(std::ostream& s,
+                         const ValuePool<T, MaxD, NumD>& p) {
+    s << "pool[" << NumD << "/" << MaxD << ":";
+    // print dim_idx
+    for (int i = 0; i < NumD; ++i) {
+        s << p.dim_idx[i];
+        if (NumD > 0 && i < NumD - 1)
+            s << ",";
+    }
+    s << "|";
+    // print ready
+    if constexpr (NumD == 0)
+        s << p.ready ? "T" : "F";
+    else if constexpr (NumD == 1) {
+        for (bool& r : p.ready)
+            s << r ? "T," : "F,";
+    } else {
+        for (std::vector<bool>& rr : p.ready) {
+            for (bool& r : rr)
+                s << r ? "T," : "F,";
+            s << ";";
+        }
+    }
+    s << "|";
+    // print data (the values)
+    if constexpr (NumD == 0)
+        s << p.data;
+    else if constexpr (NumD == 1) {
+        for (T& v : p.data)
+            s << v << ",";
+    } else {
+        for (std::vector<T>& vv : p.data) {
+            for (T& v : vv)
+                s << v << ",";
+            s << ";";
+        }
+    }
+    s << "]";
+    return s;
+}
+
+
+template <typename T, unsigned MaxD, unsigned NumD>
+inline bool ValuePool<T, MaxD, NumD>::GetReady(
+        EpochList<MaxD> *epoch) const {
     if constexpr (NumD == 0)
         return ready;
     else if constexpr (NumD == 1)
@@ -140,8 +519,8 @@ inline bool ValuePoolDim<T, MaxD, NumD>::GetReady(
 }
 
 template <typename T, unsigned MaxD, unsigned NumD>
-inline T ValuePoolDim<T, MaxD, NumD>::GetValue(
-        EpochListDim<MaxD> *epoch) const {
+inline T& ValuePool<T, MaxD, NumD>::GetValue(
+        EpochList<MaxD> *epoch) const {
     if constexpr (NumD == 0)
         return data;
     else if constexpr (NumD == 1)
@@ -150,21 +529,10 @@ inline T ValuePoolDim<T, MaxD, NumD>::GetValue(
         return data[epoch->GetEpoch(dim_idx[0])][epoch->GetEpoch(dim_idx[1])];
 }
 
-template <typename T, unsigned MaxD, unsigned NumD>
-inline T *ValuePoolDim<T, MaxD, NumD>::PtrValue(
-        EpochListDim<MaxD> *epoch) const {
-    if constexpr (NumD == 0)
-        return &data;
-    else if constexpr (NumD == 1)
-        return &data[epoch->GetEpoch(dim_idx[0])];
-    else
-        return &data[epoch->GetEpoch(dim_idx[0])][epoch->GetEpoch(dim_idx[1])];
-}
-
 
 template <typename T, unsigned MaxD, unsigned NumD>
-inline void ValuePoolDim<T, MaxD, NumD>::SetValue(
-        EpochListDim<MaxD> *epoch, T value) {
+inline void ValuePool<T, MaxD, NumD>::SetValue(
+        EpochList<MaxD> *epoch, T value) {
     if constexpr (NumD == 0)
         data = value;
     else if constexpr (NumD == 1)
@@ -174,7 +542,7 @@ inline void ValuePoolDim<T, MaxD, NumD>::SetValue(
 }
 
 template <typename T, unsigned MaxD, unsigned NumD>
-inline void ValuePoolDim<T, MaxD, NumD>::SetValueBatch(DataT& values) {
+inline void ValuePool<T, MaxD, NumD>::SetValueBatch(DataT& values) {
     if constexpr (NumD == 0)
         data = values;
     else if constexpr (NumD == 1) {
@@ -194,13 +562,27 @@ inline void ValuePoolDim<T, MaxD, NumD>::SetValueBatch(DataT& values) {
 
 
 template <typename T, unsigned MaxD, unsigned NumD>
-inline void ValuePoolDim<T, MaxD, NumD>::ClearValues() {
-    if constexpr (NumD == 0)
+inline void ValuePool<T, MaxD, NumD>::ClearValues(bool delete_ptr) {
+    if constexpr (NumD == 0) {
         ready = false;
-    else {
+        if (delete_ptr)
+            delete data;
+    } else if constexpr (NumD == 1) {
         ready.clear();
+        if (delete_ptr)
+            for (T& v : data)
+                delete v;
         data.clear();
-    }   
+    } else {
+        ready.clear();
+        if (delete_ptr) {
+            for (std::vector<T>& vv : data) {
+                for (T& v : vv)
+                    delete v;
+            }
+        }
+        data.clear();
+    }
 }
 
 

@@ -3,9 +3,27 @@
 #include "debug.hpp"
 #include "timer.hpp"
 #include "io_uring.hpp"
+#include "scg_nodes.hpp"
+#include "value_pool.hpp"
 
 
 namespace foreactor {
+
+
+///////////////////////////////////////
+// NodeAndEpoch handle implementaion //
+///////////////////////////////////////
+
+NodeAndEpoch::NodeAndEpoch(SyscallNode *node_, EpochListBase *epoch_)
+        : node(node_), epoch(EpochListBase::Copy(epoch_)) {
+    // stores a copy of epoch to remember the epoch at submission
+    assert(node_ != nullptr);
+    assert(epoch_ != nullptr);
+}
+
+NodeAndEpoch::~NodeAndEpoch() {
+    EpochListBase::Delete(epoch);
+}
 
 
 ////////////////////////////
@@ -53,6 +71,26 @@ void IOUring::Initialize(int sq_length_) {
 
 bool IOUring::IsInitialized() const {
     return ring_initialized;
+}
+
+
+void IOUring::PutInProgress(NodeAndEpoch *nae) {
+    assert(in_progress.find(nae) == in_progress.end());
+    in_progress.insert(nae);
+}
+
+void IOUring::RemoveInProgress(NodeAndEpoch *nae) {
+    assert(in_progress.find(nae) != in_progress.end());
+    in_progress.erase(nae);
+}
+
+
+void IOUring::ClearAllInProgress() {
+    for (NodeAndEpoch *nae : in_progress) {
+        assert(nae->node->stage->GetValue(nae->epoch) == STAGE_PROGRESS);
+        nae->node->CmplAsync(nae->epoch);   // nae will be deleted here
+    }
+    in_progress.clear();
 }
 
 

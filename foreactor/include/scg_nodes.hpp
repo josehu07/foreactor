@@ -3,6 +3,8 @@
 #include <assert.h>
 #include <liburing.h>
 
+#include "value_pool.hpp"
+
 
 #ifndef __FOREACTOR_SCG_NODES_H__
 #define __FOREACTOR_SCG_NODES_H__
@@ -74,6 +76,7 @@ typedef enum SyscallType {
 // See syscalls.hpp.
 class SyscallNode : public SCGraphNode {
     friend class SCGraph;
+    friend class IOUring;
 
     public:
         const SyscallType sc_type = SC_BASE;
@@ -84,37 +87,39 @@ class SyscallNode : public SCGraphNode {
         EdgeType edge_type = EDGE_BASE;
 
         // Fields that may vary across loops.
-        ValuePool<SyscallStage> *stage;
-        ValuePool<long> *rc;
-
-        // Every child class must implement the following three functions.
-        virtual long SyscallSync(EpochList *epoch, void *output_buf) = 0;
-        virtual void PrepUring(EpochList *epoch, struct io_uring_sqe *sqe) = 0;
-        virtual void ReflectResult(EpochList *epoch, void *output_buf) = 0;
-
-        void PrepAsync(EpochList *epoch);
-        void CmplAsync(EpochList *epoch);
+        ValuePoolBase<SyscallStage> *stage;
+        ValuePoolBase<long> *rc;
 
         SyscallNode() = delete;
         SyscallNode(SyscallType sc_type, bool pure_sc,
-                    ValuePool<SyscallStage> *stage, ValuePool<long> *rc);
+                    ValuePoolBase<SyscallStage> *stage,
+                    ValuePoolBase<long> *rc);
         virtual ~SyscallNode() {}
+
+        // Every child class must implement the following three functions.
+        virtual bool RefreshStage(EpochListBase *epoch) = 0;
+        virtual long SyscallSync(EpochListBase *epoch, void *output_buf) = 0;
+        virtual void PrepUring(EpochListBase *epoch, struct io_uring_sqe *sqe) = 0;
+        virtual void ReflectResult(EpochListBase *epoch, void *output_buf) = 0;
+
+        void PrepAsync(EpochListBase *epoch);
+        void CmplAsync(EpochListBase *epoch);
+
+        static bool IsForeactable(EdgeType edge, SyscallNode *next,
+                                  EpochListBase *epoch);
 
     public:
         void PrintCommonInfo(std::ostream& s) const;
         friend std::ostream& operator<<(std::ostream& s, const SyscallNode& n);
 
-        // Set the next node that this node points to.
-        void SetNext(SCGraphNode *node, bool weak_edge);
-
-        // Set argument installation dependencies to fill not-ready argument
-        // values in some later syscall node.
-        // FIXME: finish this
-        // void CalcArg(SCGraphNode *node, CalcArgFunc func);
+        // Set the next node that this node points to. Weak edge means there's
+        // early exit logic on that edge and the next node is not guaranteed
+        // to be issued.
+        void SetNext(SCGraphNode *node, bool weak_edge = false);
 
         // Invoke this syscall, possibly pre-issuing the next few syscalls
         // in graph. Must be invoked on current frontier node only.
-        long Issue(EpochList *epoch, void *output_buf = nullptr);
+        long Issue(EpochListBase *epoch, void *output_buf = nullptr);
 };
 
 
@@ -129,25 +134,28 @@ class BranchNode final : public SCGraphNode {
     private:
         // Fields that stay the same across loops.
         std::vector<SCGraphNode *> children;
+        std::vector<int> epoch_dim_idx;
 
         // Fields that may vary across loops.
-        ValuePool<int> *decision;
+        ValuePoolBase<int> *decision;
 
         // Pick a child node based on decision. If the edge crossed is a
         // back-pointing edge, increments the corresponding epoch number
         // in epoch.
-        SCGraphNode *PickBranch(EpochList *epoch);
+        SCGraphNode *PickBranch(EpochListBase *epoch);
 
     public:
         BranchNode() = delete;
-        BranchNode(ValuePool<int> *decision);
+        BranchNode(ValuePoolBase<int> *decision);
         ~BranchNode() {}
 
         friend std::ostream& operator<<(std::ostream& s, const BranchNode& n);
 
         // Append child node to children list. Index of child in this vector
-        // should correspond to the decision int.
-        void AppendChild(SCGraphNode *child);
+        // should correspond to the decision int. The second argument dim_idx
+        // >= 0 means that the edge to this child is a looping-back edge and
+        // is associated with the epoch number at this dimension index.
+        void AppendChild(SCGraphNode *child, int dim_idx = -1);
 };
 
 

@@ -64,7 +64,7 @@ extern thread_local const pid_t tid;
 
 
 template <typename T>
-static std::string StreamStr(T *item) {
+static inline std::string StreamStr(T *item) {
     std::ostringstream ss;
     ss << *item;
     return ss.str();

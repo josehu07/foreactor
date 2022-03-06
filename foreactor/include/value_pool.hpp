@@ -1,3 +1,4 @@
+#include <iostream>
 #include <vector>
 #include <type_traits>
 
@@ -9,6 +10,10 @@
 namespace foreactor {
 
 
+class NodeAndEpoch;     // forward declarations
+class SyscallNode;
+
+
 // An EpochList is a n-dimensional "tuple" of loop indices. If an SCGraph
 // has n back-pointing edges, then it is associated with n-dimensional Epochs
 // to index any ValuePool created for that SCGraph. Each back-pointing edge
@@ -18,19 +23,27 @@ namespace foreactor {
 // This is the base class for auto-resolving of template arguments if called
 // upon a base class pointer.
 class EpochListBase {
+    friend class NodeAndEpoch;
+    friend class SyscallNode;
+
     private:
         const unsigned max_dims = 0;
+
+        static EpochListBase *Copy(EpochListBase *epoch);
+        static void Delete(EpochListBase *epoch);
         
     public:
         EpochListBase() = delete;
         EpochListBase(unsigned max_dims);
-        ~EpochListBase() {}
+        virtual ~EpochListBase();
+
+        friend std::ostream& operator<<(std::ostream& s,
+                                        const EpochListBase& e);
 
         // Every child class must implement these interfaces.
         // The base class implementation of these methods provide
         // auto-resolving of D.
         virtual size_t GetEpoch(int dim_idx) const;
-        virtual size_t operator[](int dim_idx) const;   // [] syntax sugar
         virtual void IncrementEpoch(int dim_idx);
 };
 
@@ -45,8 +58,11 @@ class EpochList final : public EpochListBase {
         EpochList();
         ~EpochList() {}
 
+        template <unsigned E>
+        friend std::ostream& operator<<(std::ostream& s,
+                                        const EpochList<E>& e);
+
         size_t GetEpoch(int dim_idx) const;
-        size_t operator[](int dim_idx) const;
         void IncrementEpoch(int dim_idx);
 };
 
@@ -69,23 +85,26 @@ class ValuePoolBase {
         ValuePoolBase(unsigned max_dims, unsigned num_dims);
         ~ValuePoolBase() {}
 
+        template <typename U>
+        friend std::ostream& operator<<(std::ostream& s,
+                                        const ValuePoolBase<U>& p);
+
         // Every child class must implement these interfaces.
         // The base class implementations of these methods provide
         // auto-resolving of MaxD and NumD.
-        virtual bool GetReady(EpochList& epoch) const;
-        virtual T GetValue(EpochList& epoch) const;
-        virtual T *PtrValue(EpochList& epoch) const;
+        virtual bool GetReady(EpochListBase *epoch) const;
+        virtual T& GetValue(EpochListBase *epoch) const;
 
         // Value might be set at the entrance of hijacked function, or at
         // an argument installation action, or by CheckArgs() of a SyscallNode
         // when it is actually invoked.
-        virtual void SetValue(EpochList& epoch, T value);
+        virtual void SetValue(EpochListBase *epoch, T value);
         virtual void SetValueBatch(T& values);
         virtual void SetValueBatch(std::vector<T>& values);
         virtual void SetValueBatch(std::vector<std::vector<T>>& values);
 
         // Values are cleared at the exit of hijacked function.
-        virtual void ClearValues();
+        virtual void ClearValues(bool do_delete = false);
 };
 
 // Template argument MaxD specifies the max #dims, i.e., number of all
@@ -111,17 +130,20 @@ class ValuePool final : public ValuePoolBase<T> {
         ReadyT ready;
 
     public:
-        ValuePoolDim(std::vector<int> dim_idx_);
-        ~ValuePoolDim() {}
+        ValuePool(std::vector<int> dim_idx_);
+        ~ValuePool() {}
 
-        bool GetReady(EpochListDim<MaxD>& epoch) const;
-        T GetValue(EpochListDim<MaxD>& epoch) const;
-        T *PtrValue(EpochListDim<MaxD>& epoch) const;
+        template <typename U, unsigned MaxE, unsigned NumE>
+        friend std::ostream& operator<<(std::ostream& s,
+                                        const ValuePool<U, MaxE, NumE>& p);
 
-        void SetValue(EpochListDim<MaxD>& epoch, T value);
+        bool GetReady(EpochList<MaxD> *epoch) const;
+        T& GetValue(EpochList<MaxD> *epoch) const;
+
+        void SetValue(EpochList<MaxD> *epoch, T value);
         void SetValueBatch(DataT& values);
 
-        void ClearValues();
+        void ClearValues(bool do_delete = false);
 };
 
 

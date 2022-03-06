@@ -51,7 +51,7 @@ class SCGraph {
         // has hit. SyscallNode->Issue() might create temporary EpochLists
         // that are ahead of frontier_epoch for pre-issuing purposes.
         SCGraphNode *frontier = nullptr;
-        EpochList *frontier_epoch;
+        EpochListBase *frontier_epoch;
 
         struct io_uring *Ring() const {
             assert(ring_associated);
@@ -64,7 +64,7 @@ class SCGraph {
 
     public:
         SCGraph() = delete;
-        SCGraph(unsigned graph_id, EpochList *frontier_epoch);
+        SCGraph(unsigned graph_id, EpochListBase *frontier_epoch);
         ~SCGraph();
 
         // Associate the graph to an IOUring instance.
@@ -78,12 +78,12 @@ class SCGraph {
         // the exit.
         void SetBuilt();
         bool IsBuilt() const;
-        void CleanNodes();
+        void ClearAllInProgress();
 
         // Get current frontier node and frontier epoch.
         // NodeT must be one of those listed in syscalls.hpp.
         template <typename NodeT>
-        std::tuple<NodeT *, EpochList *> GetFrontier() {
+        std::tuple<NodeT *, EpochListBase *> GetFrontier() {
             static_assert(std::is_base_of<SyscallNode, NodeT>::value,
                           "NodeT must be derived from SyscallNode");
             static_assert(!std::is_same<SyscallNode, NodeT>::value,

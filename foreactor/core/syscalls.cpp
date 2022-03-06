@@ -11,81 +11,84 @@
 #include "scg_nodes.hpp"
 #include "posix_itf.hpp"
 #include "syscalls.hpp"
+#include "value_pool.hpp"
 
 
 namespace foreactor {
-
-
-template <typename T>
-static void SetArg(SyscallStage& stage, std::vector<bool>& arg_ready,
-                   int arg_index, T& arg_field, T arg_value) {
-    assert(arg_index >= 0 && arg_index < (int) arg_ready.size());
-    assert(!arg_ready[arg_index] && stage == STAGE_NOTREADY);
-    arg_field = arg_value;
-    arg_ready[arg_index] = true;
-    if (SyscallNode::AllArgsReady(arg_ready))
-        stage = STAGE_UNISSUED;
-}
 
 
 //////////
 // open //
 //////////
 
-SyscallOpen::SyscallOpen(std::string pathname, int flags, mode_t mode,
-                         std::vector<bool> arg_ready)
-        : SyscallNode(SC_OPEN, /*pure_sc*/ false, arg_ready),
+SyscallOpen::SyscallOpen(ValuePoolBase<SyscallStage> *stage,
+                         ValuePoolBase<long> *rc,
+                         ValuePoolBase<std::string> *pathname,
+                         ValuePoolBase<int> *flags,
+                         ValuePoolBase<mode_t> *mode)
+        : SyscallNode(SC_OPEN, /*pure_sc*/ false, stage, rc),
           pathname(pathname), flags(flags), mode(mode) {
-    assert(arg_ready.size() == 3);
+    assert(pathname != nullptr);
+    assert(flags != nullptr);
+    assert(mode != nullptr);
 }
+
 
 std::ostream& operator<<(std::ostream& s, const SyscallOpen& n) {
     s << "SyscallOpen{"
-      << "pathname=\"" << n.pathname << "\","
-      << "flags=" << n.flags << ","
-      << "mode" << n.mode << ",";
+      << "pathname=" << StreamStr<ValuePoolBase<std::string>>(n.pathname) << ","
+      << "flags=" << StreamStr<ValuePoolBase<int>>(n.flags) << ","
+      << "mode" << StreamStr<ValuePoolBase<mode_t>>(n.mode) << ",";
     n.PrintCommonInfo(s);
     s << "}";
     return s;
 }
 
-long SyscallOpen::SyscallSync(void *output_buf) {
-    (void) output_buf;      // unused
-    return posix::open(pathname.c_str(), flags, mode);
+
+bool SyscallOpen::RefreshStage(EpochListBase *epoch) {
+    if (pathname->GetReady(epoch) &&
+        flags->GetReady(epoch) &&
+        mode->GetReady(epoch)) {
+        stage->SetValue(epoch, STAGE_UNISSUED);
+        return true;
+    }
+    return false;
 }
 
-void SyscallOpen::PrepUring(struct io_uring_sqe *sqe) {
-    io_uring_prep_openat(sqe, AT_FDCWD, pathname.c_str(), flags, mode);
+long SyscallOpen::SyscallSync(EpochListBase *epoch, void *output_buf) {
+    (void) output_buf;      // unused
+    return posix::open(pathname->GetValue(epoch).c_str(),
+                       flags->GetValue(epoch),
+                       mode->GetValue(epoch));
 }
 
-void SyscallOpen::ReflectResult(void *output_buf) {
-    (void) output_buf;      // unused
+void SyscallOpen::PrepUring(EpochListBase *epoch, struct io_uring_sqe *sqe) {
+    io_uring_prep_openat(sqe, AT_FDCWD,
+                         pathname->GetValue(epoch).c_str(),
+                         flags->GetValue(epoch),
+                         mode->GetValue(epoch));
+}
+
+void SyscallOpen::ReflectResult(EpochListBase *epoch, void *output_buf) {
+    // nothing to do
     return;
 }
 
-void SyscallOpen::SetArgPathname(std::string pathname_) {
-    SetArg(stage, arg_ready, 0, pathname, pathname_);
-}
 
-void SyscallOpen::SetArgFlags(int flags_) {
-    SetArg(stage, arg_ready, 1, flags, flags_);
-}
-
-void SyscallOpen::SetArgMode(mode_t mode_) {
-    SetArg(stage, arg_ready, 2, mode, mode_);
-}
-
-void SyscallOpen::CheckArgs(const char *pathname_, int flags_, mode_t mode_) {
+void SyscallOpen::CheckArgs(EpochListBase *epoch,
+                            const char *pathname_, int flags_, mode_t mode_) {
     assert(pathname_ != nullptr);
-    if (stage == STAGE_NOTREADY) {
-        assert(arg_ready.size() == 3);
-        if (!arg_ready[0]) SetArgPathname(std::string(pathname_));
-        if (!arg_ready[1]) SetArgFlags(flags_);
-        if (!arg_ready[2]) SetArgMode(mode_);
+    if (stage->GetValue(epoch) == STAGE_NOTREADY) {
+        if (!pathname->GetReady(epoch))
+            pathname->SetValue(epoch, std::string(pathname_));
+        if (!flags->GetReady(epoch))
+            flags->SetValue(epoch, flags_);
+        if (!mode->GetReady(epoch))
+            mode->SetValue(epoch, mode_);
     }
-    assert(strcmp(pathname_, pathname.c_str()) == 0);
-    assert(flags_ == flags);
-    assert(mode_ == mode);
+    assert(strcmp(pathname_, pathname->GetValue(epoch).c_str()) == 0);
+    assert(flags_ == flags->GetValue(epoch));
+    assert(mode_ == mode->GetValue(epoch));
 }
 
 
@@ -93,72 +96,81 @@ void SyscallOpen::CheckArgs(const char *pathname_, int flags_, mode_t mode_) {
 // pread //
 ///////////
 
-SyscallPread::SyscallPread(int fd, size_t count, off_t offset,
-                           std::vector<bool> arg_ready)
-        : SyscallNode(SC_PREAD, /*pure_sc*/ true, arg_ready),
-          fd(fd), count(count), offset(offset),
-          internal_buf(nullptr) {
-    assert(arg_ready.size() == 3);
+SyscallPread::SyscallPread(ValuePoolBase<SyscallStage> *stage,
+                           ValuePoolBase<long> *rc,
+                           ValuePoolBase<int> *fd,
+                           ValuePoolBase<size_t> *count,
+                           ValuePoolBase<off_t> *offset,
+                           ValuePoolBase<char *> *internal_buf)
+        : SyscallNode(SC_PREAD, /*pure_sc*/ true, stage, rc),
+          fd(fd), count(count), offset(offset), internal_buf(internal_buf) {
+    assert(fd != nullptr);
+    assert(count != nullptr);
+    assert(offset != nullptr);
+    assert(internal_buf != nullptr);
 }
 
-SyscallPread::~SyscallPread() {
-    // syscall node cannot be destructed when in the stage of
-    // in io_uring progress
-    assert(stage != STAGE_PROGRESS);
-    if (internal_buf != nullptr)
-        delete[] internal_buf;
-}
 
 std::ostream& operator<<(std::ostream& s, const SyscallPread& n) {
     s << "SyscallPread{"
-      << "fd=" << n.fd << ","
-      << "count=" << n.count << ","
-      << "offset=" << n.offset << ",";
+      << "fd=" << StreamStr<ValuePoolBase<int>>(n.fd) << ","
+      << "count=" << StreamStr<ValuePoolBase<size_t>>(n.count) << ","
+      << "offset=" << StreamStr<ValuePoolBase<off_t>>(n.offset) << ",";
     n.PrintCommonInfo(s);
     s << "}";
     return s;
 }
 
-long SyscallPread::SyscallSync(void *output_buf) {
-    assert(output_buf != nullptr);
-    char *buf = reinterpret_cast<char *>(output_buf);
-    return posix::pread(fd, buf, count, offset);
-}
 
-void SyscallPread::PrepUring(struct io_uring_sqe *sqe) {
-    if (internal_buf == nullptr)
-        internal_buf = new char[count];
-    io_uring_prep_read(sqe, fd, internal_buf, count, offset);
-}
-
-void SyscallPread::ReflectResult(void *output_buf) {
-    assert(output_buf != nullptr);
-    char *buf = reinterpret_cast<char *>(output_buf);
-    memcpy(buf, internal_buf, count);
-}
-
-void SyscallPread::SetArgFd(int fd_) {
-    SetArg(stage, arg_ready, 0, fd, fd_);
-}
-
-void SyscallPread::SetArgCount(size_t count_) {
-    SetArg(stage, arg_ready, 1, count, count_);
-}
-
-void SyscallPread::SetArgOffset(off_t offset_) {
-    SetArg(stage, arg_ready, 2, offset, offset_);
-}
-
-void SyscallPread::CheckArgs(int fd_, size_t count_, off_t offset_) {
-    if (stage == STAGE_NOTREADY) {
-        assert(arg_ready.size() == 3);
-        if (!arg_ready[0]) SetArgFd(fd_);
-        if (!arg_ready[1]) SetArgCount(count_);
-        if (!arg_ready[2]) SetArgOffset(offset_);
+bool SyscallPread::RefreshStage(EpochListBase *epoch) {
+    if (fd->GetReady(epoch) &&
+        count->GetReady(epoch) &&
+        offset->GetReady(epoch)) {
+        stage->SetValue(epoch, STAGE_UNISSUED);
+        return true;
     }
-    assert(fd_ == fd);
-    assert(count_ == count);
-    assert(offset_ == offset);
+    return false;
+}
+
+long SyscallPread::SyscallSync(EpochListBase *epoch, void *output_buf) {
+    assert(output_buf != nullptr);
+    char *buf = reinterpret_cast<char *>(output_buf);
+    return posix::pread(fd->GetValue(epoch),
+                        buf,
+                        count->GetValue(epoch),
+                        offset->GetValue(epoch));
+}
+
+void SyscallPread::PrepUring(EpochListBase *epoch, struct io_uring_sqe *sqe) {
+    if (internal_buf->GetValue(epoch) == nullptr)
+        internal_buf->SetValue(epoch, new char[count->GetValue(epoch)]);
+    io_uring_prep_read(sqe,
+                       fd->GetValue(epoch),
+                       internal_buf->GetValue(epoch),
+                       count->GetValue(epoch),
+                       offset->GetValue(epoch));
+}
+
+void SyscallPread::ReflectResult(EpochListBase *epoch, void *output_buf) {
+    assert(output_buf != nullptr);
+    char *buf = reinterpret_cast<char *>(output_buf);
+    memcpy(buf, internal_buf->GetValue(epoch), count->GetValue(epoch));
+}
+
+
+void SyscallPread::CheckArgs(EpochListBase *epoch,
+                             int fd_, size_t count_, off_t offset_) {
+    if (stage->GetValue(epoch) == STAGE_NOTREADY) {
+        if (!fd->GetReady(epoch))
+            fd->SetValue(epoch, fd_);
+        if (!count->GetReady(epoch))
+            count->SetValue(epoch, count_);
+        if (!offset->GetReady(epoch))
+            offset->SetValue(epoch, offset_);
+    }
+    assert(fd_ == fd->GetValue(epoch));
+    assert(count_ == count->GetValue(epoch));
+    assert(offset_ == offset->GetValue(epoch));
 }
 
 

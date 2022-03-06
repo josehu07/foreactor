@@ -42,7 +42,7 @@ void UnregisterSCGraph() {
 // SCGraph implementation //
 ////////////////////////////
 
-SCGraph::SCGraph(unsigned graph_id, EpochList *frontier_epoch)
+SCGraph::SCGraph(unsigned graph_id, EpochListBase *frontier_epoch)
         : graph_id(graph_id), frontier_epoch(frontier_epoch) {
     graph_built = false;
     ring_associated = false;
@@ -92,21 +92,9 @@ bool SCGraph::IsBuilt() const {
 }
 
 
-void SCGraph::CleanNodes() {
+void SCGraph::ClearAllInProgress() {
     TIMER_START(TimerNameStr("clean"));
-    for (auto& node : nodes) {
-        if ((node->node_type == NODE_SC_PURE ||
-             node->node_type == NODE_SC_SEFF)) {
-            SyscallNode *syscall_node
-                = static_cast<SyscallNode *>(node);
-            // harvest in-progress syscall from uring
-            if (syscall_node->stage == STAGE_PROGRESS)
-                syscall_node->CmplAsync();
-        }
-        delete node;
-    }
-
-    nodes.clear();
+    ring->ClearAllInProgress();
     graph_built = false;
     TIMER_PAUSE(TimerNameStr("clean"));
     DEBUG("cleaned SCGraph %u\n", graph_id);

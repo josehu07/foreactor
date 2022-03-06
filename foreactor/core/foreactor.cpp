@@ -122,7 +122,7 @@ void WrapperFuncLeave(SCGraph *scgraph) {
     if (UseForeactor) {
         assert(scgraph != nullptr);
         assert(scgraph->IsBuilt());
-        scgraph->CleanNodes();
+        scgraph->ClearAllInProgress();
         UnregisterSCGraph();
     } else {
         assert(scgraph == nullptr);

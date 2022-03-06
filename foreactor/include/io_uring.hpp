@@ -1,5 +1,8 @@
+#include <unordered_set>
 #include <assert.h>
 #include <liburing.h>
+
+#include "value_pool.hpp"
 
 
 #ifndef __FOREACTOR_IO_URING_H__
@@ -9,7 +12,20 @@
 namespace foreactor {
 
 
-class SCGraph;  // forward declaration
+class SCGraph;  // forward declarations
+class SyscallNode;
+
+
+// The NodeAndEpoch structure is a handle that uniquely identifies any
+// request submitted.
+struct NodeAndEpoch {
+    SyscallNode *node;
+    EpochListBase *epoch;
+
+    NodeAndEpoch() = delete;
+    NodeAndEpoch(SyscallNode *node_, EpochListBase *epoch_);
+    ~NodeAndEpoch();
+};
 
 
 // Each IOUring instance is a pair of io_uring SQ/CQ queues.
@@ -22,6 +38,8 @@ class IOUring {
         bool ring_initialized = false;
         int sq_length = 0;
 
+        std::unordered_set<NodeAndEpoch *> in_progress;
+
         struct io_uring *Ring() {
             return &ring;
         }
@@ -32,6 +50,13 @@ class IOUring {
 
         void Initialize(int sq_length);
         bool IsInitialized() const;
+
+        // Put or remove in-progress requests.
+        void PutInProgress(NodeAndEpoch *nae);
+        void RemoveInProgress(NodeAndEpoch *nae);
+
+        // Clear and complete all remaining in-progress requests.
+        void ClearAllInProgress();
 };
 
 

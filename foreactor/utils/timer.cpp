@@ -16,11 +16,11 @@ std::unordered_map<std::string, Timer> timers;
 
 static std::string TimeUnitStr(TimeUnit unit) {
     switch (unit) {
-        case TIME_NANO:  return "ns";
-        case TIME_MICRO: return "us";
-        case TIME_MILLI: return "ms";
-        case TIME_SEC:   return "s";
-        default:         return "unknown_unit";
+    case TIME_NANO:  return "ns";
+    case TIME_MICRO: return "us";
+    case TIME_MILLI: return "ms";
+    case TIME_SEC:   return "s";
+    default:         return "unknown_unit";
     }
 }
 
