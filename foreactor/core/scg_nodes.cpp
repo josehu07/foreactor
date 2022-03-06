@@ -64,12 +64,6 @@ SyscallNode::SyscallNode(SyscallType sc_type, bool pure_sc,
     assert(rc != nullptr);
 }
 
-void SyscallNode::SetNext(SCGraphNode *node, bool weak_edge) {
-    assert(node != nullptr);
-    next_node = node;
-    edge_type = weak_edge ? EDGE_WEAK : EDGE_MUST;
-}
-
 
 void SyscallNode::PrintCommonInfo(std::ostream& s) const {
     s << "stage=" << StreamStr<ValuePoolBase<SyscallStage>>(stage) << ","
@@ -126,12 +120,19 @@ void SyscallNode::CmplAsync(EpochListBase *epoch) {
         scgraph->ring->RemoveInProgress(nae);
         
         // if desired completion found, break
-        if (nae->node == this && nae->epoch == epoch) {
+        if (nae->node == this && nae->epoch->IsSame(epoch)) {
             delete nae;
             break;
         }
         delete nae;
     }
+}
+
+
+void SyscallNode::SetNext(SCGraphNode *node, bool weak_edge) {
+    assert(node != nullptr);
+    next_node = node;
+    edge_type = weak_edge ? EDGE_WEAK : EDGE_MUST;
 }
 
 
@@ -209,7 +210,10 @@ long SyscallNode::Issue(EpochListBase *epoch, void *output_buf) {
     }
 
     // handle myself
-    assert(stage->GetValue(epoch) != STAGE_NOTREADY);
+    if (stage->GetValue(epoch) == STAGE_NOTREADY) {
+        bool now_ready __attribute__((unused)) = RefreshStage(epoch);
+        assert(now_ready);
+    }
     if (stage->GetValue(epoch) == STAGE_UNISSUED) {
         // if not pre-issued
         DEBUG("sync-call %s<%p>@%s\n",
@@ -278,17 +282,22 @@ SCGraphNode *BranchNode::PickBranch(EpochListBase *epoch) {
 
     // if goes through a looping-back edge, increment the corresponding
     // epoch number
-    if (epoch_dim_idx[d] > 0)
+    if (epoch_dim_idx[d] >= 0) {
+        DEBUG("epoch currently @ -> %s\n",
+              StreamStr<EpochListBase>(epoch).c_str());
         epoch->IncrementEpoch(epoch_dim_idx[d]);
+        DEBUG("incremented epoch -> %s\n",
+              StreamStr<EpochListBase>(epoch).c_str());
+    }
     return child;
 }
 
 
 void BranchNode::AppendChild(SCGraphNode *child, int dim_idx) {
-    assert(child != nullptr);
+    // child could be nullptr, which means end of scgraph
     children.push_back(child);
     if (dim_idx >= 0) {
-        assert(dim_idx < scgraph->frontier_epoch->max_dims);
+        assert(dim_idx < static_cast<int>(scgraph->frontier_epoch->max_dims));
         epoch_dim_idx.push_back(dim_idx);
     } else
         epoch_dim_idx.push_back(-1);

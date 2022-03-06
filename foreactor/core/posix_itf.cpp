@@ -62,7 +62,7 @@ int open(const char *pathname, int flags, ...) {
         assert(node->sc_type == SC_OPEN);
         node->CheckArgs(epoch, pathname, flags, mode);
         DEBUG("open<%p>->Issue(%s)\n",
-              node, StreamStr<EpochList>(epoch).c_str());
+              node, StreamStr<EpochListBase>(epoch).c_str());
         return static_cast<int>(node->Issue(epoch));
     }
 }
@@ -84,7 +84,7 @@ ssize_t pread(int fd, void *buf, size_t count, off_t offset) {
         assert(node->sc_type == SC_PREAD);
         node->CheckArgs(epoch, fd, count, offset);
         DEBUG("pread<%p>->Issue(%s, %p)\n",
-              node, StreamStr<EpochList>(epoch).c_str(), buf);
+              node, StreamStr<EpochListBase>(epoch).c_str(), buf);
         return static_cast<ssize_t>(node->Issue(epoch, buf));
     }
 }

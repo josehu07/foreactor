@@ -23,17 +23,13 @@ thread_local SCGraph *active_scgraph = nullptr;
 void RegisterSCGraph(SCGraph *scgraph) {
     assert(active_scgraph == nullptr);
     assert(scgraph != nullptr);
-
     active_scgraph = scgraph;
     DEBUG("registered SCGraph @ %p as active\n", scgraph);
-    
-    TIMER_START(scgraph->TimerNameStr("build"));
 }
 
 void UnregisterSCGraph() {
     assert(active_scgraph != nullptr);
     DEBUG("unregister SCGraph @ %p\n", active_scgraph);
-
     active_scgraph = nullptr;
 }
 
@@ -42,24 +38,43 @@ void UnregisterSCGraph() {
 // SCGraph implementation //
 ////////////////////////////
 
-SCGraph::SCGraph(unsigned graph_id, EpochListBase *frontier_epoch)
-        : graph_id(graph_id), frontier_epoch(frontier_epoch) {
+SCGraph::SCGraph(unsigned graph_id, unsigned max_dims)
+        : graph_id(graph_id), frontier_epoch(EpochListBase::New(max_dims)) {
     graph_built = false;
     ring_associated = false;
 }
 
 SCGraph::~SCGraph() {
     // show sync-call, ring-cmpl, ring-submit, etc. timers, then reset them
-    TIMER_PRINT(TimerNameStr("build"),       TIME_MICRO);
-    TIMER_PRINT(TimerNameStr("clean"),       TIME_MICRO);
+    TIMER_PRINT(TimerNameStr("build-graph"), TIME_MICRO);
+    TIMER_PRINT(TimerNameStr("clear-prog"),  TIME_MICRO);
+    TIMER_PRINT(TimerNameStr("pool-flush"),  TIME_MICRO);
+    TIMER_PRINT(TimerNameStr("pool-clear"),  TIME_MICRO);
     TIMER_PRINT(TimerNameStr("sync-call"),   TIME_MICRO);
     TIMER_PRINT(TimerNameStr("ring-submit"), TIME_MICRO);
     TIMER_PRINT(TimerNameStr("ring-cmpl"),   TIME_MICRO);
-    TIMER_RESET(TimerNameStr("build"));
-    TIMER_RESET(TimerNameStr("clean"));
+    TIMER_RESET(TimerNameStr("build-graph"));
+    TIMER_RESET(TimerNameStr("clear-prog"));
+    TIMER_RESET(TimerNameStr("pool-flush"));
+    TIMER_RESET(TimerNameStr("pool-clear"));
     TIMER_RESET(TimerNameStr("sync-call"));
     TIMER_RESET(TimerNameStr("ring-submit"));
     TIMER_RESET(TimerNameStr("ring-cmpl"));
+
+    EpochListBase::Delete(frontier_epoch);
+
+    // clean up and delete all nodes added
+    for (auto& node : nodes)
+        delete node;
+}
+
+
+void SCGraph::StartTimer(std::string timer) const {
+    TIMER_START(TimerNameStr(timer));
+}
+
+void SCGraph::PauseTimer(std::string timer) const {
+    TIMER_PAUSE(TimerNameStr(timer));
 }
 
 
@@ -83,7 +98,6 @@ bool SCGraph::IsRingAssociated() const {
 
 void SCGraph::SetBuilt() {
     graph_built = true;
-    TIMER_PAUSE(TimerNameStr("build"));
     DEBUG("built SCGraph %u\n", graph_id);
 }
 
@@ -92,12 +106,16 @@ bool SCGraph::IsBuilt() const {
 }
 
 
+void SCGraph::ResetToStart() {
+    frontier_epoch->ClearEpochs();
+    frontier = initial_frontier;
+}
+
 void SCGraph::ClearAllInProgress() {
-    TIMER_START(TimerNameStr("clean"));
+    TIMER_START(TimerNameStr("clear-prog"));
     ring->ClearAllInProgress();
-    graph_built = false;
-    TIMER_PAUSE(TimerNameStr("clean"));
-    DEBUG("cleaned SCGraph %u\n", graph_id);
+    TIMER_PAUSE(TimerNameStr("clear-prog"));
+    DEBUG("cleared SCGraph %u\n", graph_id);
 }
 
 
@@ -112,6 +130,7 @@ void SCGraph::AddNode(SCGraphNode *node, bool is_start) {
     if (is_start) {
         assert(frontier == nullptr);
         frontier = node;
+        initial_frontier = node;
         DEBUG("inited frontier -> %p\n", frontier);
     }
 }

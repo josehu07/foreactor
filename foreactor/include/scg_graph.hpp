@@ -35,8 +35,10 @@ class SCGraph {
     friend class SyscallNode;
     friend class BranchNode;
 
-    private:
+    public:
         const unsigned graph_id;
+
+    private:
         bool graph_built = false;
         bool ring_associated = false;
         IOUring *ring = nullptr;
@@ -50,6 +52,7 @@ class SCGraph {
         // field stores the EpochList of where the actual execution timeline
         // has hit. SyscallNode->Issue() might create temporary EpochLists
         // that are ahead of frontier_epoch for pre-issuing purposes.
+        SCGraphNode *initial_frontier = nullptr;
         SCGraphNode *frontier = nullptr;
         EpochListBase *frontier_epoch;
 
@@ -58,27 +61,34 @@ class SCGraph {
             return ring->Ring();
         }
 
+    public:
+        SCGraph() = delete;
+        SCGraph(unsigned graph_id, unsigned max_dims);
+        ~SCGraph();
+
         std::string TimerNameStr(std::string timer) const {
             return "g" + std::to_string(graph_id) + "-" + timer;
         }
 
-    public:
-        SCGraph() = delete;
-        SCGraph(unsigned graph_id, EpochListBase *frontier_epoch);
-        ~SCGraph();
+        void StartTimer(std::string timer) const;
+        void PauseTimer(std::string timer) const;
 
         // Associate the graph to an IOUring instance.
         void AssociateRing(IOUring *ring, int pre_issue_depth);
         bool IsRingAssociated() const;
 
-        // Add a new node into graph -- used at graph building.
-        void AddNode(SCGraphNode *node, bool is_start = false);
-
         // Set to "built" at the entrance of hijacked function, cleaned at
         // the exit.
         void SetBuilt();
         bool IsBuilt() const;
-        void ClearAllInProgress();
+
+        // Reset graph state to start, clear epoch numbers in frontier_epoch
+        // and reset frontier pointer to start node.
+        void ResetToStart();
+        void ClearAllInProgress();      // TODO: do GC instead of this
+
+        // Add a new node into graph -- used at graph building.
+        void AddNode(SCGraphNode *node, bool is_start = false);
 
         // Get current frontier node and frontier epoch.
         // NodeT must be one of those listed in syscalls.hpp.

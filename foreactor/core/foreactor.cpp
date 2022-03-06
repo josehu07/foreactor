@@ -25,7 +25,7 @@ static std::unordered_map<unsigned, int> uring_queue_lens;
 static std::unordered_map<unsigned, int> pre_issue_depths;
 
 
-static void ParseEnvValues() {
+void ParseEnvValues() {
     assert(!EnvParsed);
 
     // parse environment variables to config foreactor
@@ -84,49 +84,16 @@ static void ParseEnvValues() {
 }
 
 
-static int EnvUringQueueLen(unsigned graph_id) {
+int EnvUringQueueLen(unsigned graph_id) {
     PANIC_IF(uring_queue_lens.find(graph_id) == uring_queue_lens.end(),
              "graph_id %u not found in uring_queue_lens\n", graph_id);
     return uring_queue_lens[graph_id];
 }
 
-static int EnvPreIssueDepth(unsigned graph_id) {
+int EnvPreIssueDepth(unsigned graph_id) {
     PANIC_IF(pre_issue_depths.find(graph_id) == pre_issue_depths.end(),
              "graph_id %u not found in pre_issue_depths\n", graph_id);
     return pre_issue_depths[graph_id];
-}
-
-
-//////////////////////////////////
-// Syntax sugar for plugin code //
-//////////////////////////////////
-
-void WrapperFuncEnter(SCGraph *scgraph, IOUring *ring, unsigned graph_id) {
-    assert(scgraph != nullptr);
-    assert(ring != nullptr);
-
-    if (!EnvParsed)
-        ParseEnvValues();
-    if (UseForeactor && !ring->IsInitialized())
-        ring->Initialize(EnvUringQueueLen(graph_id));
-    if (UseForeactor && !scgraph->IsRingAssociated())
-        scgraph->AssociateRing(ring, EnvPreIssueDepth(graph_id));
-
-    if (UseForeactor) {
-        RegisterSCGraph(scgraph);
-        assert(!scgraph->IsBuilt());
-    }
-}
-
-void WrapperFuncLeave(SCGraph *scgraph) {
-    if (UseForeactor) {
-        assert(scgraph != nullptr);
-        assert(scgraph->IsBuilt());
-        scgraph->ClearAllInProgress();
-        UnregisterSCGraph();
-    } else {
-        assert(scgraph == nullptr);
-    }
 }
 
 
