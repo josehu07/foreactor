@@ -37,12 +37,16 @@ objdump -t path/to/original/app/file.o | grep funcname_keyword
 
 ## TODO List
 
+- [ ] pool flush optimization
+- [ ] cleverer pre-issuing algo
 - [ ] internal buffer GC
 - [ ] control point inject logic
+- [ ] unstable arguments
 - [ ] io_uring fixed buffers
 - [ ] io_uring SQ polling
 - [ ] config & options on/off
 - [ ] show io_wq concurrency
+- [ ] compiler CFG mapping
 
 
 ## References
@@ -50,3 +54,4 @@ objdump -t path/to/original/app/file.o | grep funcname_keyword
 - ALICE
 - io_uring, ScyllaDB
 - eBPF, AnyCall, BPF for Storage
+- TBC...
