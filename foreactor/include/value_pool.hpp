@@ -154,10 +154,14 @@ class ValuePool final : public ValuePoolBase<T> {
 
     private:
         int dim_idx[NumD];      // which of the dims in EpochList index me
+    
+    public:
+        // Exposing data and ready as public to allow direct population of
+        // vectors from plugin. The SetValueBatch() API may incur too many
+        // std::vector copies.
         DataT data;
         ReadyT ready;
 
-    public:
         ValuePool(const std::vector<int>& dim_idx_);
         ~ValuePool() {}
 

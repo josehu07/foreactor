@@ -142,7 +142,8 @@ long SyscallPread::SyscallSync(EpochListBase *epoch, void *output_buf) {
 }
 
 void SyscallPread::PrepUring(EpochListBase *epoch, struct io_uring_sqe *sqe) {
-    if (internal_buf->GetValue(epoch) == nullptr)
+    if ((!internal_buf->GetReady(epoch)) ||
+        internal_buf->GetValue(epoch) == nullptr)
         internal_buf->SetValue(epoch, new char[count->GetValue(epoch)]);
     io_uring_prep_read(sqe,
                        fd->GetValue(epoch),
