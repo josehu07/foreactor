@@ -28,7 +28,9 @@ static const std::string rand_string(size_t length) {
 }
 
 static void drop_caches(void) {
-    system("sudo sync; sudo sh -c 'echo 3 > /proc/sys/vm/drop_caches'");
+    int rc __attribute__((unused)) =
+        system("sudo sync; sudo sh -c 'echo 3 > /proc/sys/vm/drop_caches'");
+    assert(rc == 0);
 }
 
 static std::vector<std::vector<int>> open_selective(void) {

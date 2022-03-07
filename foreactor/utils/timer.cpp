@@ -99,12 +99,12 @@ void Timer::ShowStat(TimeUnit unit) const {
             min = time < min ? time : min;
         }
         double avg = sum / stat.size();
-        fprintf(stderr, "# %-20s #  cnt %5lu  "
-                        "avg %8.3lf  max %8.3lf  min %8.3lf  %s\n",
+        fprintf(stderr, "# %-24s #  cnt %5lu  "
+                        "avg %10.3lf  max %10.3lf  min %10.3lf  %s\n",
                id.c_str(), stat.size(), avg, max, min,
                TimeUnitStr(unit).c_str());
     } else {
-        fprintf(stderr, "# %20s #  cnt 0\n", id.c_str());
+        fprintf(stderr, "# %24s #  cnt %5lu\n", id.c_str(), 0lu);
     }
 }
 

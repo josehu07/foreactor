@@ -1,5 +1,5 @@
 CC=g++
-CXXFLAGS=-Wall -Werror -std=c++20 -D_GNU_SOURCE -O3 -DNDEBUG
+CXXFLAGS=-Wall -Werror -std=c++20 -D_GNU_SOURCE -O3
 
 FA_SRCS:=$(wildcard core/*.cpp)
 FA_SRCS+=$(wildcard utils/*.cpp)

@@ -1,3 +1,7 @@
 *.o
 *.so
+
 liburing/
+
+demoapp/demo_dbdir/
+

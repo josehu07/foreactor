@@ -9,6 +9,12 @@ make clean && make
 
 
 echo
+echo "Making dummy DB image under /tmp --"
+./demoapp make
+echo "Done."
+
+
+echo
 echo "Correctness check --"
 
 echo " demoapp dump original..."
