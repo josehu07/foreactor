@@ -88,100 +88,100 @@ void build_ldb_get_scgraph() {
 
 // Called upon every entrance of wrapped function.
 void flush_ldb_get_pools(std::vector<std::vector<int>>& files) {
-    branch0_decision.data.reserve(FILES_PER_LEVEL);
-    branch0_decision.ready.reserve(FILES_PER_LEVEL);
+    // branch0_decision.data.reserve(FILES_PER_LEVEL);
+    // branch0_decision.ready.reserve(FILES_PER_LEVEL);
 
-    open_stage.data.reserve(FILES_PER_LEVEL);
-    open_stage.ready.reserve(FILES_PER_LEVEL);
-    open_rc.data.reserve(FILES_PER_LEVEL);
-    open_rc.ready.reserve(FILES_PER_LEVEL);
-    open_pathname.data.reserve(FILES_PER_LEVEL);
-    open_pathname.ready.reserve(FILES_PER_LEVEL);
+    // open_stage.data.reserve(FILES_PER_LEVEL);
+    // open_stage.ready.reserve(FILES_PER_LEVEL);
+    // open_rc.data.reserve(FILES_PER_LEVEL);
+    // open_rc.ready.reserve(FILES_PER_LEVEL);
+    // open_pathname.data.reserve(FILES_PER_LEVEL);
+    // open_pathname.ready.reserve(FILES_PER_LEVEL);
 
-    pread_stage.data.reserve(FILES_PER_LEVEL);
-    pread_stage.ready.reserve(FILES_PER_LEVEL);
-    pread_rc.data.reserve(FILES_PER_LEVEL);
-    pread_rc.ready.reserve(FILES_PER_LEVEL);
-    pread_fd.data.reserve(FILES_PER_LEVEL);
-    pread_fd.ready.reserve(FILES_PER_LEVEL);
-    pread_internal_buf.data.reserve(FILES_PER_LEVEL);
-    pread_internal_buf.ready.reserve(FILES_PER_LEVEL);
+    // pread_stage.data.reserve(FILES_PER_LEVEL);
+    // pread_stage.ready.reserve(FILES_PER_LEVEL);
+    // pread_rc.data.reserve(FILES_PER_LEVEL);
+    // pread_rc.ready.reserve(FILES_PER_LEVEL);
+    // pread_fd.data.reserve(FILES_PER_LEVEL);
+    // pread_fd.ready.reserve(FILES_PER_LEVEL);
+    // pread_internal_buf.data.reserve(FILES_PER_LEVEL);
+    // pread_internal_buf.ready.reserve(FILES_PER_LEVEL);
 
-    branch1_decision.data.reserve(FILES_PER_LEVEL);
-    branch1_decision.ready.reserve(FILES_PER_LEVEL);
+    // branch1_decision.data.reserve(FILES_PER_LEVEL);
+    // branch1_decision.ready.reserve(FILES_PER_LEVEL);
 
-    for (int i = FILES_PER_LEVEL - 1; i >= 0; --i) {
-        int fd = files[0][i];
+    // for (int i = FILES_PER_LEVEL - 1; i >= 0; --i) {
+    //     int fd = files[0][i];
 
-        branch0_decision.data.push_back(fd < 0 ? 0 : 1);
-        branch0_decision.ready.push_back(true);
+    //     branch0_decision.data.push_back(fd < 0 ? 0 : 1);
+    //     branch0_decision.ready.push_back(true);
 
-        open_stage.data.push_back(fa::STAGE_UNISSUED);
-        open_stage.ready.push_back(true);
-        open_rc.data.push_back(-1);
-        open_rc.ready.push_back(false);
-        open_pathname.data.push_back(table_name(0, i));
-        open_pathname.ready.push_back(true);
-        open_flags.data = 0;
-        open_flags.ready = true;
-        open_mode.data = O_RDONLY;
-        open_mode.ready = true;
+    //     open_stage.data.push_back(fa::STAGE_UNISSUED);
+    //     open_stage.ready.push_back(true);
+    //     open_rc.data.push_back(-1);
+    //     open_rc.ready.push_back(false);
+    //     open_pathname.data.push_back(table_name(0, i));
+    //     open_pathname.ready.push_back(true);
+    //     open_flags.data = 0;
+    //     open_flags.ready = true;
+    //     open_mode.data = O_RDONLY;
+    //     open_mode.ready = true;
 
-        pread_stage.data.push_back(fd < 0 ? fa::STAGE_NOTREADY : fa::STAGE_UNISSUED);
-        pread_stage.ready.push_back(true);
-        pread_rc.data.push_back(-1);
-        pread_rc.ready.push_back(false);
-        pread_fd.data.push_back(fd);
-        pread_fd.ready.push_back(fd < 0 ? false : true);
-        pread_count.data = FILE_SIZE;
-        pread_count.ready = true;
-        pread_offset.data = 0;
-        pread_offset.ready = true;
-        pread_internal_buf.data.push_back(nullptr);
-        pread_internal_buf.ready.push_back(false);
+    //     pread_stage.data.push_back(fd < 0 ? fa::STAGE_NOTREADY : fa::STAGE_UNISSUED);
+    //     pread_stage.ready.push_back(true);
+    //     pread_rc.data.push_back(-1);
+    //     pread_rc.ready.push_back(false);
+    //     pread_fd.data.push_back(fd);
+    //     pread_fd.ready.push_back(fd < 0 ? false : true);
+    //     pread_count.data = FILE_SIZE;
+    //     pread_count.ready = true;
+    //     pread_offset.data = 0;
+    //     pread_offset.ready = true;
+    //     pread_internal_buf.data.push_back(nullptr);
+    //     pread_internal_buf.ready.push_back(false);
 
-        branch1_decision.data.push_back(i == 0 ? 0 : 1);
-        branch1_decision.ready.push_back(true);
-    }
-
-    // std::vector<int> branch0_decision_data;
-    // branch0_decision_data.reserve(FILES_PER_LEVEL);
-    // for (auto it = files[0].crbegin(); it != files[0].crend(); ++it)
-    //     branch0_decision_data.push_back(*it < 0 ? 0 : 1);
-    // branch0_decision.SetValueBatch(branch0_decision_data);
-
-    // open_stage.SetValueBatch(std::vector<fa::SyscallStage>(FILES_PER_LEVEL, fa::STAGE_UNISSUED));
-    // open_rc.SetValueBatch(std::vector<long>(FILES_PER_LEVEL, -1));
-    // std::vector<std::string> open_pathname_data;
-    // open_pathname_data.reserve(FILES_PER_LEVEL);
-    // for (int i = FILES_PER_LEVEL - 1; i >= 0; --i)
-    //     open_pathname_data.push_back(table_name(0, i));
-    // open_pathname.SetValueBatch(open_pathname_data);
-    // open_flags.SetValueBatch(0);
-    // open_mode.SetValueBatch(O_RDONLY);
-
-    // std::vector<fa::SyscallStage> pread_stage_data;
-    // pread_stage_data.reserve(FILES_PER_LEVEL);
-    // for (auto it = files[0].crbegin(); it != files[0].crend(); ++it)
-    //     pread_stage_data.push_back(*it < 0 ? fa::STAGE_NOTREADY : fa::STAGE_UNISSUED);
-    // pread_stage.SetValueBatch(pread_stage_data);
-    // pread_rc.SetValueBatch(std::vector<long>(FILES_PER_LEVEL, -1));
-    // std::vector<int> pread_fd_data;
-    // std::vector<bool> pread_fd_ready;
-    // pread_fd_data.reserve(FILES_PER_LEVEL);
-    // pread_fd_ready.reserve(FILES_PER_LEVEL);
-    // for (auto it = files[0].crbegin(); it != files[0].crend(); ++it) {
-    //     pread_fd_data.push_back(*it);
-    //     pread_fd_ready.push_back(*it < 0 ? false : true);
+    //     branch1_decision.data.push_back(i == 0 ? 0 : 1);
+    //     branch1_decision.ready.push_back(true);
     // }
-    // pread_fd.SetValueBatch(pread_fd_data, pread_fd_ready);
-    // pread_count.SetValueBatch(FILE_SIZE);
-    // pread_offset.SetValueBatch(0);
-    // pread_internal_buf.SetValueBatch(std::vector<char *>(FILES_PER_LEVEL, nullptr));
 
-    // std::vector<int> branch1_decision_data(FILES_PER_LEVEL, 1);
-    // branch1_decision_data.back() = 0;
-    // branch1_decision.SetValueBatch(branch1_decision_data);
+    std::vector<int> branch0_decision_data;
+    branch0_decision_data.reserve(FILES_PER_LEVEL);
+    for (auto it = files[0].crbegin(); it != files[0].crend(); ++it)
+        branch0_decision_data.push_back(*it < 0 ? 0 : 1);
+    branch0_decision.SetValueBatch(branch0_decision_data);
+
+    open_stage.SetValueBatch(std::vector<fa::SyscallStage>(FILES_PER_LEVEL, fa::STAGE_UNISSUED));
+    open_rc.SetValueBatch(std::vector<long>(FILES_PER_LEVEL, -1));
+    std::vector<std::string> open_pathname_data;
+    open_pathname_data.reserve(FILES_PER_LEVEL);
+    for (int i = FILES_PER_LEVEL - 1; i >= 0; --i)
+        open_pathname_data.push_back(table_name(0, i));
+    open_pathname.SetValueBatch(open_pathname_data);
+    open_flags.SetValueBatch(0);
+    open_mode.SetValueBatch(O_RDONLY);
+
+    std::vector<fa::SyscallStage> pread_stage_data;
+    pread_stage_data.reserve(FILES_PER_LEVEL);
+    for (auto it = files[0].crbegin(); it != files[0].crend(); ++it)
+        pread_stage_data.push_back(*it < 0 ? fa::STAGE_NOTREADY : fa::STAGE_UNISSUED);
+    pread_stage.SetValueBatch(pread_stage_data);
+    pread_rc.SetValueBatch(std::vector<long>(FILES_PER_LEVEL, -1));
+    std::vector<int> pread_fd_data;
+    std::vector<bool> pread_fd_ready;
+    pread_fd_data.reserve(FILES_PER_LEVEL);
+    pread_fd_ready.reserve(FILES_PER_LEVEL);
+    for (auto it = files[0].crbegin(); it != files[0].crend(); ++it) {
+        pread_fd_data.push_back(*it);
+        pread_fd_ready.push_back(*it < 0 ? false : true);
+    }
+    pread_fd.SetValueBatch(pread_fd_data, pread_fd_ready);
+    pread_count.SetValueBatch(FILE_SIZE);
+    pread_offset.SetValueBatch(0);
+    pread_internal_buf.SetValueBatch(std::vector<char *>(FILES_PER_LEVEL, nullptr));
+
+    std::vector<int> branch1_decision_data(FILES_PER_LEVEL, 1);
+    branch1_decision_data.back() = 0;
+    branch1_decision.SetValueBatch(branch1_decision_data);
 }
 
 // Called upon every exit of wrapped function.
