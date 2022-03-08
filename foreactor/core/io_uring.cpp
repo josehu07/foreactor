@@ -42,10 +42,11 @@ IOUring::~IOUring() {
         DEBUG("destroyed IOUring @ %p\n", &ring);
     }
     TIMER_PAUSE("uring-exit");
-    TIMER_PRINT("uring-exit", TIME_MICRO);
-    TIMER_RESET("uring-exit");
 
-    
+    TIMER_PRINT("uring-init", TIME_MICRO);
+    TIMER_PRINT("uring-exit", TIME_MICRO);
+    TIMER_RESET("uring-init");
+    TIMER_RESET("uring-exit");
 }
 
 
@@ -65,8 +66,6 @@ void IOUring::Initialize(int sq_length_) {
         DEBUG("initialized IOUring @ %p sq_length %d\n", &ring, sq_length);
     }
     TIMER_PAUSE("uring-init");
-    TIMER_PRINT("uring-init", TIME_MICRO);
-    TIMER_RESET("uring-init");
 }
 
 bool IOUring::IsInitialized() const {
