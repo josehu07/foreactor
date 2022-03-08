@@ -6,7 +6,7 @@
 #define __DEMOAPP_LDBGET_H__
 
 
-static constexpr char DBDIR[] = "./demo_dbdir";
+static constexpr char DBDIR[] = "/tmp/demo_dbdir";
 static constexpr int NUM_LEVELS = 4;
 static constexpr int FILES_PER_LEVEL = 8;
 static constexpr size_t FILE_SIZE = 4096;
