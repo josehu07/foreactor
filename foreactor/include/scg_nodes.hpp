@@ -57,7 +57,8 @@ class SCGraphNode {
 typedef enum SyscallStage {
     STAGE_NOTREADY,     // there are missing arguments, not ready for issuing
     STAGE_UNISSUED,     // args are complete, not issued yet
-    STAGE_PROGRESS,     // issued async, completion not harvested yet
+    STAGE_PROGRESS,     // prepared and trying to submit or has been submitted
+                        // to io_uring async, completion not harvested yet
     STAGE_FINISHED      // issued sync / issued async and completion harvested
 } SyscallStage;
 

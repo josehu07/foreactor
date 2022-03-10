@@ -147,7 +147,7 @@ bool SyscallNode::IsForeactable(EdgeType edge, SyscallNode *next,
 }
 
 // The Issue() method contains the core logic of foreactor's syscall
-// pre-issuing algorithm.
+// pre-issuing algorithm. The epoch argument is the current frontier_epoch.
 long SyscallNode::Issue(EpochListBase *epoch, void *output_buf) {
     // can only call issue on frontier node
     assert(scgraph != nullptr);
@@ -156,57 +156,101 @@ long SyscallNode::Issue(EpochListBase *epoch, void *output_buf) {
           StreamStr<SyscallNode>(this).c_str(), this,
           StreamStr<EpochListBase>(epoch).c_str());
 
-    // pre-issue the next few syscalls asynchronously
-    SCGraphNode *next = next_node;
-    EdgeType edge = edge_type;
-    int depth = scgraph->pre_issue_depth;
-    int num_prepared = 0;
-
-    EpochListBase *peek_epoch = EpochListBase::Copy(epoch);
-    while (depth-- > 0 && next != nullptr) {
-        // while next node is a branching node, calculate the user-defined
-        // condition function to pick a branch to consider
-        while (next != nullptr && next->node_type == NODE_BRANCH) {
-            BranchNode *branch_node = static_cast<BranchNode *>(next);
-            DEBUG("branch %s<%p>@%s\n",
-                  StreamStr<BranchNode>(branch_node).c_str(), branch_node,
-                  StreamStr<EpochListBase>(peek_epoch).c_str());
-            next = branch_node->PickBranch(peek_epoch);
-            DEBUG("picked branch %p\n", next);
+    // if pre_issue_depth > 0, and previous pre-issuing procedure has not hit
+    // the end of SCGraph, try to peek and pre-issue
+    if (scgraph->pre_issue_depth > 0 && !scgraph->peekhead_hit_end) {
+        TIMER_START(scgraph->TimerNameStr("peek-algo"));
+        // sometimes, peekhead might get stuck due to some barrier, and thus
+        // the current frontier might proceed ahead of the stored peekhead;
+        // in this case, update peekhead to be current frontier
+        if (scgraph->peekhead_distance < 0) {
+            assert(epoch->AheadOf(scgraph->peekhead_epoch));
+            scgraph->peekhead = next_node;
+            scgraph->peekhead_edge = edge_type;
+            scgraph->peekhead_epoch->CopyFrom(epoch);
+            scgraph->peekhead_distance = 0;
+            DEBUG("peekhead catch up with frontier\n");
         }
-        if (next == nullptr)
-            break;
+        SCGraphNode *next = scgraph->peekhead;
+        EpochListBase *peek_epoch = scgraph->peekhead_epoch;
+        EdgeType edge = scgraph->peekhead_edge;
 
-        // decide if the next node is pre-issuable, and if so, prepare
-        // for submission to uring
-        SyscallNode *syscall_node = static_cast<SyscallNode *>(next);
-        if (IsForeactable(edge, syscall_node, peek_epoch)) {
-            if (syscall_node->stage->GetValue(peek_epoch) == STAGE_UNISSUED) {
-                // the syscall might have already been submitted to
-                // io_uring by some previous foreactions
+        // peek and pre-issue the next few syscalls asynchronously; at most
+        // peek as far as pre_issue_depth nodes beyond current frontier
+        assert(scgraph->peekhead_distance >= 0);
+        assert(scgraph->peekhead_distance <= scgraph->pre_issue_depth);
+        int depth = scgraph->pre_issue_depth - scgraph->peekhead_distance;
+        DEBUG("peeking %d starts %s<%p>@%s\n",
+              depth, StreamStr<SCGraphNode>(next).c_str(), next,
+              StreamStr<EpochListBase>(peek_epoch).c_str());
+        while (depth-- > 0 && next != nullptr) {
+            // while next node is a branching node, pick up the correct
+            // branch if the branching has been decided
+            while (next != nullptr && next->node_type == NODE_BRANCH) {
+                BranchNode *branch_node = static_cast<BranchNode *>(next);
+                DEBUG("branch %s<%p>@%s\n",
+                      StreamStr<BranchNode>(branch_node).c_str(), branch_node,
+                      StreamStr<EpochListBase>(peek_epoch).c_str());
+                next = branch_node->PickBranch(peek_epoch);
+                DEBUG("picked branch %p\n", next);
+            }
+            if (next == nullptr) {
+                // FIXME: argument install logic, may also return nullptr
+                // hit end of graph, no need of peeking for future Issue()s
+                scgraph->peekhead_hit_end = true;
+                DEBUG("peeking hit end of SCGraph\n");
+                break;
+            } else
+                scgraph->peekhead = next;
+
+            // decide if the next node is pre-issuable, and if so, prepare
+            // for submission to uring
+            SyscallNode *syscall_node = static_cast<SyscallNode *>(next);
+            if (IsForeactable(edge, syscall_node, peek_epoch)) {
+                // prepare the IOUring submission entry, set node stage to be
+                // in-progress
+                assert(syscall_node->stage->GetValue(peek_epoch) ==
+                       STAGE_UNISSUED);
                 syscall_node->PrepAsync(peek_epoch);
                 syscall_node->stage->SetValue(peek_epoch, STAGE_PROGRESS);
-                num_prepared++;
-                DEBUG("prepared %s<%p>@%s\n",
+                DEBUG("prepared %d %s<%p>@%s\n",
+                      scgraph->num_prepared,
                       StreamStr<SyscallNode>(syscall_node).c_str(),
-                      syscall_node, StreamStr<EpochListBase>(peek_epoch).c_str());
-            }
-            next = syscall_node->next_node;
-            edge = syscall_node->edge_type;
-        } else
-            break;
-    }
-    EpochListBase::Delete(peek_epoch);
+                      syscall_node,
+                      StreamStr<EpochListBase>(peek_epoch).c_str());
+                // distance of peekhead from frontier increments by 1
+                next = syscall_node->next_node;
+                edge = syscall_node->edge_type;
+                scgraph->peekhead = next;
+                scgraph->peekhead_edge = edge;
+                scgraph->peekhead_distance++;
+                // update prepared_distance if this is the earliest
+                if (scgraph->num_prepared == 0)
+                    scgraph->prepared_distance = scgraph->peekhead_distance;
+                scgraph->num_prepared++;
+            } else
+                break;
+        }
+        TIMER_PAUSE(scgraph->TimerNameStr("peek-algo"));
 
-    // see some number of syscall nodes prepared, do io_uring_submit
-    if (num_prepared > 0) {
-        TIMER_START("g"+std::to_string(scgraph->graph_id)+"-ring-submit");
-        int num_submitted __attribute__((unused)) =
-            io_uring_submit(scgraph->Ring());
-        TIMER_PAUSE("g"+std::to_string(scgraph->graph_id)+"-ring-submit");
-        DEBUG("submitted %d / %d entries to SQ\n",
-              num_submitted, num_prepared);
-        assert(num_submitted == num_prepared);
+        // see some number of syscall nodes prepared, may do io_uring_submit
+        // if we have a sufficient number of prepared entries or if the
+        // earliest prepared entry is close enough to current frontier
+        if (scgraph->num_prepared > 0) {
+            // TODO: these conditions might be tunable
+            if ((scgraph->num_prepared >= scgraph->pre_issue_depth / 2) ||
+                (scgraph->prepared_distance <= 1)) {
+                TIMER_START(scgraph->TimerNameStr("ring-submit"));
+                int num_submitted __attribute__((unused)) =
+                    io_uring_submit(scgraph->Ring());
+                TIMER_PAUSE(scgraph->TimerNameStr("ring-submit"));
+                DEBUG("submitted %d / %d entries to SQ\n",
+                      num_submitted, scgraph->num_prepared);
+                assert(num_submitted == scgraph->num_prepared);
+                scgraph->num_prepared = 0;
+                scgraph->prepared_distance = -1;
+            }
+        }
     }
 
     // handle myself
@@ -219,10 +263,10 @@ long SyscallNode::Issue(EpochListBase *epoch, void *output_buf) {
         DEBUG("sync-call %s<%p>@%s\n",
               StreamStr<SyscallNode>(this).c_str(), this,
               StreamStr<EpochListBase>(epoch).c_str());
-        TIMER_START("g"+std::to_string(scgraph->graph_id)+"-sync-call");
+        TIMER_START(scgraph->TimerNameStr("sync-call"));
         rc->SetValue(epoch, SyscallSync(epoch, output_buf));
         stage->SetValue(epoch, STAGE_FINISHED);
-        TIMER_PAUSE("g"+std::to_string(scgraph->graph_id)+"-sync-call");
+        TIMER_PAUSE(scgraph->TimerNameStr("sync-call"));
         DEBUG("sync-call finished rc %ld\n", rc->GetValue(epoch));
     } else {
         // if has been pre-issued, process CQEs from io_uring until mine
@@ -230,18 +274,20 @@ long SyscallNode::Issue(EpochListBase *epoch, void *output_buf) {
         DEBUG("ring-cmpl %s<%p>@%s\n",
               StreamStr<SyscallNode>(this).c_str(), this,
               StreamStr<EpochListBase>(epoch).c_str());
-        TIMER_START("g"+std::to_string(scgraph->graph_id)+"-ring-cmpl");
+        TIMER_START(scgraph->TimerNameStr("ring-cmpl"));
         if (stage->GetValue(epoch) == STAGE_PROGRESS)
             CmplAsync(epoch);
         assert(stage->GetValue(epoch) == STAGE_FINISHED);
-        TIMER_PAUSE("g"+std::to_string(scgraph->graph_id)+"-ring-cmpl");
+        TIMER_PAUSE(scgraph->TimerNameStr("ring-cmpl"));
         DEBUG("ring-cmpl finished rc %ld\n", rc->GetValue(epoch));
         ReflectResult(epoch, output_buf);
         DEBUG("ring-cmpl result reflected\n");
     }
 
-    // push frontier forward
+    // push frontier forward, reduce distance counters by 1
     scgraph->frontier = next_node;
+    scgraph->peekhead_distance--;
+    scgraph->prepared_distance--;
     DEBUG("pushed frontier -> %p\n", scgraph->frontier);
 
     return rc->GetValue(epoch);

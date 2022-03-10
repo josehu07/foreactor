@@ -37,6 +37,7 @@ class SCGraph {
 
     public:
         const unsigned graph_id;
+        const unsigned max_dims;
 
     private:
         bool graph_built = false;
@@ -48,13 +49,28 @@ class SCGraph {
         // Must be no larger than the length of SQ of uring.
         int pre_issue_depth = 0;
 
+        // Number of uring-prepared syscalls not yet submitted, and the
+        // distance of the earliest prepared SyscallNode from frontier.
+        int num_prepared = 0;
+        int prepared_distance = -1;
+
         // Current frontier node during execution. The frontier_epoch
         // field stores the EpochList of where the actual execution timeline
         // has hit. SyscallNode->Issue() might create temporary EpochLists
         // that are ahead of frontier_epoch for pre-issuing purposes.
         SCGraphNode *initial_frontier = nullptr;
         SCGraphNode *frontier = nullptr;
-        EpochListBase *frontier_epoch;
+        EpochListBase *frontier_epoch = nullptr;
+
+        // Current head of peeking. Each time a SyscallLnode->Issue() is
+        // called, the peeking procedure starts here. The peekhead_distance
+        // field stores how far away is the current peekhead node from the
+        // current frontier node.
+        SCGraphNode *peekhead = nullptr;
+        EpochListBase *peekhead_epoch = nullptr;
+        EdgeType peekhead_edge = EDGE_BASE;
+        int peekhead_distance = -1;
+        bool peekhead_hit_end = false;
 
         struct io_uring *Ring() const {
             assert(ring_associated);

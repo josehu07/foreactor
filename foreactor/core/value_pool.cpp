@@ -119,6 +119,44 @@ bool EpochListBase::IsSame(const EpochListBase *epoch) const {
     }
 }
 
+bool EpochListBase::AheadOf(const EpochListBase *epoch) const {
+    if (max_dims != epoch->max_dims)
+        return false;
+    switch (max_dims) {
+    case 0:
+        return static_cast<const EpochList<0> *>(this)->AheadOf(
+               static_cast<const EpochList<0> *>(epoch));
+    case 1:
+        return static_cast<const EpochList<1> *>(this)->AheadOf(
+               static_cast<const EpochList<1> *>(epoch));
+    case 2:
+        return static_cast<const EpochList<2> *>(this)->AheadOf(
+               static_cast<const EpochList<2> *>(epoch));
+    default:
+        return false;   // not reached
+    }
+}
+
+void EpochListBase::CopyFrom(const EpochListBase *epoch) {
+    assert(max_dims == epoch->max_dims);
+    switch (max_dims) {
+    case 0:
+        static_cast<EpochList<0> *>(this)->CopyFrom(
+            static_cast<const EpochList<0> *>(epoch));
+        break;
+    case 1:
+        static_cast<EpochList<1> *>(this)->CopyFrom(
+            static_cast<const EpochList<1> *>(epoch));
+        break;
+    case 2:
+        static_cast<EpochList<2> *>(this)->CopyFrom(
+            static_cast<const EpochList<2> *>(epoch));
+        break;
+    default:
+        break;      // not reached
+    }
+}
+
 
 size_t EpochListBase::GetEpoch(int dim_idx) const {
     switch (max_dims) {

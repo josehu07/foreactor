@@ -48,6 +48,10 @@ class EpochListBase {
 
         // Compare epoch numbers with another instance.
         virtual bool IsSame(const EpochListBase *epoch) const;
+        virtual bool AheadOf(const EpochListBase *epoch) const;
+
+        // Copy epoch numbers from another instance.
+        virtual void CopyFrom(const EpochListBase *epoch);
 
         // Every child class must implement these interfaces.
         // The base class implementation of these methods provide
@@ -75,6 +79,9 @@ class EpochList final : public EpochListBase {
                                         const EpochList<E>& e);
 
         bool IsSame(const EpochList<D> *epoch) const;
+        bool AheadOf(const EpochList<D> *epoch) const;
+
+        void CopyFrom(const EpochList<D> *epoch);
 
         size_t GetEpoch(int dim_idx) const;
         void IncrementEpoch(int dim_idx);

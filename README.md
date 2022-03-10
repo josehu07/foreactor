@@ -5,13 +5,15 @@ TODO (kernel version, etc.)
 
 ## Prerequisites
 
-Requires `gcc`/`g++` version >= 10.2 for full support of `c++20` standard:
+<details>
+<summary>Requires `gcc`/`g++` version >= 10.2 for full support of `c++20` standard.</summary>
 
 ```bash
 sudo apt update
 sudo apt upgrade
 sudo apt install build-essential gcc-10 g++-10 cpp-10 cmake
 ```
+</details>
 
 Make `gcc-10`/`g++-10` the default version:
 
@@ -56,15 +58,19 @@ objdump -t path/to/original/app/file.o | grep funcname_keyword
 
 ## TODO List
 
-- [ ] pool flush optimization
-- [ ] cleverer pre-issuing algo
-- [ ] internal buffer GC
+- [x] pool flush optimization
+- [x] cleverer pre-issuing algo
+- [ ] longer chain for demoapp
+- [ ] readme & website doc
 - [ ] control point inject logic
+- [ ] syscall graph visualize
 - [ ] unstable arguments
+- [ ] internal buffer GC
 - [ ] io_uring fixed buffers
 - [ ] io_uring SQ polling
 - [ ] config & options on/off
 - [ ] show io_wq concurrency
+- [ ] serious related work study
 - [ ] compiler CFG mapping
 
 

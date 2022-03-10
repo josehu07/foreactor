@@ -44,6 +44,22 @@ inline bool EpochList<D>::IsSame(const EpochList<D> *epoch) const {
     return true;
 }
 
+template <unsigned D>
+inline bool EpochList<D>::AheadOf(const EpochList<D> *epoch) const {
+    for (unsigned i = 0; i < D; ++i) {
+        if (epochs[i] < epoch->epochs[i])
+            return false;
+    }
+    return true;
+}
+
+
+template <unsigned D>
+inline void EpochList<D>::CopyFrom(const EpochList<D> *epoch) {
+    for (unsigned i = 0; i < D; ++i)
+        epochs[i] = epoch->epochs[i];
+}
+
 
 template <unsigned D>
 inline size_t EpochList<D>::GetEpoch(int dim_idx) const {

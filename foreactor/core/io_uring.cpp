@@ -19,6 +19,7 @@ NodeAndEpoch::NodeAndEpoch(SyscallNode *node_, EpochListBase *epoch_)
     // stores a copy of epoch to remember the epoch at submission
     assert(node_ != nullptr);
     assert(epoch_ != nullptr);
+    assert(epoch != nullptr);
 }
 
 NodeAndEpoch::~NodeAndEpoch() {
@@ -85,11 +86,11 @@ void IOUring::RemoveInProgress(NodeAndEpoch *nae) {
 
 
 void IOUring::ClearAllInProgress() {
-    for (NodeAndEpoch *nae : in_progress) {
+    while (in_progress.size() > 0) {
+        NodeAndEpoch *nae = *(in_progress.begin());
         assert(nae->node->stage->GetValue(nae->epoch) == STAGE_PROGRESS);
         nae->node->CmplAsync(nae->epoch);   // nae will be deleted here
     }
-    in_progress.clear();
 }
 
 

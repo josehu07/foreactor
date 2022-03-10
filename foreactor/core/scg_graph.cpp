@@ -39,9 +39,12 @@ void UnregisterSCGraph() {
 ////////////////////////////
 
 SCGraph::SCGraph(unsigned graph_id, unsigned max_dims)
-        : graph_id(graph_id), frontier_epoch(EpochListBase::New(max_dims)) {
-    graph_built = false;
-    ring_associated = false;
+        : graph_id(graph_id), max_dims(max_dims),
+          graph_built(false), ring_associated(false),
+          num_prepared(0), prepared_distance(-1),
+          frontier_epoch(EpochListBase::New(max_dims)),
+          peekhead_epoch(EpochListBase::New(max_dims)),
+          peekhead_distance(-1), peekhead_hit_end(false) {
 }
 
 SCGraph::~SCGraph() {
@@ -49,6 +52,7 @@ SCGraph::~SCGraph() {
     TIMER_RESET(TimerNameStr("build-graph"));
 
     EpochListBase::Delete(frontier_epoch);
+    EpochListBase::Delete(peekhead_epoch);
 
     // clean up and delete all nodes added
     for (auto& node : nodes)
@@ -94,8 +98,17 @@ bool SCGraph::IsBuilt() const {
 
 
 void SCGraph::ResetToStart() {
-    frontier_epoch->ClearEpochs();
+    num_prepared = 0;
+    prepared_distance = -1;
+
     frontier = initial_frontier;
+    frontier_epoch->ClearEpochs();
+    
+    peekhead = nullptr;
+    peekhead_edge = EDGE_BASE;
+    peekhead_epoch->ClearEpochs();
+    peekhead_distance = -1;
+    peekhead_hit_end = false;
 }
 
 void SCGraph::ClearAllInProgress() {
@@ -106,14 +119,16 @@ void SCGraph::ClearAllInProgress() {
 
     TIMER_PRINT(TimerNameStr("pool-flush"),  TIME_MICRO);
     TIMER_PRINT(TimerNameStr("pool-clear"),  TIME_MICRO);
-    TIMER_PRINT(TimerNameStr("sync-call"),   TIME_MICRO);
+    TIMER_PRINT(TimerNameStr("peek-algo"),   TIME_MICRO);
     TIMER_PRINT(TimerNameStr("ring-submit"), TIME_MICRO);
+    TIMER_PRINT(TimerNameStr("sync-call"),   TIME_MICRO);
     TIMER_PRINT(TimerNameStr("ring-cmpl"),   TIME_MICRO);
     TIMER_PRINT(TimerNameStr("clear-prog"),  TIME_MICRO);
     TIMER_RESET(TimerNameStr("pool-flush"));
     TIMER_RESET(TimerNameStr("pool-clear"));
-    TIMER_RESET(TimerNameStr("sync-call"));
+    TIMER_RESET(TimerNameStr("peek-algo"));
     TIMER_RESET(TimerNameStr("ring-submit"));
+    TIMER_RESET(TimerNameStr("sync-call"));
     TIMER_RESET(TimerNameStr("ring-cmpl"));
     TIMER_RESET(TimerNameStr("clear-prog"));
 }

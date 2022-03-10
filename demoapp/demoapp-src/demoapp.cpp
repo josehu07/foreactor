@@ -77,19 +77,23 @@ void run_ldb_get(bool dump_result, bool do_drop_caches = false) {
     std::filesystem::current_path(DBDIR);
     std::vector<std::string> bytes;
 
-    std::vector<std::vector<int>> files = open_selective();
-    drop_caches();
-
     std::vector<double> elapsed_us;
     for (int i = 0; i < 5; ++i) {
+        std::vector<std::vector<int>> files = open_selective();
+
         if (do_drop_caches)     // drain page cache before each run?
             drop_caches();
+        
         auto t1 = std::chrono::high_resolution_clock::now();
         bytes = ldb_get(files);
         auto t2 = std::chrono::high_resolution_clock::now();
+        
         std::chrono::duration<double, std::micro> duration = t2 - t1;
         elapsed_us.push_back(duration.count());
+
+        close_all(files);
     }
+
     std::cerr << "Time elapsed: [ ";
     for (double& us : elapsed_us)
         std::cerr << us << " ";
@@ -99,8 +103,6 @@ void run_ldb_get(bool dump_result, bool do_drop_caches = false) {
         for (std::string& s : bytes)
             std::cout << s << std::endl;
     }
-    
-    close_all(files);
 }
 
 

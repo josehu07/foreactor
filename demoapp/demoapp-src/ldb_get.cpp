@@ -12,7 +12,7 @@ std::vector<std::string> ldb_get(std::vector<std::vector<int>>& files) {
     std::vector<std::string> bytes;
     char read_buf[FILE_SIZE+1];
 
-    for (int index = FILES_PER_LEVEL - 1; index >= 0; --index) {
+    for (int index = FILES_PER_LEVEL - 1; index >= 1; --index) {
         if (files[0][index] < 0)
             files[0][index] = open(table_name(0, index).c_str(), 0, O_RDONLY);
         ssize_t ret __attribute__((unused)) =
