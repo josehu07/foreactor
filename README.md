@@ -6,7 +6,7 @@ TODO (kernel version, etc.)
 ## Prerequisites
 
 <details>
-<summary>Requires `gcc`/`g++` version >= 10.2 for full support of `c++20` standard.</summary>
+<summary>Requires gcc/g++ version >= 10.2 for full support of c++20 standard...</summary>
 
 ```bash
 sudo apt update
@@ -15,15 +15,18 @@ sudo apt install build-essential gcc-10 g++-10 cpp-10 cmake
 ```
 </details>
 
-Make `gcc-10`/`g++-10` the default version:
+<details>
+<summary>Make gcc-10/g++-10 the default version...</summary>
 
 ```bash
 sudo update-alternatives --install /usr/bin/gcc gcc /usr/bin/gcc-10 100
 sudo update-alternatives --install /usr/bin/g++ g++ /usr/bin/g++-10 100
 sudo update-alternatives --install /usr/bin/gcov gcov /usr/bin/gcov-10 100
 ```
+</details>
 
-Build and install `liburing`, a collection of helpers over the io_uring interface:
+<details>
+<summary>Build and install liburing, a set of official helpers over io_uring...</summary>
 
 ```bash
 git clone https://github.com/axboe/liburing.git
@@ -32,6 +35,7 @@ make
 sudo make install
 cd ..
 ```
+</details>
 
 
 ## Build Instructions
