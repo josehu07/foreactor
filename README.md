@@ -1,5 +1,9 @@
 # Foreactor: Transparent Asynchronous Syscalls for Any Serial Application
 
+![languages](https://img.shields.io/github/languages/count/josehu07/foreactor)
+![top-lang](https://img.shields.io/github/languages/top/josehu07/foreactor)
+![license](https://img.shields.io/github/license/josehu07/foreactor)
+
 Foreactor is a library + plugins framework that enables asynchronous I/O (or more generally, asynchronous syscalls) with Linux `io_uring` in any application. Foreactor is transparent -- it allows the integration of `io_uring` into any originally serial application with no modification to application code.
 
 This is done by describing the application's critical functions (e.g., LevelDB's `Version::Get`) as **syscall graphs**, a formal abstraction we propose, in plugins. Such graph abstraction captures the original execution order of syscalls to be issued by the function and their mutual dependencies. If the `foreactor` library gets `LD_PRELOAD`ed when running the application, it automatically hijacks those wrapped functions specified in plugins as well as certain POSIX syscalls, and pre-issues some syscalls ahead of time if the syscall graph says it is safe to do so.
