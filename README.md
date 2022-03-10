@@ -1,12 +1,31 @@
-# Foreactor: Transparent Async Syscalls for Any Application
+# Foreactor: Transparent Asynchronous Syscalls for Any Serial Application
 
-TODO (kernel version, etc.)
+Foreactor is a library + plugin framework that enables asynchronous I/O (or more generally, asynchronous syscalls) with Linux `io_uring` in any application. Foreactor is transparent -- it allows the integration of `io_uring` into any originally serial application with no modification to application code.
+
+This is done by describing the application's critical functions (e.g., LevelDB's `Version::Get`) as syscall graphs -- a formal abstraction we propose. Such graph abstraction captures the original execution order of syscalls to be issued by the function and their mutual dependencies. If the `foreactor` library gets `LD_PRELOAD`ed when running the application, it automatically hijacks those wrapped functions as well as POSIX syscalls, and pre-issues a certain number of syscalls ahead of time if the syscall graph says it is safe to do so.
 
 
 ## Prerequisites
 
+The following kernel version, compiler, and libraries are required:
+
+* Linux kernel >= 5.10 (we tested with Ubuntu 20.04)
+* gcc/g++ >= 10.2
+* liburing >= 2.1
+
 <details>
-<summary>Requires gcc/g++ version >= 10.2 for full support of c++20 standard...</summary>
+<summary>Update to latest mainline Linux kernel for Ubuntu 20.04...</summary>
+
+```bash
+wget https://raw.githubusercontent.com/pimlie/ubuntu-mainline-kernel.sh/master/ubuntu-mainline-kernel.sh
+sudo chmod +x ubuntu-mainline-kernel.sh
+./ubuntu-mainline-kernel.sh -c
+sudo ./ubuntu-mainline-kernel.sh -i
+```
+</details>
+
+<details>
+<summary>Install gcc/g++ version >= 10.2 for full support of c++20 standard...</summary>
 
 ```bash
 sudo apt update

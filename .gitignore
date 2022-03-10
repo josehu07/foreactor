@@ -1,6 +1,7 @@
 *.o
 *.so
 
+ubuntu-mainline-kernel.sh
 liburing/
 
 demoapp/demo_dbdir/
