@@ -1,8 +1,8 @@
 # Foreactor: Transparent Asynchronous Syscalls for Any Serial Application
 
-Foreactor is a library + plugin framework that enables asynchronous I/O (or more generally, asynchronous syscalls) with Linux `io_uring` in any application. Foreactor is transparent -- it allows the integration of `io_uring` into any originally serial application with no modification to application code.
+Foreactor is a library + plugins framework that enables asynchronous I/O (or more generally, asynchronous syscalls) with Linux `io_uring` in any application. Foreactor is transparent -- it allows the integration of `io_uring` into any originally serial application with no modification to application code.
 
-This is done by describing the application's critical functions (e.g., LevelDB's `Version::Get`) as syscall graphs -- a formal abstraction we propose. Such graph abstraction captures the original execution order of syscalls to be issued by the function and their mutual dependencies. If the `foreactor` library gets `LD_PRELOAD`ed when running the application, it automatically hijacks those wrapped functions as well as POSIX syscalls, and pre-issues a certain number of syscalls ahead of time if the syscall graph says it is safe to do so.
+This is done by describing the application's critical functions (e.g., LevelDB's `Version::Get`) as **syscall graphs**, a formal abstraction we propose, in plugins. Such graph abstraction captures the original execution order of syscalls to be issued by the function and their mutual dependencies. If the `foreactor` library gets `LD_PRELOAD`ed when running the application, it automatically hijacks those wrapped functions specified in plugins as well as certain POSIX syscalls, and pre-issues some syscalls ahead of time if the syscall graph says it is safe to do so.
 
 
 ## Prerequisites
@@ -57,26 +57,59 @@ cd ..
 </details>
 
 
-## Build Instructions
+## Basic Usage
 
-Build the `foreactor` library:
+To enable foreactor for an application function, we need the following components:
+
+* The core foreactor library under `foreactor/`
+* An application plugin describing the function's syscall graph, to be put alongside application code
+* Some minor modifications to the applications build system
+
+<details>
+<summary>Build the core foreactor library...</summary>
 
 ```bash
 cd foreactor
 make clean && make
 cd ..
 ```
+</details>
 
-Finally, for each application of interest, go into the corresponding folder (which contains its foreactor-patched source code), then follow the README down there.
+<details>
+<summary>Build and try the demo application...</summary>
+
+```bash
+cd demoapp
+./demo.sh
+cd ..
+```
+</details>
+
+
+## Listed Applications
+
+This repository contains a collection of applications that contain functions suitable to benefit from asynchrony and which we have written some plugins for.
+
+<details>
+<summary>LevelDB v1.23</summary>
+
+TODO
+</details>
 
 
 ## Making a New Plugin
+
+It does not take too much effort to make a new plugin for some new application function, as long as the syscall graph for that function is conceptually clear.
+
+<details>
+<summary>Make a new plugin for new appliation function...</summary>
 
 TODO
 
 ```bash
 objdump -t path/to/original/app/file.o | grep funcname_keyword
 ```
+</details>
 
 
 ## TODO List
