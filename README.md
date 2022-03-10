@@ -9,9 +9,11 @@ This is done by describing the application's critical functions (e.g., LevelDB's
 
 The following kernel version, compiler, and libraries are required:
 
-* Linux kernel >= 5.10 (we tested with Ubuntu 20.04)
-* gcc/g++ >= 10.2
-* liburing >= 2.1
+- Linux kernel >= 5.10 (we tested with Ubuntu 20.04)
+- gcc/g++ >= 10.2
+- liburing >= 2.1
+
+Detailed instructions:
 
 <details>
 <summary>Update to latest mainline Linux kernel for Ubuntu 20.04...</summary>
@@ -61,9 +63,11 @@ cd ..
 
 To enable foreactor for an application function, we need the following components:
 
-* The core foreactor library under `foreactor/`
-* An application plugin describing the function's syscall graph, to be put alongside application code
-* Some minor modifications to the applications build system
+- The core foreactor library under `foreactor/`
+- An application plugin describing the function's syscall graph, to be put alongside application code
+- Some minor modifications to the applications build system
+
+Detailed instructions:
 
 <details>
 <summary>Build the core foreactor library...</summary>
