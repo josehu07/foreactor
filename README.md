@@ -1,4 +1,4 @@
-# Foreactor: Transparent Asynchronous Syscalls for Any Serial Application
+# Foreactor
 
 ![languages](https://img.shields.io/github/languages/count/josehu07/foreactor)
 ![top-lang](https://img.shields.io/github/languages/top/josehu07/foreactor)
@@ -96,18 +96,29 @@ cd ..
 
 ## Listed Applications
 
-This repository contains a collection of applications that contain functions suitable to benefit from asynchrony and which we have written some plugins for.
+This repository contains a collection of applications that involve functions suitable to be wrapped by foreactor and benefit from asynchrony. We have written plugins for some of them.
 
 <details>
 <summary>LevelDB v1.23</summary>
 
-TODO
+Build:
+
+```bash
+cd leveldb
+make clean && make
+```
+
+Run with foreactor:
+
+```bash
+./ycsbcli TODO
+```
 </details>
 
 
 ## Making a New Plugin
 
-It does not take too much effort to make a new plugin for some new application function, as long as the syscall graph for that function is conceptually clear.
+It does not take too much effort to make a new plugin for an application function, as long as the syscall graph for that function is conceptually clear.
 
 <details>
 <summary>Make a new plugin for new appliation function...</summary>
