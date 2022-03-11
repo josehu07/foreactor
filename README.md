@@ -6,7 +6,7 @@
 
 Foreactor is a library + plugins framework that enables asynchronous I/O (or more generally, asynchronous syscalls) with Linux `io_uring` in any application. Foreactor is transparent -- it allows the integration of `io_uring` into any originally serial application with no modification to application code.
 
-This is done by describing the application's critical functions (e.g., LevelDB's `Version::Get`) as **syscall graphs**, a formal abstraction we propose, in plugins. Such graph abstraction captures the original execution order of syscalls to be issued by the function and their mutual dependencies. If the `foreactor` library gets `LD_PRELOAD`ed when running the application, it automatically hijacks those wrapped functions specified in plugins as well as certain POSIX syscalls, and pre-issues some syscalls ahead of time if the syscall graph says it is safe to do so.
+This is done by describing the application's critical functions (e.g., LevelDB's `Version::Get`) as **syscall graphs**, a formal abstraction we propose, in plugins. Such graph abstraction captures the original execution order of syscalls to be issued by the function and their mutual dependencies. If the `foreactor` library gets `LD_PRELOAD`ed when running the application, it automatically hijacks those wrapped functions specified in plugins as well as certain POSIX syscalls, and pre-issues some syscalls ahead of time if the syscall graph says it is safe and benefitial to do so.
 
 
 ## Prerequisites
@@ -91,15 +91,23 @@ cd demoapp
 ./demo.sh
 cd ..
 ```
+
+TODO describe linker wrapping procedure
 </details>
 
 
 ## Listed Applications
 
-This repository contains a collection of applications that involve functions suitable to be wrapped by foreactor and benefit from asynchrony. We have written plugins for some of them.
+This repository contains a collection of applications that involve functions suitable to be wrapped by foreactor and benefit from asynchrony. We have written plugins for some of them. The plugins code can be found under `appname/appname-plugin/`.
+
+TODO link to scgraph database website
 
 <details>
 <summary>LevelDB v1.23</summary>
+
+| Function | Note |
+| :-: | :- |
+| `Version::Get` | Chained preads with early exits |
 
 Build:
 
@@ -123,11 +131,11 @@ It does not take too much effort to make a new plugin for an application functio
 <details>
 <summary>Make a new plugin for new appliation function...</summary>
 
-TODO
-
 ```bash
 objdump -t path/to/original/app/file.o | grep funcname_keyword
 ```
+
+TODO complete tutorial
 </details>
 
 
@@ -147,6 +155,7 @@ objdump -t path/to/original/app/file.o | grep funcname_keyword
 - [ ] show io_wq concurrency
 - [ ] serious related work study
 - [ ] compiler CFG mapping
+- [ ] support other static langs
 
 
 ## References
