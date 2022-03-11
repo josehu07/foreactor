@@ -17,7 +17,7 @@ The following kernel version, compiler, and libraries are required:
 - gcc/g++ >= 10.2
 - liburing >= 2.1
 
-Detailed instructions:
+**Instructions**:
 
 <details>
 <summary>Update to latest mainline Linux kernel for Ubuntu 20.04...</summary>
@@ -71,7 +71,7 @@ To enable foreactor for an application function, we need the following component
 - An application plugin describing the function's syscall graph, to be put alongside application code
 - Some minor modifications to the applications build system
 
-Detailed instructions:
+**Instructions**:
 
 <details>
 <summary>Build the core foreactor library...</summary>
