@@ -143,10 +143,13 @@ TODO complete tutorial
 
 - [x] pool flush optimization
 - [x] cleverer pre-issuing algo
+- [ ] larger LevelDB YCSB-c bench
 - [ ] longer chain for demoapp
+- [ ] apply to git status case
 - [ ] control point inject logic
 - [ ] syscall graph visualize
 - [ ] readme & website doc
+- [ ] == spring break goal end ==
 - [ ] unstable arguments
 - [ ] internal buffer GC
 - [ ] io_uring fixed buffers
