@@ -107,7 +107,7 @@ TODO link to scgraph database website
 
 | Function | Note |
 | :-: | :- |
-| `Version::Get` | Chained preads with early exits |
+| `Version::Get` | Chained `pread`s with early exits |
 
 Build:
 
