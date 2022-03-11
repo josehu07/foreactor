@@ -32,7 +32,8 @@ class SyscallOpen final : public SyscallNode {
         // Arguments could be not ready at the point of constructing the
         // SCGraph, in which case those they must be set before calling
         // Issue on this syscall node.
-        SyscallOpen(ValuePoolBase<SyscallStage> *stage,
+        SyscallOpen(std::string name,
+                    ValuePoolBase<SyscallStage> *stage,
                     ValuePoolBase<long> *rc,
                     ValuePoolBase<std::string> *pathname,
                     ValuePoolBase<int> *flags,
@@ -69,7 +70,8 @@ class SyscallPread final : public SyscallNode {
 
     public:
         SyscallPread() = delete;
-        SyscallPread(ValuePoolBase<SyscallStage> *stage,
+        SyscallPread(std::string name,
+                     ValuePoolBase<SyscallStage> *stage,
                      ValuePoolBase<long> *rc,
                      ValuePoolBase<int> *fd,
                      ValuePoolBase<size_t> *count,

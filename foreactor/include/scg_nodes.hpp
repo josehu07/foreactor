@@ -38,14 +38,15 @@ class SCGraphNode {
     friend class SCGraph;
 
     public:
+        const std::string name;
         const NodeType node_type;
 
     protected:
         SCGraph *scgraph = nullptr;
 
         SCGraphNode() = delete;
-        SCGraphNode(NodeType node_type)
-                : node_type(node_type), scgraph(nullptr) {}
+        SCGraphNode(std::string name, NodeType node_type)
+                : name(name), node_type(node_type), scgraph(nullptr) {}
         virtual ~SCGraphNode() {}
 
     public:
@@ -92,7 +93,7 @@ class SyscallNode : public SCGraphNode {
         ValuePoolBase<long> *rc;
 
         SyscallNode() = delete;
-        SyscallNode(SyscallType sc_type, bool pure_sc,
+        SyscallNode(std::string name, SyscallType sc_type, bool pure_sc,
                     ValuePoolBase<SyscallStage> *stage,
                     ValuePoolBase<long> *rc);
         virtual ~SyscallNode() {}
@@ -147,7 +148,7 @@ class BranchNode final : public SCGraphNode {
 
     public:
         BranchNode() = delete;
-        BranchNode(ValuePoolBase<int> *decision);
+        BranchNode(std::string name, ValuePoolBase<int> *decision);
         ~BranchNode() {}
 
         friend std::ostream& operator<<(std::ostream& s, const BranchNode& n);

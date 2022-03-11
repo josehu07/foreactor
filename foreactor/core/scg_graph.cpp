@@ -1,7 +1,11 @@
+#include <iostream>
+#include <fstream>
 #include <tuple>
+#include <string>
 #include <unordered_set>
 #include <stdexcept>
 #include <assert.h>
+#include <unistd.h>
 #include <liburing.h>
 
 #include "debug.hpp"
@@ -90,6 +94,8 @@ bool SCGraph::IsRingAssociated() const {
 void SCGraph::SetBuilt() {
     graph_built = true;
     DEBUG("built SCGraph %u\n", graph_id);
+
+    // DumpDotImg("version_get");
 }
 
 bool SCGraph::IsBuilt() const {
@@ -152,6 +158,113 @@ void SCGraph::AddNode(SCGraphNode *node, bool is_start) {
 
 
 // GetFrontier implementation inside header due to genericity.
+
+
+///////////////////////////
+// Visualization helpers //
+///////////////////////////
+
+static std::string NodeName(const SCGraphNode *node) {
+    if (node == nullptr)
+        return "end";
+    return node->name;
+}
+
+void SCGraph::DumpDotImg(std::string filestem) const {
+    std::ofstream fdot;
+    fdot.open(filestem + ".dot");
+    fdot << "digraph SCGraph {" << std::endl;
+    fdot << "  graph [fontname=\"helvetica\"];" << std::endl;
+    fdot << "  node  [fontname=\"helvetica\"];" << std::endl;
+    fdot << "  edge  [fontname=\"helvetica\"];" << std::endl;
+
+    std::unordered_set<SCGraphNode *> plotted;
+    std::unordered_set<SCGraphNode *> pending;
+
+    auto DumpSyscallNode = [&](const SyscallNode *node) {
+        bool node_pure = node->node_type == NODE_SC_PURE;
+        bool edge_weak = node->edge_type == EDGE_WEAK;
+        
+        if (!node_pure) {
+            fdot << "  " << NodeName(node) << " [shape=box,style=bold];"
+                 << std::endl;
+        }
+
+        fdot << "  " << NodeName(node) << " -> " << NodeName(node->next_node);
+        if (edge_weak)
+            fdot << " [style=dashed]";
+        fdot << ";" << std::endl;
+
+        if (plotted.find(node->next_node) == plotted.end() &&
+            pending.find(node->next_node) == pending.end())
+            pending.insert(node->next_node);
+    };
+
+    auto DumpBranchNode = [&](const BranchNode *node) {
+        fdot << "  " << NodeName(node) << " [shape=diamond,label=\""
+             << NodeName(node) << "?\"];" << std::endl;
+
+        for (size_t i = 0; i < node->children.size(); ++i) {
+            SCGraphNode *child = node->children[i];
+            int dim_idx = node->epoch_dim_idx[i];
+
+            fdot << "  " << NodeName(node);
+            if (dim_idx >= 0)
+                fdot << ":e";
+            fdot << " -> " << NodeName(child);
+            if (dim_idx >= 0)
+                fdot << ":e";
+
+            fdot << " [arrowhead=empty";
+            if (dim_idx >= 0)
+                fdot << ",dir=both,arrowtail=odot";
+            fdot << "];" << std::endl;
+
+            if (plotted.find(child) == plotted.end() &&
+                pending.find(child) == pending.end())
+                pending.insert(child);
+        }
+    };
+
+    // special start node
+    fdot << "  " << "start" << " [shape=plaintext];" << std::endl;
+    fdot << "  " << "start" << " -> " << NodeName(initial_frontier) << ";"
+         << std::endl;
+    // special end node
+    fdot << "  " << "end" << " [shape=plaintext];" << std::endl;
+
+    pending.insert(initial_frontier);
+    while (plotted.size() != nodes.size() && pending.size() > 0) {
+        auto node = *(pending.begin());
+        pending.erase(pending.begin());
+
+        if (node == nullptr)
+            continue;
+
+        switch (node->node_type) {
+        case NODE_SC_PURE:
+        case NODE_SC_SEFF:
+            DumpSyscallNode(static_cast<const SyscallNode *>(node));
+            break;
+        case NODE_BRANCH:
+            DumpBranchNode(static_cast<const BranchNode *>(node));
+            break;
+        default:
+            throw std::runtime_error("unknown node type");
+        }
+
+        if (plotted.find(node) == plotted.end())
+            plotted.insert(node);
+    }
+
+    fdot << "}" << std::endl;
+    fdot.close();
+
+    std::string dot_cmd = "dot -T svg -o " + filestem + ".svg "
+                          + filestem + ".dot";
+    int rc __attribute__((unused)) = system(dot_cmd.c_str());
+    assert(rc == 0);
+}
 
 
 }

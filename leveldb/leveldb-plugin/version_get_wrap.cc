@@ -177,32 +177,39 @@ thread_local fa::ValuePool<int, 1, 1> branch_loop_decision({0});
 
 // Called only once.
 void BuildVersionGetSCGraph() {
-    auto node_branch_empty = new fa::BranchNode(&branch_empty_decision);
-    auto node_branch_open = new fa::BranchNode(&branch_open_decision);
-    auto node_open = new fa::SyscallOpen(&open_stage,
+    auto node_branch_empty = new fa::BranchNode("not_empty",
+                                                &branch_empty_decision);
+    auto node_branch_open = new fa::BranchNode("table_open",
+                                               &branch_open_decision);
+    auto node_open = new fa::SyscallOpen("open",
+                                         &open_stage,
                                          &open_rc,
                                          &open_pathname,
                                          &open_flags,
                                          &open_mode);
-    auto node_pread_footer = new fa::SyscallPread(&pread_footer_stage,
+    auto node_pread_footer = new fa::SyscallPread("pread_footer",
+                                                  &pread_footer_stage,
                                                   &pread_footer_rc,
                                                   &pread_footer_fd,
                                                   &pread_footer_count,
                                                   &pread_footer_offset,
                                                   &pread_footer_internal_buf);
-    auto node_pread_index = new fa::SyscallPread(&pread_index_stage,
+    auto node_pread_index = new fa::SyscallPread("pread_index",
+                                                 &pread_index_stage,
                                                  &pread_index_rc,
                                                  &pread_index_fd,
                                                  &pread_index_count,
                                                  &pread_index_offset,
                                                  &pread_index_internal_buf);
-    auto node_pread_data = new fa::SyscallPread(&pread_data_stage,
+    auto node_pread_data = new fa::SyscallPread("pread_data",
+                                                &pread_data_stage,
                                                 &pread_data_rc,
                                                 &pread_data_fd,
                                                 &pread_data_count,
                                                 &pread_data_offset,
                                                 &pread_data_internal_buf);
-    auto node_branch_loop = new fa::BranchNode(&branch_loop_decision);
+    auto node_branch_loop = new fa::BranchNode("has_more",
+                                               &branch_loop_decision);
 
     scgraph.AddNode(node_branch_empty, /*is_start*/ true);
     scgraph.AddNode(node_branch_open);

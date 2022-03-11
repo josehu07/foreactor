@@ -54,10 +54,10 @@ std::ostream& operator<<(std::ostream& s, const SCGraphNode& n) {
 // SyscallNode implementation //
 ////////////////////////////////
 
-SyscallNode::SyscallNode(SyscallType sc_type, bool pure_sc,
+SyscallNode::SyscallNode(std::string name, SyscallType sc_type, bool pure_sc,
                          ValuePoolBase<SyscallStage> *stage,
                          ValuePoolBase<long> *rc)
-        : SCGraphNode(pure_sc ? NODE_SC_PURE : NODE_SC_SEFF),
+        : SCGraphNode(name, pure_sc ? NODE_SC_PURE : NODE_SC_SEFF),
           sc_type(sc_type), next_node(nullptr), stage(stage), rc(rc) {
     assert(node_type == NODE_SC_PURE || node_type == NODE_SC_SEFF);
     assert(stage != nullptr);
@@ -298,8 +298,8 @@ long SyscallNode::Issue(EpochListBase *epoch, void *output_buf) {
 // BranchNode implementation //
 ///////////////////////////////
 
-BranchNode::BranchNode(ValuePoolBase<int> *decision)
-        : SCGraphNode(NODE_BRANCH), decision(decision) {
+BranchNode::BranchNode(std::string name, ValuePoolBase<int> *decision)
+        : SCGraphNode(name, NODE_BRANCH), decision(decision) {
     assert(decision != nullptr);
 }
 

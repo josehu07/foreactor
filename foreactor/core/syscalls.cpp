@@ -21,12 +21,13 @@ namespace foreactor {
 // open //
 //////////
 
-SyscallOpen::SyscallOpen(ValuePoolBase<SyscallStage> *stage,
+SyscallOpen::SyscallOpen(std::string name,
+                         ValuePoolBase<SyscallStage> *stage,
                          ValuePoolBase<long> *rc,
                          ValuePoolBase<std::string> *pathname,
                          ValuePoolBase<int> *flags,
                          ValuePoolBase<mode_t> *mode)
-        : SyscallNode(SC_OPEN, /*pure_sc*/ false, stage, rc),
+        : SyscallNode(name, SC_OPEN, /*pure_sc*/ false, stage, rc),
           pathname(pathname), flags(flags), mode(mode) {
     assert(pathname != nullptr);
     assert(flags != nullptr);
@@ -96,13 +97,14 @@ void SyscallOpen::CheckArgs(EpochListBase *epoch,
 // pread //
 ///////////
 
-SyscallPread::SyscallPread(ValuePoolBase<SyscallStage> *stage,
+SyscallPread::SyscallPread(std::string name,
+                           ValuePoolBase<SyscallStage> *stage,
                            ValuePoolBase<long> *rc,
                            ValuePoolBase<int> *fd,
                            ValuePoolBase<size_t> *count,
                            ValuePoolBase<off_t> *offset,
                            ValuePoolBase<char *> *internal_buf)
-        : SyscallNode(SC_PREAD, /*pure_sc*/ true, stage, rc),
+        : SyscallNode(name, SC_PREAD, /*pure_sc*/ true, stage, rc),
           fd(fd), count(count), offset(offset), internal_buf(internal_buf) {
     assert(fd != nullptr);
     assert(count != nullptr);

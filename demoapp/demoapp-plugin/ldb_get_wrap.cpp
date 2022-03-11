@@ -54,19 +54,23 @@ thread_local fa::ValuePool<int, 1, 1> branch1_decision({0});
 
 // Called only once.
 void build_ldb_get_scgraph() {
-    auto node_branch0 = new fa::BranchNode(&branch0_decision);
-    auto node_open = new fa::SyscallOpen(&open_stage,
+    auto node_branch0 = new fa::BranchNode("file_open",
+                                           &branch0_decision);
+    auto node_open = new fa::SyscallOpen("open",
+                                         &open_stage,
                                          &open_rc,
                                          &open_pathname,
                                          &open_flags,
                                          &open_mode);
-    auto node_pread = new fa::SyscallPread(&pread_stage,
+    auto node_pread = new fa::SyscallPread("pread",
+                                           &pread_stage,
                                            &pread_rc,
                                            &pread_fd,
                                            &pread_count,
                                            &pread_offset,
                                            &pread_internal_buf);
-    auto node_branch1 = new fa::BranchNode(&branch1_decision);
+    auto node_branch1 = new fa::BranchNode("has_more",
+                                           &branch1_decision);
 
     scgraph.AddNode(node_branch0, /*is_start*/ true);
     scgraph.AddNode(node_open);

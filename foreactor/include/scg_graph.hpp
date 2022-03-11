@@ -77,6 +77,8 @@ class SCGraph {
             return ring->Ring();
         }
 
+        void DumpDotImg(std::string filestem) const;
+
     public:
         SCGraph() = delete;
         SCGraph(unsigned graph_id, unsigned max_dims);
