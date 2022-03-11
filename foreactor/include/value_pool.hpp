@@ -99,6 +99,7 @@ class EpochList final : public EpochListBase {
 template <typename T>
 class ValuePoolBase {
     friend class SyscallNode;
+    friend class BranchNode;
 
     private:
         const unsigned max_dims = 0;

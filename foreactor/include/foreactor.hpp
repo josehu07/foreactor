@@ -107,8 +107,6 @@ void WrapperFuncLeave(SCGraph *scgraph, PoolClearFunc pool_clear_func) {
         scgraph->StartTimer("pool-clear");
         pool_clear_func();
         scgraph->PauseTimer("pool-clear");
-    } else {
-        assert(scgraph == nullptr);
     }
 }
 

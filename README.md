@@ -125,9 +125,9 @@ objdump -t path/to/original/app/file.o | grep funcname_keyword
 - [x] pool flush optimization
 - [x] cleverer pre-issuing algo
 - [ ] longer chain for demoapp
-- [ ] readme & website doc
 - [ ] control point inject logic
 - [ ] syscall graph visualize
+- [ ] readme & website doc
 - [ ] unstable arguments
 - [ ] internal buffer GC
 - [ ] io_uring fixed buffers
