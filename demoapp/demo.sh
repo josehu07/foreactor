@@ -29,24 +29,48 @@ rm dump-*.txt
 
 
 echo
-echo "Performance bench (page cache on) --"
+echo "Performance bench (all files open; page cache on) --"
 
 echo " demoapp run original..."
 ./demoapp run
 
-for DEPTH in 0 1 2 4 8; do
+for DEPTH in 0 1 2 4 8 16; do
     echo " demoapp run w/ foreactor, pre_issue_depth = ${DEPTH}..."
     LD_PRELOAD=${ROOT_PATH}/foreactor/libforeactor.so USE_FOREACTOR=yes QUEUE_0=32 DEPTH_0=${DEPTH} ./demoapp run
 done
 
 
 echo
-echo "Performance bench (drop_caches) --"
+echo "Performance bench (all files open; do drop_caches) --"
 
 echo " demoapp run original..."
 ./demoapp run --drop_caches
 
-for DEPTH in 0 1 2 4 8; do
+for DEPTH in 0 1 2 4 8 16; do
     echo " demoapp run w/ foreactor, pre_issue_depth = ${DEPTH}..."
     LD_PRELOAD=${ROOT_PATH}/foreactor/libforeactor.so USE_FOREACTOR=yes QUEUE_0=32 DEPTH_0=${DEPTH} ./demoapp run --drop_caches
+done
+
+
+echo
+echo "Performance bench (selective open; page cache on) --"
+
+echo " demoapp run original..."
+./demoapp run
+
+for DEPTH in 0 1 2 4 8 16; do
+    echo " demoapp run w/ foreactor, pre_issue_depth = ${DEPTH}..."
+    LD_PRELOAD=${ROOT_PATH}/foreactor/libforeactor.so USE_FOREACTOR=yes QUEUE_0=32 DEPTH_0=${DEPTH} ./demoapp run --selective_open
+done
+
+
+echo
+echo "Performance bench (selective open; do drop_caches) --"
+
+echo " demoapp run original..."
+./demoapp run --drop_caches
+
+for DEPTH in 0 1 2 4 8 16; do
+    echo " demoapp run w/ foreactor, pre_issue_depth = ${DEPTH}..."
+    LD_PRELOAD=${ROOT_PATH}/foreactor/libforeactor.so USE_FOREACTOR=yes QUEUE_0=32 DEPTH_0=${DEPTH} ./demoapp run --selective_open --drop_caches
 done

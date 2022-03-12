@@ -1,5 +1,5 @@
 CC=g++
-CXXFLAGS=-Wall -Werror -std=c++20 -D_GNU_SOURCE -O3 -DNDEBUG -DNTIMER
+CXXFLAGS=-Wall -Werror -std=c++20 -D_GNU_SOURCE
 
 FA_SRCS:=$(wildcard core/*.cpp)
 FA_SRCS+=$(wildcard utils/*.cpp)
@@ -8,7 +8,24 @@ FA_INCL:=-I./include -I./utils
 
 
 .PHONY: all
-all: libforeactor.so
+all: release
+
+
+.PHONY: release
+release: CXXFLAGS+=-O3 -DNDEBUG -DNTIMER
+release: libforeactor.so
+
+.PHONY: debug
+debug: CXXFLAGS+=-Og -g -ggdb -DNTIMER
+debug: libforeactor.so
+
+.PHONY: timer
+timer: CXXFLAGS+=-O3 -DNDEBUG
+timer: libforeactor.so
+
+.PHONY: debug-timer
+debug-timer: CXXFLAGS+=-O3
+debug-timer: libforeactor.so
 
 
 %.o: %.cpp

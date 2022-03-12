@@ -12,6 +12,10 @@
 #include "ldb_get.hpp"
 
 
+static constexpr int OPEN_SKIP_WHICH = 12;
+static constexpr int NUM_RUN_ITERS = 5;
+
+
 static const std::string rand_string(size_t length) {
     static constexpr char alphanum[] =
         "0123456789"
@@ -33,12 +37,12 @@ static void drop_caches(void) {
     assert(rc == 0);
 }
 
-static std::vector<std::vector<int>> open_selective(void) {
+static std::vector<std::vector<int>> open_all(bool selective) {
     std::vector<std::vector<int>> files;
     for (int level = 0; level < NUM_LEVELS; ++level) {
         files.push_back(std::vector<int>());
         for (int index = 0; index < FILES_PER_LEVEL; ++index) {
-            if (level == 0 && index != FILES_PER_LEVEL / 2) {
+            if ((!selective) || (index != OPEN_SKIP_WHICH)) {
                 int fd = open(table_name(level, index).c_str(), 0, O_RDONLY);
                 assert(fd > 0);
                 files.back().push_back(fd);
@@ -73,13 +77,14 @@ void make_db_img() {
     }
 }
 
-void run_ldb_get(bool dump_result, bool do_drop_caches = false) {
+void run_ldb_get(bool dump_result, bool selective_open = false,
+                 bool do_drop_caches = false) {
     std::filesystem::current_path(DBDIR);
     std::vector<std::string> bytes;
 
     std::vector<double> elapsed_us;
-    for (int i = 0; i < 5; ++i) {
-        std::vector<std::vector<int>> files = open_selective();
+    for (int i = 0; i < NUM_RUN_ITERS; ++i) {
+        std::vector<std::vector<int>> files = open_all(selective_open);
 
         if (do_drop_caches)     // drain page cache before each run?
             drop_caches();
@@ -107,8 +112,9 @@ void run_ldb_get(bool dump_result, bool do_drop_caches = false) {
 
 
 int main(int argc, char *argv[]) {
-    if (argc != 2 && argc != 3) {
-        std::cerr << "Usage: " << argv[0] << " make|dump|run [--drop_caches]" << std::endl;
+    if ((argc < 2) || (argc > 4)) {
+        std::cerr << "Usage: " << argv[0] << " make|dump|run"
+                  << " [--selective_open] [--drop_caches]" << std::endl;
         return -1;
     }
 
@@ -116,16 +122,22 @@ int main(int argc, char *argv[]) {
         make_db_img();
         return 0;
     } else if (strcmp(argv[1], "run") == 0) {
-        if (argc == 3 && strcmp(argv[2], "--drop_caches") == 0)
-            run_ldb_get(false, true);
-        else
-            run_ldb_get(false, false);
+        bool selective_open = false;
+        bool do_drop_caches = false;
+        for (int i = 2; i < argc; ++i) {
+            if (strcmp(argv[i], "--selective_open") == 0)
+                selective_open = true;
+            else if (strcmp(argv[i], "--drop_caches") == 0)
+                do_drop_caches = true;
+        }
+        run_ldb_get(false, selective_open, do_drop_caches);
         return 0;
     } else if (strcmp(argv[1], "dump") == 0) {
         run_ldb_get(true);
         return 0;
     } else {
-        std::cerr << "Usage: " << argv[0] << " make|dump|run [--drop_caches]" << std::endl;
+        std::cerr << "Usage: " << argv[0] << " make|dump|run"
+                  << " [--selective_open] [--drop_caches]" << std::endl;
         return -1;
     }
 }

@@ -98,7 +98,7 @@ void WrapperFuncLeave(SCGraph *scgraph, PoolClearFunc pool_clear_func) {
 
         // TODO: do background garbage collection of unharvested completions,
         // instead of always waiting for all of them at every exit
-        scgraph->ClearAllInProgress();
+        scgraph->ClearAllReqs();
 
         // remember to reset all epoch numbers to 0
         scgraph->ResetToStart();

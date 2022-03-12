@@ -74,9 +74,28 @@ bool IOUring::IsInitialized() const {
 }
 
 
-void IOUring::PutInProgress(NodeAndEpoch *nae) {
-    assert(in_progress.find(nae) == in_progress.end());
-    in_progress.insert(nae);
+void IOUring::PutToPrepared(NodeAndEpoch *nae) {
+    assert(prepared.find(nae) == prepared.end());
+    prepared.insert(nae);
+}
+
+void IOUring::MakeAllInProgress() {
+    for (NodeAndEpoch *nae : prepared) {
+        assert(in_progress.find(nae) == in_progress.end());
+        assert(nae->node->stage->GetValue(nae->epoch) == STAGE_PREPARED);
+
+        // do io_uring_prep_xxx() here
+        struct io_uring_sqe *sqe = io_uring_get_sqe(Ring());
+        assert(sqe != nullptr);
+        io_uring_sqe_set_data(sqe, nae);
+        nae->node->PrepUring(nae->epoch, sqe);      // syscall-specific prep
+
+        in_progress.insert(nae);
+        nae->node->stage->SetValue(nae->epoch, STAGE_PROGRESS);
+    }
+
+    prepared.clear();
+    // io_uring_submit() will be done by SyscallNode->Issue()
 }
 
 void IOUring::RemoveInProgress(NodeAndEpoch *nae) {
@@ -84,6 +103,12 @@ void IOUring::RemoveInProgress(NodeAndEpoch *nae) {
     in_progress.erase(nae);
 }
 
+
+void IOUring::DeleteAllPrepared() {
+    for (NodeAndEpoch *nae : prepared)
+        delete nae;
+    prepared.clear();
+}
 
 void IOUring::ClearAllInProgress() {
     while (in_progress.size() > 0) {

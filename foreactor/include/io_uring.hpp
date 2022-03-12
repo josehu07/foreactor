@@ -38,6 +38,7 @@ class IOUring {
         bool ring_initialized = false;
         int sq_length = 0;
 
+        std::unordered_set<NodeAndEpoch *> prepared;
         std::unordered_set<NodeAndEpoch *> in_progress;
 
         struct io_uring *Ring() {
@@ -51,11 +52,13 @@ class IOUring {
         void Initialize(int sq_length);
         bool IsInitialized() const;
 
-        // Put or remove in-progress requests.
-        void PutInProgress(NodeAndEpoch *nae);
+        // Put or remove prepared/in-progress requests.
+        void PutToPrepared(NodeAndEpoch *nae);
+        void MakeAllInProgress();   // io_uring_prep_xxx() happens here
         void RemoveInProgress(NodeAndEpoch *nae);
 
-        // Clear and complete all remaining in-progress requests.
+        // Clear and complete unused but prepared/submitted requests.
+        void DeleteAllPrepared();
         void ClearAllInProgress();
 };
 

@@ -144,19 +144,18 @@ TODO complete tutorial
 - [x] pool flush optimization
 - [x] cleverer pre-issuing algo
 - [ ] larger LevelDB YCSB-c bench
-- [ ] longer chain for demoapp
 - [ ] apply to git status case
 - [ ] control point inject logic
 - [ ] syscall graph visualize
 - [ ] readme & website doc
-- [ ] == spring break goal end ==
+- [ ] serious related work study
+- === spring break goal end ===
 - [ ] unstable arguments
 - [ ] internal buffer GC
 - [ ] io_uring fixed buffers
 - [ ] io_uring SQ polling
 - [ ] config & options on/off
 - [ ] show io_wq concurrency
-- [ ] serious related work study
 - [ ] compiler CFG mapping
 - [ ] support other static langs
 

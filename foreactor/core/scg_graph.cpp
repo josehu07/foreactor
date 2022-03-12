@@ -117,9 +117,10 @@ void SCGraph::ResetToStart() {
     peekhead_hit_end = false;
 }
 
-void SCGraph::ClearAllInProgress() {
+void SCGraph::ClearAllReqs() {
     TIMER_START(TimerNameStr("clear-prog"));
     ring->ClearAllInProgress();
+    ring->DeleteAllPrepared();
     TIMER_PAUSE(TimerNameStr("clear-prog"));
     DEBUG("cleared SCGraph %u\n", graph_id);
 

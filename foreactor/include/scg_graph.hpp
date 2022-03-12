@@ -103,7 +103,7 @@ class SCGraph {
         // Reset graph state to start, clear epoch numbers in frontier_epoch
         // and reset frontier pointer to start node.
         void ResetToStart();
-        void ClearAllInProgress();      // TODO: do GC instead of this
+        void ClearAllReqs();    // TODO: do GC instead of this
 
         // Add a new node into graph -- used at graph building.
         void AddNode(SCGraphNode *node, bool is_start = false);

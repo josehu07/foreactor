@@ -86,16 +86,11 @@ void SyscallNode::PrepAsync(EpochListBase *epoch) {
     assert(stage->GetValue(epoch) == STAGE_UNISSUED);
     assert(scgraph != nullptr);
     assert(epoch != nullptr);
-    struct io_uring_sqe *sqe = io_uring_get_sqe(scgraph->Ring());
-    assert(sqe != nullptr);
 
     // SQE data is the pointer to a NodeAndEpoch structure
     NodeAndEpoch *nae = new NodeAndEpoch(this, epoch);
-    io_uring_sqe_set_data(sqe, nae);
-    
-    // call syscall-specific preparation function
-    PrepUring(epoch, sqe);
-    scgraph->ring->PutInProgress(nae);
+    scgraph->ring->PutToPrepared(nae);
+    stage->SetValue(epoch, STAGE_PREPARED);
 }
 
 void SyscallNode::CmplAsync(EpochListBase *epoch) {
@@ -112,6 +107,7 @@ void SyscallNode::CmplAsync(EpochListBase *epoch) {
         // fetch the NodeAndEpoch structure
         NodeAndEpoch *nae = reinterpret_cast<NodeAndEpoch *>(
             io_uring_cqe_get_data(cqe));
+        assert(nae->node->stage->GetValue(nae->epoch) == STAGE_PROGRESS);
         
         // reflect rc and stage
         nae->node->rc->SetValue(nae->epoch,  cqe->res);
@@ -120,7 +116,7 @@ void SyscallNode::CmplAsync(EpochListBase *epoch) {
         scgraph->ring->RemoveInProgress(nae);
         
         // if desired completion found, break
-        if (nae->node == this && nae->epoch->IsSame(epoch)) {
+        if ((nae->node == this) && nae->epoch->IsSame(epoch)) {
             delete nae;
             break;
         }
@@ -212,7 +208,6 @@ long SyscallNode::Issue(EpochListBase *epoch, void *output_buf) {
                 assert(syscall_node->stage->GetValue(peek_epoch) ==
                        STAGE_UNISSUED);
                 syscall_node->PrepAsync(peek_epoch);
-                syscall_node->stage->SetValue(peek_epoch, STAGE_PROGRESS);
                 DEBUG("prepared %d %s<%p>@%s\n",
                       scgraph->num_prepared,
                       StreamStr<SyscallNode>(syscall_node).c_str(),
@@ -232,24 +227,29 @@ long SyscallNode::Issue(EpochListBase *epoch, void *output_buf) {
                 break;
         }
         TIMER_PAUSE(scgraph->TimerNameStr("peek-algo"));
+    }
 
-        // see some number of syscall nodes prepared, may do io_uring_submit
-        // if we have a sufficient number of prepared entries or if the
-        // earliest prepared entry is close enough to current frontier
-        if (scgraph->num_prepared > 0) {
-            // TODO: these conditions might be tunable
-            if ((scgraph->num_prepared >= scgraph->pre_issue_depth / 2) ||
-                (scgraph->prepared_distance <= 1)) {
-                TIMER_START(scgraph->TimerNameStr("ring-submit"));
-                int num_submitted __attribute__((unused)) =
-                    io_uring_submit(scgraph->Ring());
-                TIMER_PAUSE(scgraph->TimerNameStr("ring-submit"));
-                DEBUG("submitted %d / %d entries to SQ\n",
-                      num_submitted, scgraph->num_prepared);
-                assert(num_submitted == scgraph->num_prepared);
-                scgraph->num_prepared = 0;
-                scgraph->prepared_distance = -1;
-            }
+    // see some number of syscall nodes prepared, may do io_uring_submit
+    // if we have a sufficient number of prepared entries or if the
+    // earliest prepared entry is close enough to current frontier
+    if (scgraph->num_prepared > 0) {
+        // TODO: these conditions might be tunable
+        if ((scgraph->num_prepared >= scgraph->pre_issue_depth / 2) ||
+            (scgraph->prepared_distance <= 1)) {
+            // move all prepared requests to in_progress stage, actually
+            // call the io_uring_prep_xxx()s
+            TIMER_START(scgraph->TimerNameStr("ring-submit"));
+            scgraph->ring->MakeAllInProgress();
+            // do io_uring_submit()
+            int num_submitted __attribute__((unused)) =
+                io_uring_submit(scgraph->Ring());
+            TIMER_PAUSE(scgraph->TimerNameStr("ring-submit"));
+            DEBUG("submitted %d / %d entries to SQ\n",
+                  num_submitted, scgraph->num_prepared);
+            assert(num_submitted == scgraph->num_prepared);
+            // clear num_prepared and prepared_distance
+            scgraph->num_prepared = 0;
+            scgraph->prepared_distance = -1;
         }
     }
 
@@ -259,7 +259,7 @@ long SyscallNode::Issue(EpochListBase *epoch, void *output_buf) {
         assert(now_ready);
     }
     if (stage->GetValue(epoch) == STAGE_UNISSUED) {
-        // if not pre-issued
+        // if not pre-issued, invoke syscall synchronously
         DEBUG("sync-call %s<%p>@%s\n",
               StreamStr<SyscallNode>(this).c_str(), this,
               StreamStr<EpochListBase>(epoch).c_str());
@@ -271,6 +271,7 @@ long SyscallNode::Issue(EpochListBase *epoch, void *output_buf) {
     } else {
         // if has been pre-issued, process CQEs from io_uring until mine
         // completion is seen
+        assert(stage->GetValue(epoch) != STAGE_PREPARED);
         DEBUG("ring-cmpl %s<%p>@%s\n",
               StreamStr<SyscallNode>(this).c_str(), this,
               StreamStr<EpochListBase>(epoch).c_str());
