@@ -4,16 +4,18 @@
 ![top-lang](https://img.shields.io/github/languages/top/josehu07/foreactor)
 ![license](https://img.shields.io/github/license/josehu07/foreactor)
 
-Foreactor is a library + plugins framework that enables asynchronous I/O (or more generally, asynchronous syscalls) with Linux `io_uring` in any application. Foreactor is transparent -- it allows the integration of `io_uring` into any originally serial application with no modification to application code.
+Foreactor is a library framework that enables asynchronous I/O (or more generally, asynchronous syscalls) with Linux `io_uring` in any C/C++ application. Foreactor is transparent -- it allows the integration of `io_uring` into any (perhaps serial) application with no modification to application code.
 
-This is done by describing the application's critical functions (e.g., LevelDB's `Version::Get`) as **syscall graphs**, a formal abstraction we propose, in plugins. Such graph abstraction captures the original execution order of syscalls to be issued by the function and their mutual dependencies. If the `foreactor` library gets `LD_PRELOAD`ed when running the application, it automatically hijacks those wrapped functions specified in plugins as well as certain POSIX syscalls, and pre-issues some syscalls ahead of time if the syscall graph says it is safe and benefitial to do so.
+This is done by describing the application's critical functions (e.g., LevelDB's `Version::Get`) as **syscall graphs**, a formal abstraction we propose, in plugins. Such graph abstraction captures the original execution order of syscalls to be issued by the function and their dependencies. If the `foreactor` library gets `LD_PRELOAD`ed when running the application, it automatically hijacks those wrapped functions specified in plugins as well as POSIX syscalls, and pre-issues some syscalls ahead of time if the syscall graph says it is safe and benefitial to do so.
+
+TODO paper cite info =)
 
 
 ## Prerequisites
 
 The following kernel version, compiler, and libraries are required:
 
-- Linux kernel >= 5.10 (we tested with Ubuntu 20.04)
+- Linux kernel >= 5.10 (we tested with Ubuntu 20.04 distribution)
 - gcc/g++ >= 10.2
 - liburing >= 2.1
 
@@ -144,12 +146,12 @@ TODO complete tutorial
 - [x] pool flush optimization
 - [x] cleverer pre-issuing algo
 - [ ] larger LevelDB YCSB-c bench
-- [ ] apply to git status case
 - [ ] control point inject logic
 - [ ] syscall graph visualize
 - [ ] readme & website doc
-- [ ] serious related work study
 - === spring break goal end ===
+- [ ] apply to git status case
+- [ ] serious related work study
 - [ ] unstable arguments
 - [ ] internal buffer GC
 - [ ] io_uring fixed buffers
