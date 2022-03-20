@@ -18,7 +18,9 @@
 
 
 static void drop_caches(void) {
-    system("sudo sync; sudo sh -c 'echo 3 > /proc/sys/vm/drop_caches'");
+    int rc __attribute__((unused)) =
+        system("sudo sync; sudo sh -c 'echo 3 > /proc/sys/vm/drop_caches'");
+    assert(rc == 0);
 }
 
 
