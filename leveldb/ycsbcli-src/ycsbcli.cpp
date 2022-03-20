@@ -1,13 +1,14 @@
-#include <cassert>
 #include <chrono>
-#include <cstring>
-#include <cmath>
-#include <unistd.h>
 #include <iostream>
 #include <fstream>
 #include <random>
 #include <chrono>
 #include <limits>
+#include <algorithm>
+#include <unistd.h>
+#include <string.h>
+#include <math.h>
+#include <assert.h>
 
 #include "cxxopts.hpp"
 
@@ -44,7 +45,7 @@ static leveldb::WriteOptions write_options = leveldb::WriteOptions();
 /** Open/close leveldb instance, show stats, etc. */
 static leveldb::DB *
 leveldb_open(const std::string db_location, size_t memtable_limit,
-             size_t filesize_limit)
+             size_t filesize_limit, bool bg_compact_off)
 {
     leveldb::DB *db;
     db_options.create_if_missing = true;
@@ -53,6 +54,9 @@ leveldb_open(const std::string db_location, size_t memtable_limit,
     // Must comment out `ClipToRange()` sanitizers @ db_impl.cc:102.
     db_options.write_buffer_size = memtable_limit;
     db_options.max_file_size = filesize_limit;
+
+    // When benchmarking Gets we want to turn off the automatic bg thread.
+    db_options.bg_compact_off = bg_compact_off;
 
     leveldb::Status status = leveldb::DB::Open(db_options, db_location, &db);
     if (!status.ok()) {
@@ -182,7 +186,7 @@ main(int argc, char *argv[])
 {
     std::string db_location, ycsb_filename;
     size_t value_size, memtable_limit, filesize_limit;
-    bool do_drop_caches = false;
+    bool do_drop_caches = false, bg_compact_off = false;
 
     cxxopts::Options cmd_args("leveldb ycsb trace exec client");
     cmd_args.add_options()
@@ -193,6 +197,7 @@ main(int argc, char *argv[])
             ("mlim", "memtable size limit", cxxopts::value<size_t>(memtable_limit)->default_value("4194304"))
             ("flim", "sstable filesize limit", cxxopts::value<size_t>(filesize_limit)->default_value("2097152"))
             ("write_sync", "force write sync", cxxopts::value<bool>()->default_value("false"))
+            ("bg_compact_off", "turn off background compaction", cxxopts::value<bool>()->default_value("false"))
             ("no_fill_cache", "no block cache for gets", cxxopts::value<bool>()->default_value("false"))
             ("drop_caches", "do drop_caches between ops", cxxopts::value<bool>()->default_value("false"));
     auto result = cmd_args.parse(argc, argv);
@@ -204,6 +209,9 @@ main(int argc, char *argv[])
 
     if (result.count("sync"))
         write_options.sync = true;
+
+    if (result.count("bg_compact_off"))
+        bg_compact_off = true;
 
     if (result.count("no_fill_cache"))
         read_options.fill_cache = false;
@@ -241,30 +249,49 @@ main(int argc, char *argv[])
     // Generate value.
     std::string value(value_size, '0');
 
-    leveldb::DB *db = leveldb_open(db_location, memtable_limit, filesize_limit);
+    leveldb::DB *db = leveldb_open(db_location, memtable_limit, filesize_limit,
+                                   bg_compact_off);
 
     // Execute the actions of the YCSB trace.
     std::vector<double> microsecs;
     uint cnt = do_ycsb(db, ycsb_reqs, value, do_drop_caches, microsecs);
     std::cout << "Finished " << cnt << " requests." << std::endl << std::endl;
+
+    // Print timing info.
     if (cnt > 0) {
         assert(microsecs.size() == cnt);
-        // std::cout << "Time elapsed:" << std::endl << "  [";
-        double sum_us = 0., max_us = std::numeric_limits<double>::min(),
-                            min_us = std::numeric_limits<double>::max();
-        for (double& us : microsecs) {
-            // std::cout << " " << us << " ";
+        std::sort(microsecs.begin(), microsecs.end());
+
+        double sum_us = 0.;
+        for (double& us : microsecs)
             sum_us += us;
-            max_us = us > max_us ? us : max_us;
-            min_us = us < min_us ? us : min_us;
-        }
+        double min_us = microsecs.front();
+        double max_us = microsecs.back();
         double avg_us = sum_us / microsecs.size();
-        // std::cout << "]" << std::endl << std::endl;
+
         std::cout << "Time elapsed stats:" << std::endl
                   << "  sum  " << sum_us << " us" << std::endl
                   << "  avg  " << avg_us << " us" << std::endl
                   << "  max  " << max_us << " us" << std::endl
                   << "  min  " << min_us << " us" << std::endl;
+
+        if (microsecs.size() > 10) {
+            std::cout << " removing top/bottom-5:" << std::endl;
+            microsecs.erase(microsecs.begin(), microsecs.begin() + 5);
+            microsecs.erase(microsecs.end() - 5, microsecs.end());
+
+            sum_us = 0.;
+            for (double& us : microsecs)
+                sum_us += us;
+            min_us = microsecs.front();
+            max_us = microsecs.back();
+            avg_us = sum_us / microsecs.size();
+
+            std::cout << "  sum  " << sum_us << " us" << std::endl
+                      << "  avg  " << avg_us << " us" << std::endl
+                      << "  max  " << max_us << " us" << std::endl
+                      << "  min  " << min_us << " us" << std::endl;
+        }
     }
 
     // Force compaction of everything in memory.

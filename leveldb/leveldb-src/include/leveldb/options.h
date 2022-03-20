@@ -140,6 +140,10 @@ struct LEVELDB_EXPORT Options {
   // Many applications will benefit from passing the result of
   // NewBloomFilterPolicy() here.
   const FilterPolicy* filter_policy = nullptr;
+
+  // [foreactor] when benchmarking Gets we do not want the bg thread
+  // to automatically compact and mess up the database image setup.
+  bool bg_compact_off = false;
 };
 
 // Options that control read operations

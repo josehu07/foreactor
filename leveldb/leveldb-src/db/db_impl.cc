@@ -689,8 +689,11 @@ void DBImpl::BackgroundCall() {
   } else if (!bg_error_.ok()) {
     // No more background work after a background error.
   } else {
-    // [foreactor] FIXME!
-    // BackgroundCompaction();
+    // [foreactor] when benchmarking Gets we do not want the bg thread
+    // to automatically compact and mess up the database image setup.
+    if (!options_.bg_compact_off) {
+      BackgroundCompaction();
+    }
   }
 
   background_compaction_scheduled_ = false;
