@@ -12,8 +12,7 @@ NUM_REPEATS = 1
 
 
 def run_ycsbcli_single(use_foreactor, uring_queue_len=0, pre_issue_depth=0):
-    subprocess.run(["sudo", "sync"], check=True)
-    subprocess.run(["sudo", "sh", "-c", "'echo 3 > /proc/sys/vm/drop_caches'"], check=True)
+    os.system("sudo sync; sudo sh -c 'echo 3 > /proc/sys/vm/drop_caches'")
 
     envs = os.environ.copy()
     envs["LD_PRELOAD"] = "/home/josehu/Repos/sysopt/foreactor/foreactor/libforeactor.so"
