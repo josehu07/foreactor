@@ -767,7 +767,10 @@ int MaxOpenFiles() {
     g_open_read_only_file_limit = std::numeric_limits<int>::max();
   } else {
     // Allow use of 20% of available file descriptors for read-only files.
-    g_open_read_only_file_limit = rlim.rlim_cur / 5;
+    // [foreactor] FIXME: currently changed to allow more files be open to
+    // make the SCGraph more precise -- will take care of close()s later.
+    // g_open_read_only_file_limit = rlim.rlim_cur / 5;
+    g_open_read_only_file_limit = (rlim.rlim_cur * 3) / 4;
   }
   return g_open_read_only_file_limit;
 }
