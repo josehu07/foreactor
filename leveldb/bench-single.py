@@ -8,6 +8,7 @@ import numpy as np
 
 
 PRE_ISSUE_DEPTH_LIST = [2, 4, 6, 8, 10, 12]
+NUM_REPEATS = 10
 
 
 def run_ycsbcli_single(drop_caches, use_foreactor, uring_queue_len=0, pre_issue_depth=0):
@@ -33,11 +34,17 @@ def run_ycsbcli_single(drop_caches, use_foreactor, uring_queue_len=0, pre_issue_
             return float(line.split()[-2])
 
 def run_exprs(pre_issue_depth_list):
-    original_us = run_ycsbcli_single(True, False)
+    original_us_r = 0.0
+    for i in range(NUM_REPEATS):
+        original_us_r += run_ycsbcli_single(True, False)
+    original_us = original_us_r / NUM_REPEATS
 
     foreactor_us_list = []
     for pre_issue_depth in pre_issue_depth_list:
-        foreactor_us_list.append(run_ycsbcli_single(True, True, 32, pre_issue_depth))
+        foreactor_us_r = 0.0
+        for i in range(NUM_REPEATS):
+            foreactor_us_r += run_ycsbcli_single(True, True, 32, pre_issue_depth)
+        foreactor_us_list.append(foreactor_us_r / NUM_REPEATS)
 
     return original_us, foreactor_us_list
 
