@@ -25,12 +25,14 @@ def run_ycsbcli_single(use_foreactor, uring_queue_len=0, pre_issue_depth=0):
     result = subprocess.run(cmd, check=True, capture_output=True, env=envs)
     output = result.stdout.decode('ascii')
 
-    rm_seen = False
+    # rm_seen = False
     for line in output.strip().split('\n'):
         line = line.strip()
-        if line.startswith("removing top/bottom-5"):
-            rm_seen = True
-        elif rm_seen and line.startswith("avg"):
+        # if line.startswith("removing top/bottom-5"):
+        #     rm_seen = True
+        # elif rm_seen and line.startswith("avg"):
+        #     return float(line.split()[-2])
+        if line.startswith("min "):
             return float(line.split()[-2])
 
 def run_exprs(pre_issue_depth_list):
