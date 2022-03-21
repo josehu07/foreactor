@@ -21,7 +21,7 @@ def run_ycsbcli_single(drop_caches, use_foreactor, uring_queue_len=0, pre_issue_
            "--bg_compact_off", "--no_fill_cache"]
     if drop_caches:
         cmd.append("--drop_caches")
-    result = subprocess.run(cmd, check=True, capture_output=True)
+    result = subprocess.run(cmd, check=True, capture_output=True, env=envs)
     output = result.stdout.decode('ascii')
 
     rm_seen = False
