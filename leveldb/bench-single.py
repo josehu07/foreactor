@@ -7,11 +7,11 @@ import matplotlib.pyplot as plt
 import numpy as np
 
 
-PRE_ISSUE_DEPTH_LIST = [2, 4, 6, 8, 10, 12]
+PRE_ISSUE_DEPTH_LIST = [1, 2, 3, 4, 5, 6, 7, 8]
 NUM_REPEATS = 10
 
 
-def run_ycsbcli_single(drop_caches, use_foreactor, uring_queue_len=0, pre_issue_depth=0):
+def run_ycsbcli_single(use_foreactor, uring_queue_len=0, pre_issue_depth=0):
     envs = os.environ.copy()
     envs["LD_PRELOAD"] = "/home/josehu/Repos/sysopt/foreactor/foreactor/libforeactor.so"
     envs["USE_FOREACTOR"] = "yes" if use_foreactor else "no"
@@ -19,9 +19,7 @@ def run_ycsbcli_single(drop_caches, use_foreactor, uring_queue_len=0, pre_issue_
     envs["DEPTH_0"] = str(pre_issue_depth)
 
     cmd = ["./ycsbcli", "-d", "/mnt/optane-ssd/josehu/leveldb_dbdir", "-f", "single-get.txt",
-           "--bg_compact_off", "--no_fill_cache"]
-    if drop_caches:
-        cmd.append("--drop_caches")
+           "--bg_compact_off", "--no_fill_cache", "--drop_caches"]
     result = subprocess.run(cmd, check=True, capture_output=True, env=envs)
     output = result.stdout.decode('ascii')
 
@@ -36,14 +34,14 @@ def run_ycsbcli_single(drop_caches, use_foreactor, uring_queue_len=0, pre_issue_
 def run_exprs(pre_issue_depth_list):
     original_us_r = 0.0
     for i in range(NUM_REPEATS):
-        original_us_r += run_ycsbcli_single(True, False)
+        original_us_r += run_ycsbcli_single(False)
     original_us = original_us_r / NUM_REPEATS
 
     foreactor_us_list = []
     for pre_issue_depth in pre_issue_depth_list:
         foreactor_us_r = 0.0
         for i in range(NUM_REPEATS):
-            foreactor_us_r += run_ycsbcli_single(True, True, 32, pre_issue_depth)
+            foreactor_us_r += run_ycsbcli_single(True, 32, pre_issue_depth)
         foreactor_us_list.append(foreactor_us_r / NUM_REPEATS)
 
     return original_us, foreactor_us_list
