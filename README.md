@@ -145,12 +145,11 @@ TODO complete tutorial
 
 - [x] pool flush optimization
 - [x] cleverer pre-issuing algo
+- [x] syscall graph visualize
 - [ ] larger LevelDB YCSB-c bench
-- [ ] control point inject logic
-- [ ] syscall graph visualize
-- [ ] readme & website doc
-- === spring break goal end ===
+- [ ] show tail latency benefits
 - [ ] apply to git status case
+- [ ] control point inject logic
 - [ ] serious related work study
 - [ ] unstable arguments
 - [ ] internal buffer GC
@@ -158,6 +157,7 @@ TODO complete tutorial
 - [ ] io_uring SQ polling
 - [ ] config & options on/off
 - [ ] show io_wq concurrency
+- [ ] readme & website doc
 - [ ] compiler CFG mapping
 - [ ] support other static langs
 
@@ -167,4 +167,6 @@ TODO complete tutorial
 - ALICE
 - io_uring, ScyllaDB
 - eBPF, AnyCall, BPF for Storage
-- TBC...
+- MultiCall, FlexSC
+- MAGE
+- ...
