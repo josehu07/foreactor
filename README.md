@@ -15,7 +15,7 @@ TODO paper cite info =)
 
 The following kernel version, compiler, and libraries are required:
 
-- Linux kernel >= 5.10 (we tested with Ubuntu 20.04 distribution)
+- Linux kernel >= 5.10 (we tested with Ubuntu 20.04 on kernel v5.10.60)
 - gcc/g++ >= 10.2
 - liburing >= 2.1
 
@@ -27,8 +27,9 @@ The following kernel version, compiler, and libraries are required:
 ```bash
 wget https://raw.githubusercontent.com/pimlie/ubuntu-mainline-kernel.sh/master/ubuntu-mainline-kernel.sh
 sudo chmod +x ubuntu-mainline-kernel.sh
-./ubuntu-mainline-kernel.sh -c
-sudo ./ubuntu-mainline-kernel.sh -i
+./ubuntu-mainline-kernel.sh -r v5.10     # search for 5.10 versions available
+sudo ./ubuntu-mainline-kernel.sh -i v5.10.60
+sudo apt --fix-broken install
 ```
 </details>
 

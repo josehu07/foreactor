@@ -1,3 +1,4 @@
+#include <new>
 #include <iostream>
 #include <sstream>
 #include <fstream>
@@ -16,9 +17,10 @@
 #include <liburing.h>
 
 
-static constexpr char TMPDIR[] = "/tmp/motivation_tmpdir";
+static constexpr char TMPDIR[] = "/mnt/ssd/josehu/motivation_tmpdir";
 
-static unsigned NUM_FILES = 32;     // maybe set by argument
+static constexpr size_t NUM_FILES = 10;
+static constexpr size_t FILE_SIZE = 1024 * 1024;
 static constexpr size_t READ_SIZE = 4096;
 
 static char **bufs;
@@ -31,17 +33,30 @@ static std::vector<bool> thread_done;
 static constexpr unsigned URING_QUEUE_LEN = 256;
 
 
-void thread_func(std::vector<int> *files, size_t id, size_t num_threads) {
+static int pick_rand_file(std::vector<int> *files) {
+    return files->at(std::rand() % NUM_FILES);
+}
+
+static size_t pick_rand_offset() {
+    return READ_SIZE * (std::rand() % (FILE_SIZE / READ_SIZE));
+}
+
+
+////////////////////////////////////
+// App-level thread pool approach //
+////////////////////////////////////
+
+void thread_func(std::vector<int> *files, size_t id, size_t num_preads,
+                 size_t num_threads) {
     {
         std::unique_lock start_lk(start_mu);
         if (!thread_start[id])
             start_cv.wait(start_lk);
     }
 
-    for (size_t idx = id; idx < NUM_FILES; idx += num_threads) {
-        int fd = files->at(idx);
-
-        ssize_t res = pread(fd, bufs[idx], READ_SIZE, 0);
+    for (size_t idx = id; idx < num_preads; idx += num_threads) {
+        ssize_t res = pread(pick_rand_file(files), bufs[idx], READ_SIZE,
+                            pick_rand_offset());
         if (res != READ_SIZE)
             throw std::runtime_error("app thread pread not successful");
     }
@@ -54,25 +69,31 @@ void thread_func(std::vector<int> *files, size_t id, size_t num_threads) {
     }
 }
 
-double preads_async_app_threads(std::vector<int>& files, size_t num_threads) {
+double preads_async_app_threads(std::vector<int>& files, size_t num_preads,
+                                size_t num_threads) {
     thread_start.clear();
     thread_done.clear();
-    for (size_t i = 0; i < num_threads; ++i) {
+    for (size_t id = 0; id < num_threads; ++id) {
         thread_start.push_back(false);
         thread_done.push_back(false);
     }
 
     std::vector<std::thread> workers(num_threads);
-    for (size_t i = 0; i < num_threads; ++i)
-        workers[i] = std::thread(thread_func, &files, i, num_threads);
+    for (size_t id = 0; id < num_threads; ++id) {
+        workers[id] = std::thread(thread_func, &files, id, num_preads,
+                                  num_threads);
+    }
+
+    // Sleep for a while to ensure all workers ready, listening on cv
+    std::this_thread::sleep_for(std::chrono::milliseconds(10));
 
     // Timing start...
     auto ts_beg = std::chrono::high_resolution_clock::now();
 
     {
         std::unique_lock start_lk(start_mu);
-        for (size_t i = 0; i < num_threads; ++i)
-            thread_start[i] = true;
+        for (size_t id = 0; id < num_threads; ++id)
+            thread_start[id] = true;
         start_cv.notify_all();
     }
 
@@ -97,7 +118,11 @@ double preads_async_app_threads(std::vector<int>& files, size_t num_threads) {
 }
 
 
-double preads_async_io_uring(std::vector<int>& files) {
+///////////////////////////////////
+// Async intf. io_uring approach //
+///////////////////////////////////
+
+double preads_async_io_uring(std::vector<int>& files, size_t num_preads) {
     struct io_uring ring;
     
     int rc = io_uring_queue_init(URING_QUEUE_LEN, &ring, 0);
@@ -107,22 +132,21 @@ double preads_async_io_uring(std::vector<int>& files) {
     // Timing start...
     auto ts_beg = std::chrono::high_resolution_clock::now();
 
-    for (size_t i = 0; i < files.size(); ++i) {
-        int fd = files[i];
-
+    for (size_t i = 0; i < num_preads; ++i) {
         struct io_uring_sqe *sqe = io_uring_get_sqe(&ring);
         if (sqe == nullptr)
             throw std::runtime_error("io_uring_get_sqe failed");
 
-        io_uring_prep_read(sqe, fd, bufs[i], READ_SIZE, 0);
+        io_uring_prep_read(sqe, pick_rand_file(&files), bufs[i], READ_SIZE,
+                           pick_rand_offset());
         io_uring_sqe_set_data(sqe, (void *) i);
     }
 
     int submitted = io_uring_submit(&ring);
-    if (submitted != static_cast<int>(files.size()))
+    if (submitted != static_cast<int>(num_preads))
         throw std::runtime_error("fewer than all prepared entries submitted");
 
-    for (size_t j = 0; j < files.size(); ++j) {
+    for (size_t j = 0; j < num_preads; ++j) {
         struct io_uring_cqe *cqe;
         int ret = io_uring_wait_cqe(&ring, &cqe);
         if (ret < 0)
@@ -132,7 +156,7 @@ double preads_async_io_uring(std::vector<int>& files) {
             throw std::runtime_error("io_uring pread not successful");
 
         size_t id = (size_t) io_uring_cqe_get_data(cqe);
-        if (id >= files.size())
+        if (id >= num_preads)
             throw std::runtime_error("io_uring cqe invalid user data field");
 
         io_uring_cqe_seen(&ring, cqe);
@@ -163,16 +187,21 @@ static const std::string rand_string(size_t length) {
     return str;
 }
 
-static std::vector<int> make_files() {
+static void make_files() {
     std::filesystem::remove_all(TMPDIR);
     std::filesystem::create_directory(TMPDIR);
     std::filesystem::current_path(TMPDIR);
 
     for (size_t i = 0; i < NUM_FILES; ++i) {
         std::ofstream file("tmp" + std::to_string(i));
-        std::string rand_content = rand_string(READ_SIZE);
+        std::string rand_content = rand_string(FILE_SIZE);
         file << rand_content;
     }
+}
+
+
+static std::vector<int> open_files() {
+    std::filesystem::current_path(TMPDIR);
 
     std::vector<int> files(NUM_FILES);
     for (size_t i = 0; i < NUM_FILES; ++i) {
@@ -184,48 +213,78 @@ static std::vector<int> make_files() {
     return files;
 }
 
-
-static void drop_caches(void) {
-    int rc = system("sudo sync; sudo sh -c 'echo 3 > /proc/sys/vm/drop_caches'");
-    if (rc != 0)
-        throw std::runtime_error("drop_caches failed");
+static void close_files(std::vector<int>& files) {
+    for (int fd : files)
+        close(fd);
 }
 
 
+// static void drop_caches(void) {
+//     int rc = system("sudo sync; sudo sh -c 'echo 3 > /proc/sys/vm/drop_caches'");
+//     if (rc != 0)
+//         throw std::runtime_error("drop_caches failed");
+// }
+
+
 int main(int argc, char *argv[]) {
-    if (argc != 2)
-        throw std::runtime_error("usage: ./motivation num_files");
+    if (argc != 2 && argc != 3)
+        throw std::runtime_error("usage: ./motivation make|run NUM_PREADS");
 
-    NUM_FILES = std::stoul(argv[1]);
-    if (NUM_FILES <= 0)
-        throw std::runtime_error("num_files must be positive");
-    if (NUM_FILES > URING_QUEUE_LEN) {
-        throw std::runtime_error("num_files cannot be more than " +
-                                 std::to_string(URING_QUEUE_LEN));
+    // create the files for reading
+    if (strcmp(argv[1], "make") == 0) {
+        make_files();
+        return 0;
+
+    // benchmark three forms of asynchrony on NUM_PREADS random preads
+    } else if (strcmp(argv[1], "run") == 0) {
+        if (argc != 3)
+            throw std::runtime_error("usage: ./motivation make|run NUM_PREADS");
+
+        size_t num_preads = std::stoul(argv[2]);
+        if (num_preads <= 0)
+            throw std::runtime_error("num_preads must be positive");
+        if (num_preads > URING_QUEUE_LEN) {
+            throw std::runtime_error("num_preads cannot be more than " +
+                                     std::to_string(URING_QUEUE_LEN));
+        }
+
+        bufs = new char *[num_preads];
+        for (size_t i = 0; i < num_preads; ++i)
+            bufs[i] = new (std::align_val_t(READ_SIZE)) char[READ_SIZE];
+
+        std::vector<int> files = open_files();
+
+        // warm up any caching involved, do not time this one
+        double unused __attribute__((unused)) =
+            preads_async_io_uring(files, num_preads);
+
+        // drop_caches();
+        double app_threads_unbounded_us =
+            preads_async_app_threads(files, num_preads, num_preads);
+
+        // drop_caches();
+        double app_threads_bounded_us =
+            preads_async_app_threads(files, num_preads, 8);
+
+        // drop_caches();
+        double io_uring_us =
+            preads_async_io_uring(files, num_preads);
+
+        std::cout << "app threads unbounded: " << app_threads_unbounded_us
+                  << " us" << std::endl
+                  << "app threads bounded (8): " << app_threads_bounded_us
+                  << " us" << std::endl
+                  << "io_uring: " << io_uring_us << " us" << std::endl;
+
+        for (size_t i = 0; i < num_preads; ++i)
+            delete[] bufs[i];
+        delete[] bufs;
+
+        close_files(files);
+
+    } else {
+        throw std::runtime_error("usage: ./motivation make|run NUM_PREADS");
     }
-
-    bufs = new char *[NUM_FILES];
-    for (size_t i = 0; i < NUM_FILES; ++i)
-        bufs[i] = new char[READ_SIZE];
-
-    std::vector<int> files = make_files();
-
-    drop_caches();
-    double app_threads_unbounded_us = preads_async_app_threads(files, NUM_FILES);
-
-    drop_caches();
-    double app_threads_bounded_us = preads_async_app_threads(files, 8);
-
-    drop_caches();
-    double io_uring_us = preads_async_io_uring(files);
-
-    std::cout << "app threads unbounded: " << app_threads_unbounded_us << " us" << std::endl
-              << "app threads bounded (8): " << app_threads_bounded_us << " us" << std::endl
-              << "io_uring: " << io_uring_us << " us" << std::endl;
-
-    for (size_t i = 0; i < NUM_FILES; ++i)
-        delete[] bufs[i];
-    delete[] bufs;
     
     return 0;
 }
