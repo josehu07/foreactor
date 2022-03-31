@@ -150,12 +150,13 @@ TODO complete tutorial
 - [ ] larger LevelDB YCSB-c bench
 - [ ] show tail latency benefits
 - [ ] apply to git status case
-- [ ] control point inject logic
-- [ ] serious related work study
-- [ ] unstable arguments
 - [ ] internal buffer GC
 - [ ] io_uring fixed buffers
 - [ ] io_uring SQ polling
+- [ ] delayed ValuePool population
+- [ ] serious related work study
+- [ ] unstable arguments
+- [ ] control point inject logic
 - [ ] config & options on/off
 - [ ] show io_wq concurrency
 - [ ] readme & website doc
