@@ -1,12 +1,8 @@
 #!/usr/bin/env python3
 
-import matplotlib
-matplotlib.use('Agg')
-
 import subprocess
 import os
 import argparse
-import matplotlib.pyplot as plt
 
 
 URING_QUEUE_LEN = 256
@@ -39,7 +35,6 @@ def run_ycsbcli_single(libforeactor, dbdir, trace, drop_caches, use_foreactor,
         elif rm_seen and line.startswith("avg"):
             return float(line.split()[-2])
 
-
 def run_exprs(libforeactor, dbdir, trace, drop_caches, pre_issue_depth_list):
     original_us_r = 0.0
     for i in range(NUM_REPEATS):
@@ -58,29 +53,6 @@ def run_exprs(libforeactor, dbdir, trace, drop_caches, pre_issue_depth_list):
     return original_us, foreactor_us_list
 
 
-def plot_time(pre_issue_depth_list, original_us, foreactor_us_list, output_name):
-    print(f'{original_us:8.3f}')
-    for i in range(len(pre_issue_depth_list)):
-        print(f'{pre_issue_depth_list[i]:3d} {foreactor_us_list[i]:8.3f}')
-
-    width = 0.5
-
-    plt.bar([0], [original_us], width,
-            zorder=3, label="Original")
-    plt.bar(pre_issue_depth_list, foreactor_us_list, width,
-            zorder=3, label="Foreactor")
-
-    plt.ylabel("Time (us)")
-    plt.xticks([0] + pre_issue_depth_list, ['original'] + pre_issue_depth_list)
-    plt.xlabel("pre_issue_depth")
-
-    plt.grid(zorder=0, axis='y')
-
-    plt.legend()
-
-    plt.savefig(output_name, dpi=120)
-
-
 def main():
     parser = argparse.ArgumentParser(description="LevelDB benchmark w/ foreactor")
     parser.add_argument('-l', dest='libforeactor', required=True,
@@ -89,8 +61,6 @@ def main():
                         help="dbdir of LevelDB")
     parser.add_argument('-f', dest='trace', required=True,
                         help="trace file to run ycsbcli")
-    parser.add_argument('-o', dest='output_name', required=True,
-                        help="output plot filename")
     parser.add_argument('--drop_caches', dest='drop_caches', action='store_true',
                         help="do drop_caches per request")
     parser.add_argument('pre_issue_depths', metavar='D', type=int, nargs='+',
@@ -100,8 +70,9 @@ def main():
     original_us, foreactor_us_list = run_exprs(args.libforeactor, args.dbdir,
                                                args.trace, args.drop_caches,
                                                args.pre_issue_depths)
-    plot_time(args.pre_issue_depths, original_us, foreactor_us_list,
-              args.output_name)
+    print(f'{"orig":>4s} {original_us:<.3f}')
+    for i in range(len(args.pre_issue_depths)):
+        print(f'{args.pre_issue_depths[i]:>4d} {foreactor_us_list[i]:<.3f}')
 
 if __name__ == "__main__":
     main()

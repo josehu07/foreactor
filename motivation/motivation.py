@@ -8,8 +8,8 @@ import matplotlib.pyplot as plt
 import numpy as np
 
 
-NUM_PREADS_LIST = list(range(8, 44, 4))
-NUM_REPEATS = 100
+NUM_PREADS_LIST = list(range(4, 34, 2))
+NUM_REPEATS = 30
 
 
 def make_files():
