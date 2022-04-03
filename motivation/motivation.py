@@ -90,6 +90,7 @@ def plot_time(num_preads_list, app_threads_unbounded_time, app_threads_bounded_t
     plt.legend()
 
     plt.savefig("motivation.png", dpi=120)
+    plt.close()
 
 
 def main():

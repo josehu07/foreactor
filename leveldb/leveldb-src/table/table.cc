@@ -2,6 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file. See the AUTHORS file for names of contributors.
 
+#include <iostream>
+
 #include "leveldb/table.h"
 
 #include "leveldb/cache.h"
@@ -164,6 +166,10 @@ Iterator* Table::BlockReader(void* arg, const ReadOptions& options,
   // can add more features in the future.
 
   if (s.ok()) {
+    // [foreactor] print block info
+    if (options.print_block_info)
+      std::cout << " " << handle.offset() << " " << handle.size() << std::endl;
+    
     BlockContents contents;
     if (block_cache != nullptr) {
       char cache_key_buffer[16];

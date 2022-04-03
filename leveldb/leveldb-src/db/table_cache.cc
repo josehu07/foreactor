@@ -2,6 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file. See the AUTHORS file for names of contributors.
 
+#include <iostream>
+
 #include "db/table_cache.h"
 
 #include "db/filename.h"
@@ -105,6 +107,11 @@ Status TableCache::Get(const ReadOptions& options, uint64_t file_number,
   Status s = FindTable(file_number, file_size, &handle);
   if (s.ok()) {
     Table* t = reinterpret_cast<TableAndFile*>(cache_->Value(handle))->table;
+
+    // [foreactor] print block info
+    if (options.print_block_info)
+      std::cout << " " << file_number;
+
     s = t->InternalGet(options, k, arg, handle_result);
     cache_->Release(handle);
   }

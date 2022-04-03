@@ -121,7 +121,7 @@ leveldb_stats(leveldb::DB *db)
 /** Run/load YCSB workload on a leveldb instance. */
 static uint
 do_ycsb(leveldb::DB *db, const std::vector<ycsb_req_t>& reqs,
-        const std::string value, bool do_drop_caches,
+        const std::string value, bool do_drop_caches, bool print_block_info,
         std::vector<double>& microsecs)
 {
     leveldb::Status status;
@@ -139,6 +139,8 @@ do_ycsb(leveldb::DB *db, const std::vector<ycsb_req_t>& reqs,
                 break;
 
             case READ: {
+                    if (print_block_info)
+                        std::cout << "req " << req.key << std::endl;
                     status = db->Get(read_options, req.key, &read_buf);
                 }
                 break;
@@ -188,7 +190,7 @@ main(int argc, char *argv[])
 {
     std::string db_location, ycsb_filename;
     size_t value_size, memtable_limit, filesize_limit;
-    bool do_drop_caches = false, bg_compact_off = false;
+    bool do_drop_caches = false, bg_compact_off = false, print_block_info = false;
 
     cxxopts::Options cmd_args("leveldb ycsb trace exec client");
     cmd_args.add_options()
@@ -201,7 +203,8 @@ main(int argc, char *argv[])
             ("write_sync", "force write sync", cxxopts::value<bool>()->default_value("false"))
             ("bg_compact_off", "turn off background compaction", cxxopts::value<bool>()->default_value("false"))
             ("no_fill_cache", "no block cache for gets", cxxopts::value<bool>()->default_value("false"))
-            ("drop_caches", "do drop_caches between ops", cxxopts::value<bool>()->default_value("false"));
+            ("drop_caches", "do drop_caches between ops", cxxopts::value<bool>()->default_value("false"))
+            ("print_block_info", "for distribution accounting", cxxopts::value<bool>()->default_value("false"));
     auto result = cmd_args.parse(argc, argv);
 
     if (result.count("help")) {
@@ -220,6 +223,11 @@ main(int argc, char *argv[])
 
     if (result.count("drop_caches"))
         do_drop_caches = true;
+
+    if (result.count("print_block_info")) {
+        print_block_info = true;
+        read_options.print_block_info = true;
+    }
 
     // Read in YCSB workload trace.
     std::vector<ycsb_req_t> ycsb_reqs;
@@ -256,13 +264,18 @@ main(int argc, char *argv[])
 
     // Execute the actions of the YCSB trace.
     std::vector<double> microsecs;
-    uint cnt = do_ycsb(db, ycsb_reqs, value, do_drop_caches, microsecs);
+    uint cnt = do_ycsb(db, ycsb_reqs, value, do_drop_caches, print_block_info, microsecs);
     std::cout << "Finished " << cnt << " requests." << std::endl << std::endl;
 
     // Print timing info.
     if (cnt > 0) {
         assert(microsecs.size() == cnt);
         std::sort(microsecs.begin(), microsecs.end());
+
+        std::cout << "Sorted time elapsed:";
+        for (double& us : microsecs)
+            std::cout << " " << us;
+        std::cout << std::endl << std::endl;
 
         double sum_us = 0.;
         for (double& us : microsecs)
@@ -275,10 +288,10 @@ main(int argc, char *argv[])
                   << "  sum  " << sum_us << " us" << std::endl
                   << "  avg  " << avg_us << " us" << std::endl
                   << "  max  " << max_us << " us" << std::endl
-                  << "  min  " << min_us << " us" << std::endl;
+                  << "  min  " << min_us << " us" << std::endl << std::endl;
 
         if (microsecs.size() > 10) {
-            std::cout << " removing top/bottom-5:" << std::endl;
+            std::cout << "Removing top/bottom-5:" << std::endl;
             microsecs.erase(microsecs.begin(), microsecs.begin() + 5);
             microsecs.erase(microsecs.end() - 5, microsecs.end());
 
@@ -294,6 +307,7 @@ main(int argc, char *argv[])
                       << "  max  " << max_us << " us" << std::endl
                       << "  min  " << min_us << " us" << std::endl;
         }
+
     }
 
     // Force compaction of everything in memory.
