@@ -8,7 +8,7 @@ Foreactor is a library framework that enables asynchronous I/O (or more generall
 
 This is done by describing the application's critical functions (e.g., LevelDB's `Version::Get`) as **syscall graphs**, a formal abstraction we propose, in plugins. Such graph abstraction captures the original execution order of syscalls to be issued by the function and their dependencies. If the `foreactor` library gets `LD_PRELOAD`ed when running the application, it automatically hijacks those wrapped functions specified in plugins as well as POSIX syscalls, and pre-issues some syscalls ahead of time if the syscall graph says it is safe and benefitial to do so.
 
-TODO paper cite info =)
+TODO paper cite info? =)
 
 
 ## Prerequisites
@@ -94,16 +94,12 @@ cd demoapp
 ./demo.sh
 cd ..
 ```
-
-TODO describe linker wrapping procedure
 </details>
 
 
 ## Listed Applications
 
 This repository contains a collection of applications that involve functions suitable to be wrapped by foreactor and benefit from asynchrony. We have written plugins for some of them. The plugins code can be found under `appname/appname-plugin/`.
-
-TODO link to scgraph database website
 
 <details>
 <summary>LevelDB v1.23</summary>
@@ -122,7 +118,29 @@ make clean && make
 Run with foreactor:
 
 ```bash
-./ycsbcli TODO
+TODO
+```
+</details>
+
+<details>
+<summary>Git v2.36.0-rc0</summary>
+
+| Function | Note |
+| :-: | :- |
+| `TODO` | TODO |
+
+Build:
+
+```bash
+sudo apt install libcurl4-openssl-dev
+cd git
+make clean && make
+```
+
+Run with foreactor:
+
+```bash
+TODO
 ```
 </details>
 
@@ -138,6 +156,8 @@ It does not take too much effort to make a new plugin for an application functio
 objdump -t path/to/original/app/file.o | grep funcname_keyword
 ```
 
+TODO describe linker wrapping procedure
+
 TODO complete tutorial
 </details>
 
@@ -150,11 +170,12 @@ TODO complete tutorial
 - [ ] larger LevelDB YCSB-c bench
 - [ ] show tail latency benefits
 - [ ] apply to git status case
-- [ ] internal buffer GC
+- [ ] delayed ValuePool population
 - [ ] io_uring fixed buffers
 - [ ] io_uring SQ polling
-- [ ] delayed ValuePool population
+- [ ] internal buffer GC
 - [ ] serious related work study
+- [ ] current async I/O study
 - [ ] unstable arguments
 - [ ] control point inject logic
 - [ ] config & options on/off

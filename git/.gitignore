@@ -1,0 +1,7 @@
+# Editors.
+*.sw*
+.vscode
+.DS_Store
+
+*.o
+*.so
