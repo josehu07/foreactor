@@ -63,10 +63,10 @@ static void close_all(std::vector<std::vector<int>> files) {
 }
 
 
-void make_db_img() {
-    std::filesystem::remove_all(DBDIR);
-    std::filesystem::create_directory(DBDIR);
-    std::filesystem::current_path(DBDIR);
+void make_db_img(const std::string& dbdir) {
+    std::filesystem::remove_all(dbdir);
+    std::filesystem::create_directory(dbdir);
+    std::filesystem::current_path(dbdir);
 
     for (int level = 0; level < NUM_LEVELS; ++level) {
         for (int index = 0; index < FILES_PER_LEVEL; ++index) {
@@ -77,9 +77,9 @@ void make_db_img() {
     }
 }
 
-void run_ldb_get(bool dump_result, bool selective_open = false,
-                 bool do_drop_caches = false) {
-    std::filesystem::current_path(DBDIR);
+void run_ldb_get(const std::string& dbdir, bool dump_result,
+                 bool selective_open = false, bool do_drop_caches = false) {
+    std::filesystem::current_path(dbdir);
     std::vector<std::string> bytes;
 
     std::vector<double> elapsed_us;
@@ -99,7 +99,7 @@ void run_ldb_get(bool dump_result, bool selective_open = false,
         close_all(files);
     }
 
-    std::cerr << "Time elapsed: [ ";
+    std::cerr << "  Time elapsed: [ ";
     for (double& us : elapsed_us)
         std::cerr << us << " ";
     std::cerr << "] us" << std::endl;
@@ -111,33 +111,40 @@ void run_ldb_get(bool dump_result, bool selective_open = false,
 }
 
 
+void print_usage_exit(const char *self) {
+    std::cerr << "Usage: " << self << " make|dump|run DBDIR_PATH"
+              << " [--selective_open] [--drop_caches]" << std::endl;
+    exit(1);
+}
+
 int main(int argc, char *argv[]) {
-    if ((argc < 2) || (argc > 4)) {
-        std::cerr << "Usage: " << argv[0] << " make|dump|run"
-                  << " [--selective_open] [--drop_caches]" << std::endl;
-        return -1;
-    }
+    if ((argc < 3) || (argc > 5))
+        print_usage_exit(argv[0]);
+
+    std::string dbdir(argv[2]);
 
     if (strcmp(argv[1], "make") == 0) {
-        make_db_img();
+        make_db_img(dbdir);
         return 0;
+
     } else if (strcmp(argv[1], "run") == 0) {
         bool selective_open = false;
         bool do_drop_caches = false;
-        for (int i = 2; i < argc; ++i) {
+        for (int i = 3; i < argc; ++i) {
             if (strcmp(argv[i], "--selective_open") == 0)
                 selective_open = true;
             else if (strcmp(argv[i], "--drop_caches") == 0)
                 do_drop_caches = true;
         }
-        run_ldb_get(false, selective_open, do_drop_caches);
+        run_ldb_get(dbdir, false, selective_open, do_drop_caches);
         return 0;
+    
     } else if (strcmp(argv[1], "dump") == 0) {
-        run_ldb_get(true);
+        run_ldb_get(dbdir, true);
         return 0;
-    } else {
-        std::cerr << "Usage: " << argv[0] << " make|dump|run"
-                  << " [--selective_open] [--drop_caches]" << std::endl;
-        return -1;
-    }
+    
+    } else
+        print_usage_exit(argv[0]);
+
+    return 0;
 }
