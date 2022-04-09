@@ -30,7 +30,7 @@ namespace fa = foreactor;
 // IOUring instance //
 //////////////////////
 
-// There is one IOUring instance per wrapped function per thread.
+// There is one IOUring instance per thread.
 thread_local fa::IOUring ring;
 
 
@@ -127,6 +127,7 @@ static bool NewestFirst(FileMetaData* a, FileMetaData* b) {
 // SCGraph value pools //
 /////////////////////////
 
+// There is one SCGraph per wrapped function per thread.
 static constexpr unsigned version_get_graph_id = 0;
 thread_local fa::SCGraph scgraph(version_get_graph_id, /*max-dims*/ 1);
 
