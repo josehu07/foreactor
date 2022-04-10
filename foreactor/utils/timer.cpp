@@ -105,7 +105,7 @@ void Timer::ShowStat(TimeUnit unit) const {
                id.c_str(), stat.size(), avg, max, min,
                TimeUnitStr(unit).c_str());
     } else {
-        fprintf(stderr, "# %24s #  cnt %5lu\n", id.c_str(), 0lu);
+        fprintf(stderr, "# %-24s #  cnt %5lu\n", id.c_str(), 0lu);
     }
 }
 

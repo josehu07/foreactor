@@ -44,10 +44,12 @@ IOUring::~IOUring() {
         TIMER_PAUSE("uring-exit");
     }
 
-    TIMER_PRINT("uring-init", TIME_MICRO);
-    TIMER_PRINT("uring-exit", TIME_MICRO);
-    TIMER_RESET("uring-init");
-    TIMER_RESET("uring-exit");
+    // TIMER_PRINT("uring-init", TIME_MICRO);
+    // TIMER_PRINT("uring-exit", TIME_MICRO);
+    // TIMER_RESET("uring-init");
+    // TIMER_RESET("uring-exit");
+    
+    TIMER_PRINT_ALL(TIME_MICRO);
 }
 
 

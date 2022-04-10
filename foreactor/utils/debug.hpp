@@ -61,6 +61,7 @@ namespace foreactor {
 
 // thread ID
 extern thread_local const pid_t tid;
+extern thread_local const std::string tid_str;
 
 
 template <typename T>

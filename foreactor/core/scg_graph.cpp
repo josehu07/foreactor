@@ -52,8 +52,8 @@ SCGraph::SCGraph(unsigned graph_id, unsigned max_dims)
 }
 
 SCGraph::~SCGraph() {
-    TIMER_PRINT(TimerNameStr("build-graph"), TIME_MICRO);
-    TIMER_RESET(TimerNameStr("build-graph"));
+    // TIMER_PRINT(TimerNameStr("build-graph"), TIME_MICRO);
+    // TIMER_RESET(TimerNameStr("build-graph"));
 
     EpochListBase::Delete(frontier_epoch);
     EpochListBase::Delete(peekhead_epoch);
@@ -124,20 +124,20 @@ void SCGraph::ClearAllReqs() {
     TIMER_PAUSE(TimerNameStr("clear-prog"));
     DEBUG("cleared SCGraph %u\n", graph_id);
 
-    TIMER_PRINT(TimerNameStr("pool-flush"),  TIME_MICRO);
-    TIMER_PRINT(TimerNameStr("pool-clear"),  TIME_MICRO);
-    TIMER_PRINT(TimerNameStr("peek-algo"),   TIME_MICRO);
-    TIMER_PRINT(TimerNameStr("ring-submit"), TIME_MICRO);
-    TIMER_PRINT(TimerNameStr("sync-call"),   TIME_MICRO);
-    TIMER_PRINT(TimerNameStr("ring-cmpl"),   TIME_MICRO);
-    TIMER_PRINT(TimerNameStr("clear-prog"),  TIME_MICRO);
-    TIMER_RESET(TimerNameStr("pool-flush"));
-    TIMER_RESET(TimerNameStr("pool-clear"));
-    TIMER_RESET(TimerNameStr("peek-algo"));
-    TIMER_RESET(TimerNameStr("ring-submit"));
-    TIMER_RESET(TimerNameStr("sync-call"));
-    TIMER_RESET(TimerNameStr("ring-cmpl"));
-    TIMER_RESET(TimerNameStr("clear-prog"));
+    // TIMER_PRINT(TimerNameStr("pool-flush"),  TIME_MICRO);
+    // TIMER_PRINT(TimerNameStr("pool-clear"),  TIME_MICRO);
+    // TIMER_PRINT(TimerNameStr("peek-algo"),   TIME_MICRO);
+    // TIMER_PRINT(TimerNameStr("ring-submit"), TIME_MICRO);
+    // TIMER_PRINT(TimerNameStr("sync-call"),   TIME_MICRO);
+    // TIMER_PRINT(TimerNameStr("ring-cmpl"),   TIME_MICRO);
+    // TIMER_PRINT(TimerNameStr("clear-prog"),  TIME_MICRO);
+    // TIMER_RESET(TimerNameStr("pool-flush"));
+    // TIMER_RESET(TimerNameStr("pool-clear"));
+    // TIMER_RESET(TimerNameStr("peek-algo"));
+    // TIMER_RESET(TimerNameStr("ring-submit"));
+    // TIMER_RESET(TimerNameStr("sync-call"));
+    // TIMER_RESET(TimerNameStr("ring-cmpl"));
+    // TIMER_RESET(TimerNameStr("clear-prog"));
 }
 
 

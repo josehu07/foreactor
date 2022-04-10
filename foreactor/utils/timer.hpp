@@ -22,43 +22,52 @@
 #define TIMER_PRINT(id, unit)
 #define TIMER_RESET(id)
 #define TIMER_CLEAR(id)
+#define TIMER_PRINT_ALL(unit)
 
 #else
 
-#define TIMER_START(id)                                   \
-    do {                                                  \
-        std::string uid = std::to_string(tid) + "-" + id; \
-        if (timers.find(uid) == timers.end())             \
-            timers.emplace((uid), (uid));                 \
-        timers.at(uid).Start();                           \
+#define TIMER_START(id)                       \
+    do {                                      \
+        std::string uid = tid_str + "-" + id; \
+        if (timers.find(uid) == timers.end()) \
+            timers.emplace((uid), (uid));     \
+        timers.at(uid).Start();               \
     } while (0)
 
-#define TIMER_PAUSE(id)                                   \
-    do {                                                  \
-        std::string uid = std::to_string(tid) + "-" + id; \
-        assert(timers.find(uid) != timers.end());         \
-        timers.at(uid).Pause();                           \
+#define TIMER_PAUSE(id)                           \
+    do {                                          \
+        std::string uid = tid_str + "-" + id;     \
+        assert(timers.find(uid) != timers.end()); \
+        timers.at(uid).Pause();                   \
     } while (0)
 
-#define TIMER_PRINT(id, unit)                             \
-    do {                                                  \
-        std::string uid = std::to_string(tid) + "-" + id; \
-        if (timers.find(uid) != timers.end())             \
-            timers.at(uid).ShowStat(unit);                \
+#define TIMER_PRINT(id, unit)                 \
+    do {                                      \
+        std::string uid = tid_str + "-" + id; \
+        if (timers.find(uid) != timers.end()) \
+            timers.at(uid).ShowStat(unit);    \
     } while (0)
 
-#define TIMER_RESET(id)                                   \
-    do {                                                  \
-        std::string uid = std::to_string(tid) + "-" + id; \
-        if (timers.find(uid) != timers.end())             \
-            timers.at(uid).Reset();                       \
+#define TIMER_RESET(id)                       \
+    do {                                      \
+        std::string uid = tid_str + "-" + id; \
+        if (timers.find(uid) != timers.end()) \
+            timers.at(uid).Reset();           \
     } while (0)
 
-#define TIMER_CLEAR(id)                                   \
-    do {                                                  \
-        std::string uid = std::to_string(tid) + "-" + id; \
-        if (timers.find(uid) != timers.end())             \
-            timers.erase(uid);                            \
+#define TIMER_CLEAR(id)                       \
+    do {                                      \
+        std::string uid = tid_str + "-" + id; \
+        if (timers.find(uid) != timers.end()) \
+            timers.erase(uid);                \
+    } while (0)
+
+#define TIMER_PRINT_ALL(unit)               \
+    do {                                    \
+        for (auto& [uid, timer] : timers) { \
+            if (uid.rfind(tid_str, 0) == 0) \
+                timer.ShowStat(unit);       \
+        }                                   \
     } while (0)
 
 #endif

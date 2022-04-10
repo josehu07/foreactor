@@ -169,8 +169,8 @@ TODO complete tutorial
 - [x] syscall graph visualize
 - [x] larger LevelDB YCSB-c bench
 - [x] show tail latency benefits
-- [ ] apply to git status case
 - [ ] re-work ValuePool abstraction
+- [ ] apply to git status case
 - [ ] smarter pre_issue_depth
 - [ ] io_uring fixed buffers
 - [ ] io_uring SQ polling
