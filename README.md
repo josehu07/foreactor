@@ -167,10 +167,11 @@ TODO complete tutorial
 - [x] pool flush optimization
 - [x] cleverer pre-issuing algo
 - [x] syscall graph visualize
-- [ ] larger LevelDB YCSB-c bench
-- [ ] show tail latency benefits
+- [x] larger LevelDB YCSB-c bench
+- [x] show tail latency benefits
 - [ ] apply to git status case
-- [ ] delayed ValuePool population
+- [ ] re-work ValuePool abstraction
+- [ ] smarter pre_issue_depth
 - [ ] io_uring fixed buffers
 - [ ] io_uring SQ polling
 - [ ] internal buffer GC
