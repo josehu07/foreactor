@@ -37,12 +37,12 @@ IOUring::IOUring()
 }
 
 IOUring::~IOUring() {
-    TIMER_START("uring-exit");
     if (ring_initialized) {
+        TIMER_START("uring-exit");
         io_uring_queue_exit(&ring);
         DEBUG("destroyed IOUring @ %p\n", &ring);
+        TIMER_PAUSE("uring-exit");
     }
-    TIMER_PAUSE("uring-exit");
 
     TIMER_PRINT("uring-init", TIME_MICRO);
     TIMER_PRINT("uring-exit", TIME_MICRO);

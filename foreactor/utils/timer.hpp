@@ -1,6 +1,6 @@
 #include <unordered_map>
 #include <vector>
-#include <chrono>
+#include <time.h>
 
 #include "debug.hpp"
 
@@ -81,8 +81,12 @@ typedef enum TimeUnit {
 class Timer {
     private:
         std::string id;
-        std::vector<std::chrono::time_point<std::chrono::high_resolution_clock>> start_tps;
-        std::vector<std::chrono::time_point<std::chrono::high_resolution_clock>> pause_tps;
+
+        struct timespec start_ts;
+        struct timespec pause_ts;
+        bool started = false;
+
+        std::vector<uint64_t> nanosecs;
 
     public:
         Timer() = delete;

@@ -1,9 +1,9 @@
 #include <string>
 #include <unordered_map>
 #include <vector>
-#include <chrono>
 #include <assert.h>
 #include <stdio.h>
+#include <time.h>
 
 #include "timer.hpp"
 
@@ -30,58 +30,59 @@ static std::string TimeUnitStr(TimeUnit unit) {
 //////////////////////////
 
 void Timer::Reset() {
-    start_tps.clear();
-    pause_tps.clear();
+    nanosecs.clear();
+    started = false;
 }
 
 
 void Timer::Start() {
-    assert(start_tps.size() == pause_tps.size());
-    start_tps.push_back(std::chrono::high_resolution_clock::now());
+    assert(!started);
+    int ret __attribute__((unused)) =
+        clock_gettime(CLOCK_REALTIME, &start_ts);
+    assert(ret == 0);
 }
 
 void Timer::Pause() {
-    assert(start_tps.size() == pause_tps.size() + 1);
-    pause_tps.push_back(std::chrono::high_resolution_clock::now());
+    assert(started);
+    int ret __attribute__((unused)) =
+        clock_gettime(CLOCK_REALTIME, &pause_ts);
+    assert(ret == 0);
+
+    uint64_t nsecs = (pause_ts.tv_sec - start_ts.tv_sec) * 1e9
+                     + (pause_ts.tv_nsec - start_ts.tv_nsec);
+    nanosecs.push_back(nsecs);
 }
 
 
 size_t Timer::GetSize() const {
-    assert(start_tps.size() == pause_tps.size());
-    return start_tps.size();
+    assert(!started);
+    return nanosecs.size();
 }
 
 std::vector<double> Timer::GetStat(TimeUnit unit) const {
-    assert(start_tps.size() == pause_tps.size());
+    assert(!started);
+    double div = 1;
+    switch (unit) {
+        case TIME_NANO:
+            div = 1;
+            break;
+        case TIME_MICRO:
+            div = 1e3;
+            break;
+        case TIME_MILLI:
+            div = 1e6;
+            break;
+        case TIME_SEC:
+            div = 1e9;
+            break;
+        default:
+            assert(false);
+    }
 
     std::vector<double> stat;
-    for (size_t i = 0; i < start_tps.size(); ++i) {
-        std::chrono::duration<double, std::nano>  elapsed_ns;
-        std::chrono::duration<double, std::micro> elapsed_us;
-        std::chrono::duration<double, std::milli> elapsed_ms;
-        std::chrono::duration<double>             elapsed_secs;
-
-        switch (unit) {
-            case TIME_NANO:
-                elapsed_ns = pause_tps[i] - start_tps[i];
-                stat.push_back(elapsed_ns.count());
-                break;
-            case TIME_MICRO:
-                elapsed_us = pause_tps[i] - start_tps[i];
-                stat.push_back(elapsed_us.count());
-                break;
-            case TIME_MILLI:
-                elapsed_ms = pause_tps[i] - start_tps[i];
-                stat.push_back(elapsed_ms.count());
-                break;
-            case TIME_SEC:
-                elapsed_secs = pause_tps[i] - start_tps[i];
-                stat.push_back(elapsed_secs.count());
-                break;
-            default:
-                assert(false);
-        }
-    }
+    stat.reserve(nanosecs.size());
+    for (uint64_t nsecs : nanosecs)
+        stat.push_back(static_cast<double>(nsecs) / div);
 
     return stat;
 }
