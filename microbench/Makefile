@@ -6,16 +6,16 @@ OBJS:=$(patsubst %.cpp,%.o,$(SRCS))
 
 
 .PHONY: all
-all: motivation
+all: microbench
 
 
 $(OBJS): %.o: %.cpp
 	$(CC) $(CXXFLAGS) -c $< -o $@
 
-motivation: $(OBJS)
+microbench: $(OBJS)
 	$(CC) $(CXXFLAGS) $^ -o $@ -lpthread -luring
 
 
 .PHONY: clean
 clean:
-	rm -f $(OBJS) motivation
+	rm -f $(OBJS) microbench
