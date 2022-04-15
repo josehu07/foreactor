@@ -43,7 +43,7 @@ static std::vector<std::vector<int>> open_all(bool selective) {
         files.push_back(std::vector<int>());
         for (int index = 0; index < FILES_PER_LEVEL; ++index) {
             if ((!selective) || (index != OPEN_SKIP_WHICH)) {
-                int fd = open(table_name(level, index).c_str(), 0, O_RDONLY);
+                int fd = open(table_name(level, index).c_str(), O_RDONLY);
                 assert(fd > 0);
                 files.back().push_back(fd);
             } else

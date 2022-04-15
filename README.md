@@ -164,11 +164,9 @@ TODO complete tutorial
 
 ## TODO List
 
-- [x] pool flush optimization
-- [x] cleverer pre-issuing algo
-- [x] syscall graph visualize
-- [x] larger LevelDB YCSB-c bench
-- [x] show tail latency benefits
+- [ ] microbench page cache thrashing
+- [ ] microbench thread_pool
+- [ ] microbench synth script
 - [ ] re-work ValuePool abstraction
 - [ ] apply to git status case
 - [ ] smarter pre_issue_depth

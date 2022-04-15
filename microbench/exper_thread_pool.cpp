@@ -1,4 +1,5 @@
 #include <vector>
+#include <iostream>
 #include <thread>
 #include <mutex>
 #include <condition_variable>
@@ -17,7 +18,7 @@ static std::vector<bool> thread_start;
 static std::vector<bool> thread_done;
 
 
-void thread_func(std::vector<Req>& reqs, size_t id, size_t num_threads) {
+void thread_func(std::vector<Req> *reqs, size_t id, size_t num_threads) {
     while (true) {
         {
             std::unique_lock start_lk(start_mu);
@@ -28,8 +29,8 @@ void thread_func(std::vector<Req>& reqs, size_t id, size_t num_threads) {
             thread_start[id] = false;
         }
 
-        for (size_t idx = id; idx < reqs.size(); idx += num_threads) {
-            Req& req = reqs[idx];
+        for (size_t idx = id; idx < reqs->size(); idx += num_threads) {
+            Req& req = reqs->at(idx);
             ssize_t ret;
 
             if (req.write)
@@ -37,8 +38,8 @@ void thread_func(std::vector<Req>& reqs, size_t id, size_t num_threads) {
             else
                 ret = pread(req.fd, req.buf, req.count, req.offset);
 
-            if (ret != req.count)
-                throw std::runtime_error("req rc does not match count")
+            if (static_cast<size_t>(ret) != req.count)
+                throw std::runtime_error("req rc does not match count");
         }
 
         std::unique_lock finish_lk(finish_mu);
@@ -87,8 +88,8 @@ std::vector<double> run_exper_thread_pool(std::vector<Req>& reqs,
     std::vector<bool> thread_done(num_threads, false);
 
     std::vector<std::thread> workers(num_threads);
-    for (size_t id = 0; i < num_threads; ++id)
-        workers[id] = std::thread(thread_func, reqs, id, num_threads);
+    for (size_t id = 0; id < num_threads; ++id)
+        workers[id] = std::thread(thread_func, &reqs, id, num_threads);
 
     // Sleep for a while to ensure all workers ready, listening on cv
     std::this_thread::sleep_for(std::chrono::milliseconds(10));
@@ -105,6 +106,9 @@ std::vector<double> run_exper_thread_pool(std::vector<Req>& reqs,
         std::chrono::duration<double, std::micro> elapsed_us = ts_end - ts_beg;
         if (i >= warmup_rounds)
             times_us.push_back(elapsed_us.count());
+
+        for (auto& req : reqs)
+            req.completed = false;
     }
 
     // No joins for simplicity...

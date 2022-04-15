@@ -1,4 +1,5 @@
 #include <vector>
+#include <iostream>
 #include <chrono>
 #include <stdexcept>
 #include <string.h>
@@ -17,8 +18,12 @@ void do_reqs_basic(std::vector<Req>& reqs) {
         else
             ret = pread(req.fd, req.buf, req.count, req.offset);
 
-        if (ret != req.count)
-            throw std::runtime_error("req rc does not match count")
+        if (static_cast<size_t>(ret) != req.count) {
+            std::cout << errno << " " << req.count << " " << req.offset << std::endl;
+            throw std::runtime_error("req rc does not match count");
+        }
+
+        req.completed = true;
     }
 }
 
@@ -38,6 +43,9 @@ std::vector<double> run_exper_basic(std::vector<Req>& reqs,
         std::chrono::duration<double, std::micro> elapsed_us = ts_end - ts_beg;
         if (i >= warmup_rounds)
             times_us.push_back(elapsed_us.count());
+
+        for (auto& req : reqs)
+            req.completed = false;
     }
 
     return times_us;
