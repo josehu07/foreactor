@@ -36,6 +36,7 @@ std::vector<double> run_exper_io_uring(std::vector<Req>& reqs,
                                        bool fixed_buf,
                                        bool fixed_file,
                                        bool sq_poll,
+                                       bool no_iosqe_async,
                                        size_t timing_rounds,
                                        size_t warmup_rounds);
 

@@ -91,6 +91,7 @@ void IOUring::MakeAllInProgress() {
         assert(sqe != nullptr);
         io_uring_sqe_set_data(sqe, nae);
         nae->node->PrepUring(nae->epoch, sqe);      // syscall-specific prep
+        sqe->flags |= IOSQE_ASYNC;
 
         in_progress.insert(nae);
         nae->node->stage->SetValue(nae->epoch, STAGE_PROGRESS);

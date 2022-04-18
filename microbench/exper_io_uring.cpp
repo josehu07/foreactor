@@ -22,7 +22,8 @@ static void print_sq_poll_kthread_running(void) {
 }
 
 
-void do_reqs_io_uring(std::vector<Req>& reqs, bool fixed_file, bool fixed_buf) {
+void do_reqs_io_uring(std::vector<Req>& reqs, bool fixed_file, bool fixed_buf,
+                      bool no_iosqe_async) {
     for (size_t i = 0; i < reqs.size(); ++i) {
         Req& req = reqs[i];
 
@@ -42,6 +43,8 @@ void do_reqs_io_uring(std::vector<Req>& reqs, bool fixed_file, bool fixed_buf) {
                 io_uring_prep_write(sqe, req.fd, req.buf, req.count, req.offset);
         }
 
+        if (!no_iosqe_async)
+            sqe->flags |= IOSQE_ASYNC;
         if (fixed_file)
             sqe->flags |= IOSQE_FIXED_FILE;
 
@@ -84,6 +87,7 @@ std::vector<double> run_exper_io_uring(std::vector<Req>& reqs,
                                        bool fixed_buf,
                                        bool fixed_file,
                                        bool sq_poll,
+                                       bool no_iosqe_async,
                                        size_t timing_rounds,
                                        size_t warmup_rounds) {
     // if sq_poll, give correct flag and set idle timeout
@@ -150,7 +154,7 @@ std::vector<double> run_exper_io_uring(std::vector<Req>& reqs,
     for (size_t i = 0; i < warmup_rounds + timing_rounds; ++i) {
         auto ts_beg = std::chrono::high_resolution_clock::now();
 
-        do_reqs_io_uring(reqs, fixed_file, fixed_buf);
+        do_reqs_io_uring(reqs, fixed_file, fixed_buf, no_iosqe_async);
 
         auto ts_end = std::chrono::high_resolution_clock::now();
         std::chrono::duration<double, std::micro> elapsed_us = ts_end - ts_beg;

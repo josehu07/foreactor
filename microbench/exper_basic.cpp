@@ -18,10 +18,8 @@ void do_reqs_basic(std::vector<Req>& reqs) {
         else
             ret = pread(req.fd, req.buf, req.count, req.offset);
 
-        if (static_cast<size_t>(ret) != req.count) {
-            std::cout << errno << " " << req.count << " " << req.offset << std::endl;
+        if (static_cast<size_t>(ret) != req.count)
             throw std::runtime_error("req rc does not match count");
-        }
 
         req.completed = true;
     }
