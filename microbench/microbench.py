@@ -14,7 +14,9 @@ FILE_SIZE = 128 * 1024 * 1024
 NUM_REQS_LIST = list(range(4, 68, 4))
 REQ_SIZE_LIST = [(4**i) * 1024 for i in range(1, 7, 2)]
 ASYNC_MODES = ["sync", "thread_pool_unbounded", "thread_pool_nproc",
-               "io_uring_default", "io_uring_iosqe_async", "io_uring_sqpoll"]
+               "io_uring_default", "io_uring_sqeasync", "io_uring_sqpoll", "io_uring_sqeasync_sqpoll"]
+LINE_STYLES = [':', '--', '--',
+               '-', '-', '-', '-']
 
 
 def get_nproc():
@@ -88,13 +90,16 @@ def run_single(dir_path, num_reqs, req_size, rw_mode, file_src, page_cache,
         cmd += ["-a", "thread_pool",
                 "-t", str(num_threads)]
     elif async_mode == "io_uring_default":
-        cmd += ["-a", "io_uring",
-                "--no_iosqe_async"]
-    elif async_mode == "io_uring_iosqe_async":
         cmd += ["-a", "io_uring"]
+    elif async_mode == "io_uring_sqeasync":
+        cmd += ["-a", "io_uring",
+                "--iosqe_async"]
     elif async_mode == "io_uring_sqpoll":
         cmd += ["-a", "io_uring",
                 "--fixed_file", "--sq_poll"]
+    elif async_mode == "io_uring_sqeasync_sqpoll":
+        cmd += ["-a", "io_uring",
+                "--iosqe_async", "--fixed_file", "--sq_poll"]
     else:
         raise ValueError("unrecognized async_mode " + async_mode)
 
@@ -127,7 +132,7 @@ def plot_results(req_size, avg_us_l, stddev_l, output_prefix):
         ys = avg_us_l[i]
 
         plt.plot(xs, ys,
-                 zorder=3, label=ASYNC_MODES[i])
+                 zorder=3, label=ASYNC_MODES[i], linestyle=LINE_STYLES[i])
 
     plt.xlabel("Length of Syscall Sequence")
     plt.xticks(NUM_REQS_LIST, NUM_REQS_LIST)

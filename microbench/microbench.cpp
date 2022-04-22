@@ -171,7 +171,7 @@ int main(int argc, char *argv[]) {
             ("t,num_threads", "if thread_pool, num of threads", cxxopts::value<size_t>(num_threads))
             ("q,uring_queue", "if io_uring, capacity of queue",
                               cxxopts::value<size_t>(uring_queue)->default_value("256"))
-            ("no_iosqe_async", "if io_uring, do not set IOSQE_ASYNC", cxxopts::value<bool>())
+            ("iosqe_async", "if io_uring, set IOSQE_ASYNC flag", cxxopts::value<bool>())
             ("fixed_buf", "if given for io_uring, use fixed buffers", cxxopts::value<bool>())
             ("fixed_file", "if given for io_uring, use fixed files", cxxopts::value<bool>())
             ("sq_poll", "if given for io_uring, use SQ polling", cxxopts::value<bool>())
@@ -191,7 +191,7 @@ int main(int argc, char *argv[]) {
     bool flag_make = args.count("make") > 0,
          flag_write = args.count("write") > 0,
          flag_sequential = args.count("sequential") > 0,
-         flag_no_iosqe_async = args.count("no_iosqe_async") > 0,
+         flag_iosqe_async = args.count("iosqe_async") > 0,
          flag_fixed_buf = args.count("fixed_buf") > 0,
          flag_fixed_file = args.count("fixed_file") > 0,
          flag_sq_poll = args.count("sq_poll") > 0,
@@ -252,7 +252,7 @@ int main(int argc, char *argv[]) {
         times_us = run_exper_thread_pool(reqs, num_threads, timing_rounds, warmup_rounds);
     else if (async_mode == "io_uring")
         times_us = run_exper_io_uring(reqs, uring_queue, flag_fixed_buf,
-                                      flag_fixed_file, flag_sq_poll, flag_no_iosqe_async,
+                                      flag_fixed_file, flag_sq_poll, flag_iosqe_async,
                                       timing_rounds, warmup_rounds);
     else {
         std::cerr << "Supported async_mode: basic|thread_pool|io_uring" << std::endl;

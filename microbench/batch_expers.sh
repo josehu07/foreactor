@@ -1,17 +1,22 @@
 #!/usr/bin/bash
 
 
-unbuffer python3 microbench.py -d /mnt/ssd/josehu/microbench_dir -o result-backup/read-different-unlimited \
-    2>&1 | tee result-backup/read-different-unlimited.log
+MICROBENCH_DIR=/mnt/ssd/josehu/microbench_dir
 
-unbuffer python3 microbench.py -d /mnt/ssd/josehu/microbench_dir -o result-backup/write-different-unlimited \
-    --rdwr write 2>&1 | tee result-backup/write-different-unlimited.log
 
-unbuffer python3 microbench.py -d /mnt/ssd/josehu/microbench_dir -o result-backup/read-single-unlimited \
-    --file single 2>&1 | tee result-backup/read-single-unlimited.log
+# sudo python3 microbench.py -d ${MICROBENCH_DIR} --make
 
-unbuffer python3 microbench.py -d /mnt/ssd/josehu/microbench_dir -o result-backup/read-different-direct \
-    --mem direct 2>&1 | tee result-backup/read-different-direct.log
 
-# unbuffer python3 microbench.py -d /mnt/ssd/josehu/microbench_dir -o result-backup/read-different-mem50 \
-#     --mem 50 2>&1 | tee result-backup/read-different-mem50.log
+function run_exper {
+    local exper_name=$1
+    local exper_flags=${@:2}
+
+    sudo unbuffer python3 microbench.py -d ${MICROBENCH_DIR} -o result-backup/${exper_name} \
+        ${exper_flags} 2>&1 | sudo tee result-backup/${exper_name}.log
+}
+
+run_exper "read-different-unlimited"
+run_exper "write-different-unlimited" --rdwr write
+run_exper "read-single-unlimited" --file single
+run_exper "read-different-direct" --mem direct
+# run_exper "read-different-mem50" --mem 50
