@@ -108,6 +108,16 @@ static off_t pick_seq_offset(size_t file_size, size_t req_size, size_t idx) {
     return req_size * idx;
 }
 
+void shuffle_reqs_offset(std::vector<Req>& reqs, size_t file_size, size_t req_size) {
+    std::unordered_map<int, std::vector<off_t>> offsets_seen;
+    for (size_t idx = 0; idx < reqs.size(); ++idx) {
+        int fd = reqs[idx].fd;
+        if (offsets_seen.find(fd) == offsets_seen.end())
+            offsets_seen[fd] = std::vector<off_t>();
+        reqs[idx].offset = pick_rnd_offset(file_size, req_size, fd, offsets_seen);
+    }
+}
+
 
 static void require_args(cxxopts::Options& options, cxxopts::ParseResult& args,
                          std::vector<std::string> required) {
@@ -177,6 +187,7 @@ int main(int argc, char *argv[]) {
             ("sq_poll", "if given for io_uring, use SQ polling", cxxopts::value<bool>())
             // page cache & device
             ("direct", "if given, opens with O_DIRECT", cxxopts::value<bool>())
+            ("shuffle_offset", "if given, shuffles reqs offset per round", cxxopts::value<bool>())
             // ("dev_poll", "if given, do polling I/O", cxxopts::value<bool>())
             // experiment
             ("tr", "number of timing rounds", cxxopts::value<size_t>(timing_rounds))
@@ -195,7 +206,8 @@ int main(int argc, char *argv[]) {
          flag_fixed_buf = args.count("fixed_buf") > 0,
          flag_fixed_file = args.count("fixed_file") > 0,
          flag_sq_poll = args.count("sq_poll") > 0,
-         flag_direct = args.count("direct") > 0;
+         flag_direct = args.count("direct") > 0,
+         flag_shuffle_offset = args.count("shuffle_offset") > 0;
 
     require_args(options, args, {"directory", "num_files", "file_size"});
     if (!flag_make) {
@@ -216,6 +228,9 @@ int main(int argc, char *argv[]) {
     if (flag_direct && req_size % BLOCK_SIZE != 0)
         throw std::runtime_error("request size not a multiple of 4KiB");
 
+    if (flag_sequential && flag_shuffle_offset)
+        throw std::runtime_error("--sequential and --shuffle_offset both given");
+
     // prepare the files
     if (flag_make) {
         make_files(dir_path, num_files, file_size);
@@ -226,15 +241,11 @@ int main(int argc, char *argv[]) {
     std::vector<int> files = open_files(dir_path, num_files, flag_direct);
 
     // construct the request sequence
-    std::unordered_map<int, std::vector<off_t>> offsets_seen;
     std::vector<Req> reqs;
     reqs.reserve(num_reqs);
     for (size_t idx = 0; idx < num_reqs; ++idx) {
         int fd = pick_file(files, num_reqs, idx);
-        if (offsets_seen.find(fd) == offsets_seen.end())
-            offsets_seen[fd] = std::vector<off_t>();
-        off_t offset = flag_sequential ? pick_seq_offset(file_size, req_size, idx)
-                                       : pick_rnd_offset(file_size, req_size, fd, offsets_seen);
+        off_t offset = pick_seq_offset(file_size, req_size, idx);
         reqs.emplace_back(fd, offset, req_size, flag_write,
                           new (std::align_val_t(BLOCK_SIZE)) char[req_size]);
 
@@ -244,16 +255,22 @@ int main(int argc, char *argv[]) {
         }
     }
 
+    if (!flag_sequential)
+        shuffle_reqs_offset(reqs, file_size, req_size);
+
     // carry out the experiment
     std::vector<double> times_us;
     if (async_mode == "basic")
-        times_us = run_exper_basic(reqs, timing_rounds, warmup_rounds);
+        times_us = run_exper_basic(reqs, timing_rounds, warmup_rounds,
+                                   flag_shuffle_offset, file_size, req_size);
     else if (async_mode == "thread_pool")
-        times_us = run_exper_thread_pool(reqs, num_threads, timing_rounds, warmup_rounds);
+        times_us = run_exper_thread_pool(reqs, num_threads, timing_rounds, warmup_rounds,
+                                         flag_shuffle_offset, file_size, req_size);
     else if (async_mode == "io_uring")
         times_us = run_exper_io_uring(reqs, uring_queue, flag_fixed_buf,
                                       flag_fixed_file, flag_sq_poll, flag_iosqe_async,
-                                      timing_rounds, warmup_rounds);
+                                      timing_rounds, warmup_rounds,
+                                      flag_shuffle_offset, file_size, req_size);
     else {
         std::cerr << "Supported async_mode: basic|thread_pool|io_uring" << std::endl;
         throw std::runtime_error("unrecognized async_mode");

@@ -100,7 +100,9 @@ void do_reqs_thread_pool(std::vector<Req>& reqs, size_t num_threads) {
 std::vector<double> run_exper_thread_pool(std::vector<Req>& reqs,
                                           size_t num_threads,
                                           size_t timing_rounds,
-                                          size_t warmup_rounds) {
+                                          size_t warmup_rounds,
+                                          bool shuffle_offset,
+                                          size_t file_size, size_t req_size) {
     thread_start.clear();
     thread_done.clear();
     for (size_t id = 0; id < num_threads; ++id) {
@@ -132,6 +134,9 @@ std::vector<double> run_exper_thread_pool(std::vector<Req>& reqs,
 
         for (auto& req : reqs)
             req.completed = false;
+
+        if (shuffle_offset)
+            shuffle_reqs_offset(reqs, file_size, req_size);
     }
 
     // terminate and join all worker threads

@@ -28,7 +28,9 @@ void do_reqs_basic(std::vector<Req>& reqs) {
 
 std::vector<double> run_exper_basic(std::vector<Req>& reqs,
                                     size_t timing_rounds,
-                                    size_t warmup_rounds) {
+                                    size_t warmup_rounds,
+                                    bool shuffle_offset,
+                                    size_t file_size, size_t req_size) {
     std::vector<double> times_us;
     times_us.reserve(timing_rounds);
 
@@ -44,6 +46,9 @@ std::vector<double> run_exper_basic(std::vector<Req>& reqs,
 
         for (auto& req : reqs)
             req.completed = false;
+
+        if (shuffle_offset)
+            shuffle_reqs_offset(reqs, file_size, req_size);
     }
 
     return times_us;

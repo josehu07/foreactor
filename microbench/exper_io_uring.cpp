@@ -89,7 +89,9 @@ std::vector<double> run_exper_io_uring(std::vector<Req>& reqs,
                                        bool sq_poll,
                                        bool iosqe_async,
                                        size_t timing_rounds,
-                                       size_t warmup_rounds) {
+                                       size_t warmup_rounds,
+                                       bool shuffle_offset,
+                                       size_t file_size, size_t req_size) {
     // if sq_poll, give correct flag and set idle timeout
     if (sq_poll) {
         if (geteuid() != 0)
@@ -163,6 +165,9 @@ std::vector<double> run_exper_io_uring(std::vector<Req>& reqs,
 
         for (auto& req : reqs)
             req.completed = false;
+
+        if (shuffle_offset)
+            shuffle_reqs_offset(reqs, file_size, req_size);
     }
 
     io_uring_queue_exit(&ring);

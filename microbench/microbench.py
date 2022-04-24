@@ -79,6 +79,7 @@ def run_single(dir_path, num_reqs, req_size, rw_mode, file_src, page_cache,
         mem_limit = int(num_reqs * FILE_SIZE * (mem_percentage / 100.))
         set_cgroup_mem_limit(mem_limit)
         cmd = ["sudo", "cgexec", "-g", "memory:"+CGROUP_NAME] + cmd
+        cmd += ["--shuffle_offset"]
 
     if async_mode == "sync":
         cmd += ["-a", "basic"]
