@@ -4,7 +4,7 @@
 MICROBENCH_DIR=/mnt/ssd/josehu/microbench_dir
 
 
-sudo python3 microbench.py -d ${MICROBENCH_DIR} --make -o dummy
+# sudo python3 microbench.py -d ${MICROBENCH_DIR} --make -o dummy
 
 
 function run_exper {

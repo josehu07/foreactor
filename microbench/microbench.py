@@ -13,9 +13,9 @@ NUM_FILES = 64
 FILE_SIZE = 128 * 1024 * 1024
 NUM_REQS_LIST = list(range(4, 68, 4))
 REQ_SIZE_LIST = [(4**i) * 1024 for i in range(1, 7, 2)]
-ASYNC_MODES = ["sync", "thread_pool_unbounded", "thread_pool_nproc",
+ASYNC_MODES = ["sync", "thread_pool_unbounded", "thread_pool_nproc", "thread_pool_4xsocks",
                "io_uring_default", "io_uring_sqeasync", "io_uring_sqpoll", "io_uring_sqeasync_sqpoll"]
-LINE_STYLES = [':', '--', '--',
+LINE_STYLES = [':', '--', '--', '--',
                '-', '-', '-', '-']
 
 
@@ -88,6 +88,10 @@ def run_single(dir_path, num_reqs, req_size, rw_mode, file_src, page_cache,
                 "-t", str(num_reqs)]
     elif async_mode == "thread_pool_nproc":
         num_threads = num_reqs if num_reqs < NPROC else NPROC
+        cmd += ["-a", "thread_pool",
+                "-t", str(num_threads)]
+    elif async_mode == "thread_pool_4xsocks":
+        num_threads = num_reqs if num_reqs < 8 else 8   # TODO: fetch this number
         cmd += ["-a", "thread_pool",
                 "-t", str(num_threads)]
     elif async_mode == "io_uring_default":
