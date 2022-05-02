@@ -18,5 +18,6 @@ function run_exper {
 run_exper "read-different-unlimited"
 run_exper "write-different-unlimited" --rdwr write
 run_exper "read-single-unlimited" --file single
-run_exper "read-different-direct" --mem direct --tr 1000 --wr 100
-run_exper "read-different-mem50" --mem 50 --tr 1000 --wr 100
+run_exper "read-different-direct" --mem direct
+run_exper "read-different-mem90" --mem 90
+run_exper "read-different-mem50" --mem 50

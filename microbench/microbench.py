@@ -11,6 +11,7 @@ import numpy as np
 
 NUM_FILES = 64
 FILE_SIZE = 128 * 1024 * 1024
+FILE_SIZE_WHEN_LIMIT = 16 * 1024 * 1024
 NUM_REQS_LIST = list(range(4, 68, 4))
 REQ_SIZE_LIST = [(4**i) * 1024 for i in range(1, 7, 2)]
 ASYNC_MODES = ["sync", "thread_pool_unbounded", "thread_pool_nproc", "thread_pool_4xsocks",
@@ -65,21 +66,26 @@ def run_single(dir_path, num_reqs, req_size, rw_mode, file_src, page_cache,
         cmd += ["-f", "1"]
     else:
         cmd += ["-f", str(NUM_FILES)]
-    cmd += ["-s", str(FILE_SIZE),
-            "-n", str(num_reqs),
+    cmd += ["-n", str(num_reqs),
             "-r", str(req_size)]
 
     if rw_mode == "write":
         cmd += ["--write"]
 
     if page_cache == "direct":
-        cmd += ["--direct"]
+        cmd += ["--direct",
+                "-s", str(FILE_SIZE)]
     elif page_cache != "unlimited":
+        if file_src == "single":
+            raise ValueError("single file mem limit mode not supported")
         mem_percentage = int(page_cache)
-        mem_limit = int(num_reqs * FILE_SIZE * (mem_percentage / 100.))
+        mem_limit = int(num_reqs * FILE_SIZE_WHEN_LIMIT * (mem_percentage / 100.))
         set_cgroup_mem_limit(mem_limit)
         cmd = ["sudo", "cgexec", "-g", "memory:"+CGROUP_NAME] + cmd
-        cmd += ["--shuffle_offset"]
+        cmd += ["--shuffle_offset",
+                "-s", str(FILE_SIZE_WHEN_LIMIT)]
+    else:
+        cmd += ["-s", str(FILE_SIZE)]
 
     if async_mode == "sync":
         cmd += ["-a", "basic"]
