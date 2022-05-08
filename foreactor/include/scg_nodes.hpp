@@ -3,7 +3,7 @@
 #include <assert.h>
 #include <liburing.h>
 
-#include "value_pool.hpp"
+#include "ring_buffer.hpp"
 
 
 #ifndef __FOREACTOR_SCG_NODES_H__
@@ -16,7 +16,7 @@ namespace foreactor {
 class SCGraph;  // forward declaration
 
 
-// Types of nodes on graph.
+// Types of nodes in graph.
 typedef enum NodeType {
     NODE_BASE,
     NODE_SC_PURE,   // pure syscall with no state changes, e.g., pread
@@ -90,27 +90,28 @@ class SyscallNode : public SCGraphNode {
         SCGraphNode *next_node = nullptr;
         EdgeType edge_type = EDGE_BASE;
 
-        // Fields that may vary across loops.
-        ValuePoolBase<SyscallStage> *stage;
-        ValuePoolBase<long> *rc;
+        // Fields that progress across loops.
+        int curr_epoch;     // actual execution up to frontier
+        int peek_epoch;     // used in the pre-issuing algorithm
+        RingBuffer<SyscallStage> stage;
+        RingBuffer<long> rc;
 
         SyscallNode() = delete;
         SyscallNode(std::string name, SyscallType sc_type, bool pure_sc,
-                    ValuePoolBase<SyscallStage> *stage,
-                    ValuePoolBase<long> *rc);
+                    size_t rb_capacity);
         virtual ~SyscallNode() {}
 
-        // Every child class must implement the following three functions.
-        virtual bool RefreshStage(EpochListBase *epoch) = 0;
-        virtual long SyscallSync(EpochListBase *epoch, void *output_buf) = 0;
-        virtual void PrepUring(EpochListBase *epoch, struct io_uring_sqe *sqe) = 0;
-        virtual void ReflectResult(EpochListBase *epoch, void *output_buf) = 0;
+        // Every child class must implement these methods.
+        virtual bool RefreshStage(int epoch) = 0;
+        virtual long SyscallSync(int epoch, void *output_buf) = 0;
+        virtual void PrepUringSqe(int epoch, struct io_uring_sqe *sqe) = 0;
+        virtual void ReflectResult(int epoch, void *output_buf) = 0;
 
-        void PrepAsync(EpochListBase *epoch);
-        void CmplAsync(EpochListBase *epoch);
+        void PrepAsync(int epoch);
+        void CmplAsync(int epoch);
 
         static bool IsForeactable(EdgeType edge, SyscallNode *next,
-                                  EpochListBase *epoch);
+                                  int epoch);
 
     public:
         void PrintCommonInfo(std::ostream& s) const;
@@ -123,43 +124,47 @@ class SyscallNode : public SCGraphNode {
 
         // Invoke this syscall, possibly pre-issuing the next few syscalls
         // in graph. Must be invoked on current frontier node only.
-        long Issue(EpochListBase *epoch, void *output_buf = nullptr);
+        long Issue(int epoch, void *output_buf = nullptr);
 };
 
 
 // Special branching node.
-// Used only when there is some decision to be made during the execution of
-// a syscall graph, where the decision is not known at the time of building
-// the graph.
+// Used when there is branching on some condition that leads to different
+// syscall subgraphs.
 class BranchNode final : public SCGraphNode {
     friend class SCGraph;
     friend class SyscallNode;
 
     private:
         // Fields that stay the same across loops.
-        std::vector<SCGraphNode *> children;
-        std::vector<int> epoch_dim_idx;
+        size_t num_children = 0;
+        SCGraphNode **children;                         // array of node ptrs
+        std::unordered_set<SCGraphNode *> *enclosed;    // array of sets
 
-        // Fields that may vary across loops.
-        ValuePoolBase<int> *decision;
+        // Fields that progress across loops.
+        RingBuffer<int> decision;
 
         // Pick a child node based on decision. If the edge crossed is a
         // back-pointing edge, increments the corresponding epoch number
-        // in epoch.
-        SCGraphNode *PickBranch(EpochListBase *epoch);
+        // of that node.
+        SCGraphNode *PickBranch(int epoch);
 
     public:
         BranchNode() = delete;
-        BranchNode(std::string name, ValuePoolBase<int> *decision);
-        ~BranchNode() {}
+        BranchNode(std::string name, size_t num_children, size_t rb_capacity);
+        ~BranchNode();
 
         friend std::ostream& operator<<(std::ostream& s, const BranchNode& n);
 
-        // Append child node to children list. Index of child in this vector
-        // should correspond to the decision int. The second argument dim_idx
-        // >= 0 means that the edge to this child is a looping-back edge and
-        // is associated with the epoch number at this dimension index.
-        void AppendChild(SCGraphNode *child, int dim_idx = -1);
+        // Add child node to children array.
+        // If the first argument is nullptr, it means an edge pointing to end
+        // of graph.
+        // If the second argument is given a non-empty set, it means the edge
+        // to this child is a looping-back edge, and this edge encloses the
+        // nodes given in the set -- whenever this back-pointing edge is
+        // traversed, those nodes' epoch numbers will be incremented.
+        void SetChild(int child_idx, SCGraphNode *child_node,
+                      std::unordered_set<SCGraphNode *> *enclosed = nullptr);
 };
 
 

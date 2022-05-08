@@ -22,6 +22,8 @@ class RingBuffer {
         size_t head = 0;
         size_t tail = 0;
 
+        size_t RoundedIdx(int idx) const;
+
     public:
         RingBuffer() = delete;
         RingBuffer(size_t capacity);
@@ -32,7 +34,9 @@ class RingBuffer {
                                         const RingBuffer<U>& rb);
 
         void Push(T elem);
-        T Get(size_t idx) const;
+
+        void Set(int idx, T elem);
+        T Get(int idx) const;
 
         void Reset();
 };

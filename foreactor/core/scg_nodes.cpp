@@ -8,7 +8,7 @@
 #include "scg_nodes.hpp"
 #include "scg_graph.hpp"
 #include "syscalls.hpp"
-#include "value_pool.hpp"
+#include "ring_buffer.hpp"
 
 
 namespace foreactor {
@@ -55,19 +55,18 @@ std::ostream& operator<<(std::ostream& s, const SCGraphNode& n) {
 ////////////////////////////////
 
 SyscallNode::SyscallNode(std::string name, SyscallType sc_type, bool pure_sc,
-                         ValuePoolBase<SyscallStage> *stage,
-                         ValuePoolBase<long> *rc)
+                         size_t rb_capacity)
         : SCGraphNode(name, pure_sc ? NODE_SC_PURE : NODE_SC_SEFF),
-          sc_type(sc_type), next_node(nullptr), stage(stage), rc(rc) {
+          sc_type(sc_type), next_node(nullptr),
+          stage(rb_capacity), rc(rb_capacity) {
     assert(node_type == NODE_SC_PURE || node_type == NODE_SC_SEFF);
-    assert(stage != nullptr);
-    assert(rc != nullptr);
+    assert(rb_capacity > 0);
 }
 
 
 void SyscallNode::PrintCommonInfo(std::ostream& s) const {
-    s << "stage=" << StreamStr<ValuePoolBase<SyscallStage>>(stage) << ","
-      << "rc=" << StreamStr<ValuePoolBase<long>>(rc) << ","
+    s << "stage=" << stage << ","
+      << "rc=" << rc << ","
       << "next=" << next_node << ","
       << "edge=" << edge_type;
 }
@@ -82,45 +81,54 @@ std::ostream& operator<<(std::ostream& s, const SyscallNode& n) {
 }
 
 
-void SyscallNode::PrepAsync(EpochListBase *epoch) {
-    assert(stage->GetValue(epoch) == STAGE_UNISSUED);
+void SyscallNode::PrepAsync(int epoch) {
+    // TODO: complete this
+    assert(stage.Get(epoch) == STAGE_UNISSUED);
     assert(scgraph != nullptr);
-    assert(epoch != nullptr);
 
-    // SQE data is the pointer to a NodeAndEpoch structure
-    NodeAndEpoch *nae = new NodeAndEpoch(this, epoch);
-    scgraph->ring->PutToPrepared(nae);
-    stage->SetValue(epoch, STAGE_PREPARED);
+    // encode node ptr and epoch number into a uint64_t user_data
+    uint64_t user_data = scgraph->ring->EncodeUserData(this, epoch);
+
+    // put this node to prepared state
+    scgraph->ring->PutToPrepared(this, epoch, user_data);
+    stage->Set(epoch, STAGE_PREPARED);
 }
 
-void SyscallNode::CmplAsync(EpochListBase *epoch) {
+void SyscallNode::CmplAsync(int epoch) {
+    // TODO: complete this
     assert(scgraph != nullptr);
-    assert(epoch != nullptr);
-    struct io_uring_cqe *cqe;
-    while (true) {
-        int ret = io_uring_wait_cqe(scgraph->Ring(), &cqe);
-        if (ret != 0) {
-            DEBUG("wait CQE failed %d\n", ret);
-            assert(false);
-        }
 
-        // fetch the NodeAndEpoch structure
-        NodeAndEpoch *nae = reinterpret_cast<NodeAndEpoch *>(
-            io_uring_cqe_get_data(cqe));
-        assert(nae->node->stage->GetValue(nae->epoch) == STAGE_PROGRESS);
+    // loop until completion for myself is seen
+    while (true) {
+        // int ret = io_uring_wait_cqe(scgraph->Ring(), &cqe);
+        // if (ret != 0) {
+        //     DEBUG("wait CQE failed %d\n", ret);
+        //     assert(false);
+        // }
+        struct io_uring_cqe *cqe = scgraph->ring->WaitCqe();
+        assert(cqe != nullptr);
+
+        // fetch the node ptr and epoch of submission
+        // NodeAndEpoch *nae = reinterpret_cast<NodeAndEpoch *>(
+        //     io_uring_cqe_get_data(cqe));
+        // assert(nae->node->stage->GetValue(nae->epoch) == STAGE_PROGRESS);
+        uint64_t user_data = scgraph->ring->GetCqeUserData(cqe);
+        SyscallNode *sqe_node;
+        int sqe_epoch;
+        std::tie(sqe_node, sqe_epoch) =
+            scgraph->ring->DecodeUserData(user_data);
+        assert(sqe_node->stage->Get(sqe_epoch) == STAGE_PROGRESS);
         
         // reflect rc and stage
-        nae->node->rc->SetValue(nae->epoch,  cqe->res);
-        nae->node->stage->SetValue(nae->epoch,  STAGE_FINISHED);
-        io_uring_cqe_seen(scgraph->Ring(), cqe);
+        sqe_node->rc->Set(sqe_epoch, cqe->res);
+        sqe_node->stage->Set(sqe_epoch, STAGE_FINISHED);
+        // io_uring_cqe_seen(scgraph->Ring(), cqe);
+        scgraph->ring->SeenCqe(cqe);
         scgraph->ring->RemoveInProgress(nae);
         
         // if desired completion found, break
-        if ((nae->node == this) && nae->epoch->IsSame(epoch)) {
-            delete nae;
+        if ((sqe_node == this) && sqe_epoch == epoch)
             break;
-        }
-        delete nae;
     }
 }
 
@@ -133,9 +141,8 @@ void SyscallNode::SetNext(SCGraphNode *node, bool weak_edge) {
 
 
 // The condition function that decides if an edge can be pre-issued across.
-bool SyscallNode::IsForeactable(EdgeType edge, SyscallNode *next,
-                                EpochListBase *epoch) {
-    if (next->stage->GetValue(epoch) == STAGE_NOTREADY) {
+bool SyscallNode::IsForeactable(EdgeType edge, SyscallNode *next, int epoch) {
+    if (next->stage.Get(epoch) == STAGE_NOTREADY) {
         if (!next->RefreshStage(epoch))     // check again
             return false;
     }
@@ -144,7 +151,7 @@ bool SyscallNode::IsForeactable(EdgeType edge, SyscallNode *next,
 
 // The Issue() method contains the core logic of foreactor's syscall
 // pre-issuing algorithm. The epoch argument is the current frontier_epoch.
-long SyscallNode::Issue(EpochListBase *epoch, void *output_buf) {
+long SyscallNode::Issue(int epoch, void *output_buf) {
     // can only call issue on frontier node
     assert(scgraph != nullptr);
     assert(this == scgraph->frontier);
@@ -299,15 +306,28 @@ long SyscallNode::Issue(EpochListBase *epoch, void *output_buf) {
 // BranchNode implementation //
 ///////////////////////////////
 
-BranchNode::BranchNode(std::string name, ValuePoolBase<int> *decision)
-        : SCGraphNode(name, NODE_BRANCH), decision(decision) {
-    assert(decision != nullptr);
+BranchNode::BranchNode(std::string name, size_t num_children,
+                       size_t rb_capacity)
+        : SCGraphNode(name, NODE_BRANCH), num_children(num_children),
+          decision(rb_capacity) {
+    assert(rb_capacity > 0);
+    assert(num_children > 1);
+    children = new SCGraphNode *[num_children];
+    enclosed = new std::unordered_set<SCGraphNode *>[num_children];
+    assert(children != nullptr && enclosed != nullptr);
+}
+
+BranchNode::~BranchNode() {
+    if (children != nullptr)
+        delete[] children;
+    if (enclosed != nullptr)
+        delete[] enclosed;
 }
 
 
 std::ostream& operator<<(std::ostream& s, const BranchNode& n) {
     s << "BranchNode{"
-      << "decision=" << StreamStr<ValuePoolBase<int>>(n.decision)
+      << "decision=" << decision
       << ",children=[";
     for (size_t i = 0; i < n.children.size(); ++i) {
         s << n.children[i];
@@ -319,35 +339,26 @@ std::ostream& operator<<(std::ostream& s, const BranchNode& n) {
 }
 
 
-SCGraphNode *BranchNode::PickBranch(EpochListBase *epoch) {
-    if (!decision->GetReady(epoch))
-        return nullptr;
-
-    int d = decision->GetValue(epoch);
+SCGraphNode *BranchNode::PickBranch(int epoch) {
+    int d = decision->Get(epoch);
     assert(d >= 0 && d < static_cast<int>(children.size()));
     SCGraphNode *child = children[d];
 
     // if goes through a looping-back edge, increment the corresponding
-    // epoch number
-    if (epoch_dim_idx[d] >= 0) {
-        DEBUG("epoch currently @ -> %s\n",
-              StreamStr<EpochListBase>(epoch).c_str());
-        epoch->IncrementEpoch(epoch_dim_idx[d]);
-        DEBUG("incremented epoch -> %s\n",
-              StreamStr<EpochListBase>(epoch).c_str());
+    // epoch number of that node
+    if (enclosed[d] != nullptr) {
+        // TODO: looping-back logic
     }
+
     return child;
 }
 
 
-void BranchNode::AppendChild(SCGraphNode *child, int dim_idx) {
-    // child could be nullptr, which means end of scgraph
-    children.push_back(child);
-    if (dim_idx >= 0) {
-        assert(dim_idx < static_cast<int>(scgraph->frontier_epoch->max_dims));
-        epoch_dim_idx.push_back(dim_idx);
-    } else
-        epoch_dim_idx.push_back(-1);
+void BranchNode::SetChild(int child_idx, SCGraphNode *child_node,
+                          std::unordered_set<SCGraphNode *> *enclosed) {
+    assert(child_idx >= 0 && child_idx < num_children);
+    children[child_idx] = child_node;
+    enclosed[child_idx] = enclosed;
 }
 
 
