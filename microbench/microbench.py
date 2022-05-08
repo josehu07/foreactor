@@ -29,6 +29,11 @@ def get_nproc():
 NPROC = get_nproc()
 CGROUP_NAME = "microbench_group"
 
+def calculate_mem_limit(mem_percentage, num_reqs, req_size):
+    mem_limit = int(num_reqs * FILE_SIZE_WHEN_LIMIT * (mem_percentage / 100.))
+    mem_limit += num_reqs * req_size    # space for user buffers
+    return mem_limit
+
 def set_cgroup_mem_limit(mem_limit):
     cmd = ["sudo", "lscgroup"]
     result = subprocess.run(cmd, check=True, capture_output=True)
@@ -79,7 +84,7 @@ def run_single(dir_path, num_reqs, req_size, rw_mode, file_src, page_cache,
         if file_src == "single":
             raise ValueError("single file mem limit mode not supported")
         mem_percentage = int(page_cache)
-        mem_limit = int(num_reqs * FILE_SIZE_WHEN_LIMIT * (mem_percentage / 100.))
+        mem_limit = calculate_mem_limit(mem_percentage, num_reqs, req_size)
         set_cgroup_mem_limit(mem_limit)
         cmd = ["sudo", "cgexec", "-g", "memory:"+CGROUP_NAME] + cmd
         cmd += ["--shuffle_offset",

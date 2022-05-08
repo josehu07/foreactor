@@ -103,9 +103,7 @@ static off_t pick_rnd_offset(size_t file_size, size_t req_size, int fd,
 }
 
 static off_t pick_seq_offset(size_t file_size, size_t req_size, size_t idx) {
-    if (file_size < req_size * (idx + 1))
-        throw std::runtime_error("file_size too small for sequential");
-    return req_size * idx;
+    return (req_size * idx) % file_size;
 }
 
 void shuffle_reqs_offset(std::vector<Req>& reqs, size_t file_size, size_t req_size) {
