@@ -82,49 +82,35 @@ std::ostream& operator<<(std::ostream& s, const SyscallNode& n) {
 
 
 void SyscallNode::PrepAsync(int epoch) {
-    // TODO: complete this
     assert(stage.Get(epoch) == STAGE_UNISSUED);
     assert(scgraph != nullptr);
 
     // encode node ptr and epoch number into a uint64_t user_data
-    uint64_t user_data = scgraph->ring->EncodeUserData(this, epoch);
+    EntryId entry_id = IOUring::EncodeEntryId(this, epoch);
 
     // put this node to prepared state
-    scgraph->ring->PutToPrepared(this, epoch, user_data);
+    scgraph->ring->Prepare(entry_id);
     stage->Set(epoch, STAGE_PREPARED);
 }
 
 void SyscallNode::CmplAsync(int epoch) {
-    // TODO: complete this
     assert(scgraph != nullptr);
 
-    // loop until completion for myself is seen
+    // loop until the completion for myself is seen
     while (true) {
-        // int ret = io_uring_wait_cqe(scgraph->Ring(), &cqe);
-        // if (ret != 0) {
-        //     DEBUG("wait CQE failed %d\n", ret);
-        //     assert(false);
-        // }
-        struct io_uring_cqe *cqe = scgraph->ring->WaitCqe();
+        struct io_uring_cqe *cqe = scgraph->ring->WaitOneCqe();
         assert(cqe != nullptr);
 
-        // fetch the node ptr and epoch of submission
-        // NodeAndEpoch *nae = reinterpret_cast<NodeAndEpoch *>(
-        //     io_uring_cqe_get_data(cqe));
-        // assert(nae->node->stage->GetValue(nae->epoch) == STAGE_PROGRESS);
-        uint64_t user_data = scgraph->ring->GetCqeUserData(cqe);
-        SyscallNode *sqe_node;
-        int sqe_epoch;
-        std::tie(sqe_node, sqe_epoch) =
-            scgraph->ring->DecodeUserData(user_data);
+        // fetch the node ptr and epoch of this request
+        EntryId entry_id = scgraph->ring->GetCqeEntryId(cqe);
+        auto [sqe_node, sqe_epoch] = IOUring::DecodeEntryId(entry_id);
         assert(sqe_node->stage->Get(sqe_epoch) == STAGE_PROGRESS);
         
         // reflect rc and stage
         sqe_node->rc->Set(sqe_epoch, cqe->res);
         sqe_node->stage->Set(sqe_epoch, STAGE_FINISHED);
-        // io_uring_cqe_seen(scgraph->Ring(), cqe);
-        scgraph->ring->SeenCqe(cqe);
-        scgraph->ring->RemoveInProgress(nae);
+        scgraph->ring->SeenOneCqe(cqe);
+        scgraph->ring->RemoveOne(entry_id);
         
         // if desired completion found, break
         if ((sqe_node == this) && sqe_epoch == epoch)

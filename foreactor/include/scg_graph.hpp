@@ -72,11 +72,6 @@ class SCGraph {
         int peekhead_distance = -1;
         bool peekhead_hit_end = false;
 
-        struct io_uring *Ring() const {
-            assert(ring_associated);
-            return ring->Ring();
-        }
-
         void DumpDotImg(std::string filestem) const;
 
     public:

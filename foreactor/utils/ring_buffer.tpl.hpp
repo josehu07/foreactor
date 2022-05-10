@@ -41,13 +41,13 @@ void RingBuffer<T>::Push(T elem) {
 
 
 template <typename T>
-size_t RingBuffer<T>::RoundedIdx(int idx) const {
-    PANIC_IF(idx < 0, "ring buffer idx %d less than 0\n", idx);
-    size_t idx_ = (size_t) idx % capacity;   // automatic rounding
-    PANIC_IF((idx_ >= head + nvalid) ||
-             (idx_ < head && idx_ + capacity >= head + nvalid),
-             "ring buffer idx %lu out of range\n", idx_);
-    return idx_;
+size_t RingBuffer<T>::RoundedIdx(int idx_) const {
+    PANIC_IF(idx_ < 0, "ring buffer idx %d less than 0\n", idx_);
+    size_t idx = (size_t) idx_ % capacity;   // automatic rounding
+    PANIC_IF((idx >= head + nvalid) ||
+             (idx < head && idx + capacity >= head + nvalid),
+             "ring buffer idx %lu out of range\n", idx);
+    return idx;
 }
 
 template <typename T>

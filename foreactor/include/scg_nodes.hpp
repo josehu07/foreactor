@@ -1,5 +1,5 @@
 #include <iostream>
-#include <vector>
+#include <string>
 #include <assert.h>
 #include <liburing.h>
 
@@ -57,10 +57,10 @@ class SCGraphNode {
 // Stages of a SyscallNode.
 typedef enum SyscallStage {
     STAGE_NOTREADY,     // there are missing arguments, not ready for issuing
-    STAGE_UNISSUED,     // args are complete, not issued yet
+    STAGE_ARGREADY,     // args are complete, not issued yet
     STAGE_PREPARED,     // ready to get filled to io_uring submission queue,
                         // actual io_uring_prep_xxx() not called yet
-    STAGE_PROGRESS,     // prepared and has been submitted to io_uring async,
+    STAGE_ONTHEFLY,     // prepared and has been submitted to io_uring async,
                         // completion not harvested yet
     STAGE_FINISHED      // issued sync / issued async and completion harvested
 } SyscallStage;
