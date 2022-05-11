@@ -1,0 +1,3648 @@
+Exper: req_size 4096  #reqs 4  mode sync
+['sudo', './microbench', '-d', '/mnt/ssd/josehu/microbench_dir', '-f', '64', '-n', '4', '-r', '4096', '--write', '-s', '134217728', '-a', 'basic', '--tr', '10000', '--wr', '1000']
+Time elapsed stat:
+  count   10000
+  avg_us  7.047
+  max_us  397.490
+  min_us  6.894
+  stddev  3.944
+
+Exper: req_size 4096  #reqs 8  mode sync
+['sudo', './microbench', '-d', '/mnt/ssd/josehu/microbench_dir', '-f', '64', '-n', '8', '-r', '4096', '--write', '-s', '134217728', '-a', 'basic', '--tr', '10000', '--wr', '1000']
+Time elapsed stat:
+  count   10000
+  avg_us  21.709
+  max_us  443.733
+  min_us  13.968
+  stddev  11.615
+
+Exper: req_size 4096  #reqs 12  mode sync
+['sudo', './microbench', '-d', '/mnt/ssd/josehu/microbench_dir', '-f', '64', '-n', '12', '-r', '4096', '--write', '-s', '134217728', '-a', 'basic', '--tr', '10000', '--wr', '1000']
+Time elapsed stat:
+  count   10000
+  avg_us  25.814
+  max_us  368.218
+  min_us  21.115
+  stddev  7.171
+
+Exper: req_size 4096  #reqs 16  mode sync
+['sudo', './microbench', '-d', '/mnt/ssd/josehu/microbench_dir', '-f', '64', '-n', '16', '-r', '4096', '--write', '-s', '134217728', '-a', 'basic', '--tr', '10000', '--wr', '1000']
+Time elapsed stat:
+  count   10000
+  avg_us  43.039
+  max_us  485.574
+  min_us  28.179
+  stddev  20.118
+
+Exper: req_size 4096  #reqs 20  mode sync
+['sudo', './microbench', '-d', '/mnt/ssd/josehu/microbench_dir', '-f', '64', '-n', '20', '-r', '4096', '--write', '-s', '134217728', '-a', 'basic', '--tr', '10000', '--wr', '1000']
+Time elapsed stat:
+  count   10000
+  avg_us  39.878
+  max_us  452.211
+  min_us  35.511
+  stddev  15.329
+
+Exper: req_size 4096  #reqs 24  mode sync
+['sudo', './microbench', '-d', '/mnt/ssd/josehu/microbench_dir', '-f', '64', '-n', '24', '-r', '4096', '--write', '-s', '134217728', '-a', 'basic', '--tr', '10000', '--wr', '1000']
+Time elapsed stat:
+  count   10000
+  avg_us  50.122
+  max_us  422.156
+  min_us  43.462
+  stddev  14.716
+
+Exper: req_size 4096  #reqs 28  mode sync
+['sudo', './microbench', '-d', '/mnt/ssd/josehu/microbench_dir', '-f', '64', '-n', '28', '-r', '4096', '--write', '-s', '134217728', '-a', 'basic', '--tr', '10000', '--wr', '1000']
+Time elapsed stat:
+  count   10000
+  avg_us  56.879
+  max_us  534.640
+  min_us  50.696
+  stddev  21.144
+
+Exper: req_size 4096  #reqs 32  mode sync
+['sudo', './microbench', '-d', '/mnt/ssd/josehu/microbench_dir', '-f', '64', '-n', '32', '-r', '4096', '--write', '-s', '134217728', '-a', 'basic', '--tr', '10000', '--wr', '1000']
+Time elapsed stat:
+  count   10000
+  avg_us  63.914
+  max_us  555.879
+  min_us  58.613
+  stddev  21.015
+
+Exper: req_size 4096  #reqs 36  mode sync
+['sudo', './microbench', '-d', '/mnt/ssd/josehu/microbench_dir', '-f', '64', '-n', '36', '-r', '4096', '--write', '-s', '134217728', '-a', 'basic', '--tr', '10000', '--wr', '1000']
+Time elapsed stat:
+  count   10000
+  avg_us  72.896
+  max_us  489.054
+  min_us  52.965
+  stddev  16.231
+
+Exper: req_size 4096  #reqs 40  mode sync
+['sudo', './microbench', '-d', '/mnt/ssd/josehu/microbench_dir', '-f', '64', '-n', '40', '-r', '4096', '--write', '-s', '134217728', '-a', 'basic', '--tr', '10000', '--wr', '1000']
+Time elapsed stat:
+  count   10000
+  avg_us  76.932
+  max_us  561.571
+  min_us  58.491
+  stddev  22.395
+
+Exper: req_size 4096  #reqs 44  mode sync
+['sudo', './microbench', '-d', '/mnt/ssd/josehu/microbench_dir', '-f', '64', '-n', '44', '-r', '4096', '--write', '-s', '134217728', '-a', 'basic', '--tr', '10000', '--wr', '1000']
+Time elapsed stat:
+  count   10000
+  avg_us  84.764
+  max_us  527.933
+  min_us  65.312
+  stddev  20.968
+
+Exper: req_size 4096  #reqs 48  mode sync
+['sudo', './microbench', '-d', '/mnt/ssd/josehu/microbench_dir', '-f', '64', '-n', '48', '-r', '4096', '--write', '-s', '134217728', '-a', 'basic', '--tr', '10000', '--wr', '1000']
+Time elapsed stat:
+  count   10000
+  avg_us  85.788
+  max_us  507.245
+  min_us  71.682
+  stddev  15.936
+
+Exper: req_size 4096  #reqs 52  mode sync
+['sudo', './microbench', '-d', '/mnt/ssd/josehu/microbench_dir', '-f', '64', '-n', '52', '-r', '4096', '--write', '-s', '134217728', '-a', 'basic', '--tr', '10000', '--wr', '1000']
+Time elapsed stat:
+  count   10000
+  avg_us  102.075
+  max_us  681.125
+  min_us  78.960
+  stddev  39.053
+
+Exper: req_size 4096  #reqs 56  mode sync
+['sudo', './microbench', '-d', '/mnt/ssd/josehu/microbench_dir', '-f', '64', '-n', '56', '-r', '4096', '--write', '-s', '134217728', '-a', 'basic', '--tr', '10000', '--wr', '1000']
+Time elapsed stat:
+  count   10000
+  avg_us  102.762
+  max_us  561.000
+  min_us  84.503
+  stddev  22.874
+
+Exper: req_size 4096  #reqs 60  mode sync
+['sudo', './microbench', '-d', '/mnt/ssd/josehu/microbench_dir', '-f', '64', '-n', '60', '-r', '4096', '--write', '-s', '134217728', '-a', 'basic', '--tr', '10000', '--wr', '1000']
+Time elapsed stat:
+  count   10000
+  avg_us  106.862
+  max_us  600.372
+  min_us  91.128
+  stddev  20.657
+
+Exper: req_size 4096  #reqs 64  mode sync
+['sudo', './microbench', '-d', '/mnt/ssd/josehu/microbench_dir', '-f', '64', '-n', '64', '-r', '4096', '--write', '-s', '134217728', '-a', 'basic', '--tr', '10000', '--wr', '1000']
+Time elapsed stat:
+  count   10000
+  avg_us  113.335
+  max_us  553.111
+  min_us  97.319
+  stddev  20.676
+
+Exper: req_size 4096  #reqs 4  mode thread_pool_unbounded
+['sudo', './microbench', '-d', '/mnt/ssd/josehu/microbench_dir', '-f', '64', '-n', '4', '-r', '4096', '--write', '-s', '134217728', '-a', 'thread_pool', '-t', '4', '--tr', '10000', '--wr', '1000']
+Time elapsed stat:
+  count   10000
+  avg_us  29.423
+  max_us  296.730
+  min_us  21.640
+  stddev  5.997
+
+Exper: req_size 4096  #reqs 8  mode thread_pool_unbounded
+['sudo', './microbench', '-d', '/mnt/ssd/josehu/microbench_dir', '-f', '64', '-n', '8', '-r', '4096', '--write', '-s', '134217728', '-a', 'thread_pool', '-t', '8', '--tr', '10000', '--wr', '1000']
+Time elapsed stat:
+  count   10000
+  avg_us  50.797
+  max_us  482.368
+  min_us  37.084
+  stddev  10.606
+
+Exper: req_size 4096  #reqs 12  mode thread_pool_unbounded
+['sudo', './microbench', '-d', '/mnt/ssd/josehu/microbench_dir', '-f', '64', '-n', '12', '-r', '4096', '--write', '-s', '134217728', '-a', 'thread_pool', '-t', '12', '--tr', '10000', '--wr', '1000']
+Time elapsed stat:
+  count   10000
+  avg_us  73.071
+  max_us  1765.435
+  min_us  55.275
+  stddev  20.716
+
+Exper: req_size 4096  #reqs 16  mode thread_pool_unbounded
+['sudo', './microbench', '-d', '/mnt/ssd/josehu/microbench_dir', '-f', '64', '-n', '16', '-r', '4096', '--write', '-s', '134217728', '-a', 'thread_pool', '-t', '16', '--tr', '10000', '--wr', '1000']
+Time elapsed stat:
+  count   10000
+  avg_us  102.173
+  max_us  453.368
+  min_us  81.466
+  stddev  14.554
+
+Exper: req_size 4096  #reqs 20  mode thread_pool_unbounded
+['sudo', './microbench', '-d', '/mnt/ssd/josehu/microbench_dir', '-f', '64', '-n', '20', '-r', '4096', '--write', '-s', '134217728', '-a', 'thread_pool', '-t', '20', '--tr', '10000', '--wr', '1000']
+Time elapsed stat:
+  count   10000
+  avg_us  124.858
+  max_us  486.587
+  min_us  100.333
+  stddev  15.715
+
+Exper: req_size 4096  #reqs 24  mode thread_pool_unbounded
+['sudo', './microbench', '-d', '/mnt/ssd/josehu/microbench_dir', '-f', '64', '-n', '24', '-r', '4096', '--write', '-s', '134217728', '-a', 'thread_pool', '-t', '24', '--tr', '10000', '--wr', '1000']
+Time elapsed stat:
+  count   10000
+  avg_us  141.440
+  max_us  1875.452
+  min_us  113.172
+  stddev  25.217
+
+Exper: req_size 4096  #reqs 28  mode thread_pool_unbounded
+['sudo', './microbench', '-d', '/mnt/ssd/josehu/microbench_dir', '-f', '64', '-n', '28', '-r', '4096', '--write', '-s', '134217728', '-a', 'thread_pool', '-t', '28', '--tr', '10000', '--wr', '1000']
+Time elapsed stat:
+  count   10000
+  avg_us  158.716
+  max_us  549.870
+  min_us  130.384
+  stddev  19.281
+
+Exper: req_size 4096  #reqs 32  mode thread_pool_unbounded
+['sudo', './microbench', '-d', '/mnt/ssd/josehu/microbench_dir', '-f', '64', '-n', '32', '-r', '4096', '--write', '-s', '134217728', '-a', 'thread_pool', '-t', '32', '--tr', '10000', '--wr', '1000']
+Time elapsed stat:
+  count   10000
+  avg_us  171.990
+  max_us  558.106
+  min_us  138.717
+  stddev  20.356
+
+Exper: req_size 4096  #reqs 36  mode thread_pool_unbounded
+['sudo', './microbench', '-d', '/mnt/ssd/josehu/microbench_dir', '-f', '64', '-n', '36', '-r', '4096', '--write', '-s', '134217728', '-a', 'thread_pool', '-t', '36', '--tr', '10000', '--wr', '1000']
+Time elapsed stat:
+  count   10000
+  avg_us  187.650
+  max_us  577.003
+  min_us  149.589
+  stddev  23.255
+
+Exper: req_size 4096  #reqs 40  mode thread_pool_unbounded
+['sudo', './microbench', '-d', '/mnt/ssd/josehu/microbench_dir', '-f', '64', '-n', '40', '-r', '4096', '--write', '-s', '134217728', '-a', 'thread_pool', '-t', '40', '--tr', '10000', '--wr', '1000']
+Time elapsed stat:
+  count   10000
+  avg_us  200.016
+  max_us  632.338
+  min_us  161.572
+  stddev  24.263
+
+Exper: req_size 4096  #reqs 44  mode thread_pool_unbounded
+['sudo', './microbench', '-d', '/mnt/ssd/josehu/microbench_dir', '-f', '64', '-n', '44', '-r', '4096', '--write', '-s', '134217728', '-a', 'thread_pool', '-t', '44', '--tr', '10000', '--wr', '1000']
+Time elapsed stat:
+  count   10000
+  avg_us  215.739
+  max_us  605.738
+  min_us  175.434
+  stddev  25.559
+
+Exper: req_size 4096  #reqs 48  mode thread_pool_unbounded
+['sudo', './microbench', '-d', '/mnt/ssd/josehu/microbench_dir', '-f', '64', '-n', '48', '-r', '4096', '--write', '-s', '134217728', '-a', 'thread_pool', '-t', '48', '--tr', '10000', '--wr', '1000']
+Time elapsed stat:
+  count   10000
+  avg_us  227.506
+  max_us  710.504
+  min_us  190.071
+  stddev  27.221
+
+Exper: req_size 4096  #reqs 52  mode thread_pool_unbounded
+['sudo', './microbench', '-d', '/mnt/ssd/josehu/microbench_dir', '-f', '64', '-n', '52', '-r', '4096', '--write', '-s', '134217728', '-a', 'thread_pool', '-t', '52', '--tr', '10000', '--wr', '1000']
+Time elapsed stat:
+  count   10000
+  avg_us  239.785
+  max_us  753.629
+  min_us  198.496
+  stddev  26.893
+
+Exper: req_size 4096  #reqs 56  mode thread_pool_unbounded
+['sudo', './microbench', '-d', '/mnt/ssd/josehu/microbench_dir', '-f', '64', '-n', '56', '-r', '4096', '--write', '-s', '134217728', '-a', 'thread_pool', '-t', '56', '--tr', '10000', '--wr', '1000']
+Time elapsed stat:
+  count   10000
+  avg_us  252.667
+  max_us  647.544
+  min_us  210.697
+  stddev  27.919
+
+Exper: req_size 4096  #reqs 60  mode thread_pool_unbounded
+['sudo', './microbench', '-d', '/mnt/ssd/josehu/microbench_dir', '-f', '64', '-n', '60', '-r', '4096', '--write', '-s', '134217728', '-a', 'thread_pool', '-t', '60', '--tr', '10000', '--wr', '1000']
+Time elapsed stat:
+  count   10000
+  avg_us  264.478
+  max_us  731.815
+  min_us  217.889
+  stddev  29.084
+
+Exper: req_size 4096  #reqs 64  mode thread_pool_unbounded
+['sudo', './microbench', '-d', '/mnt/ssd/josehu/microbench_dir', '-f', '64', '-n', '64', '-r', '4096', '--write', '-s', '134217728', '-a', 'thread_pool', '-t', '64', '--tr', '10000', '--wr', '1000']
+Time elapsed stat:
+  count   10000
+  avg_us  277.067
+  max_us  1250.631
+  min_us  231.682
+  stddev  31.813
+
+Exper: req_size 4096  #reqs 4  mode thread_pool_nproc
+['sudo', './microbench', '-d', '/mnt/ssd/josehu/microbench_dir', '-f', '64', '-n', '4', '-r', '4096', '--write', '-s', '134217728', '-a', 'thread_pool', '-t', '4', '--tr', '10000', '--wr', '1000']
+Time elapsed stat:
+  count   10000
+  avg_us  29.146
+  max_us  340.700
+  min_us  23.092
+  stddev  6.233
+
+Exper: req_size 4096  #reqs 8  mode thread_pool_nproc
+['sudo', './microbench', '-d', '/mnt/ssd/josehu/microbench_dir', '-f', '64', '-n', '8', '-r', '4096', '--write', '-s', '134217728', '-a', 'thread_pool', '-t', '8', '--tr', '10000', '--wr', '1000']
+Time elapsed stat:
+  count   10000
+  avg_us  52.084
+  max_us  458.986
+  min_us  38.959
+  stddev  10.234
+
+Exper: req_size 4096  #reqs 12  mode thread_pool_nproc
+['sudo', './microbench', '-d', '/mnt/ssd/josehu/microbench_dir', '-f', '64', '-n', '12', '-r', '4096', '--write', '-s', '134217728', '-a', 'thread_pool', '-t', '12', '--tr', '10000', '--wr', '1000']
+Time elapsed stat:
+  count   10000
+  avg_us  71.627
+  max_us  406.160
+  min_us  55.752
+  stddev  11.466
+
+Exper: req_size 4096  #reqs 16  mode thread_pool_nproc
+['sudo', './microbench', '-d', '/mnt/ssd/josehu/microbench_dir', '-f', '64', '-n', '16', '-r', '4096', '--write', '-s', '134217728', '-a', 'thread_pool', '-t', '16', '--tr', '10000', '--wr', '1000']
+Time elapsed stat:
+  count   10000
+  avg_us  101.531
+  max_us  589.131
+  min_us  80.512
+  stddev  13.862
+
+Exper: req_size 4096  #reqs 20  mode thread_pool_nproc
+['sudo', './microbench', '-d', '/mnt/ssd/josehu/microbench_dir', '-f', '64', '-n', '20', '-r', '4096', '--write', '-s', '134217728', '-a', 'thread_pool', '-t', '16', '--tr', '10000', '--wr', '1000']
+Time elapsed stat:
+  count   10000
+  avg_us  103.772
+  max_us  486.094
+  min_us  81.711
+  stddev  14.814
+
+Exper: req_size 4096  #reqs 24  mode thread_pool_nproc
+['sudo', './microbench', '-d', '/mnt/ssd/josehu/microbench_dir', '-f', '64', '-n', '24', '-r', '4096', '--write', '-s', '134217728', '-a', 'thread_pool', '-t', '16', '--tr', '10000', '--wr', '1000']
+Time elapsed stat:
+  count   10000
+  avg_us  105.538
+  max_us  504.288
+  min_us  84.511
+  stddev  14.931
+
+Exper: req_size 4096  #reqs 28  mode thread_pool_nproc
+['sudo', './microbench', '-d', '/mnt/ssd/josehu/microbench_dir', '-f', '64', '-n', '28', '-r', '4096', '--write', '-s', '134217728', '-a', 'thread_pool', '-t', '16', '--tr', '10000', '--wr', '1000']
+Time elapsed stat:
+  count   10000
+  avg_us  106.501
+  max_us  612.806
+  min_us  83.544
+  stddev  15.772
+
+Exper: req_size 4096  #reqs 32  mode thread_pool_nproc
+['sudo', './microbench', '-d', '/mnt/ssd/josehu/microbench_dir', '-f', '64', '-n', '32', '-r', '4096', '--write', '-s', '134217728', '-a', 'thread_pool', '-t', '16', '--tr', '10000', '--wr', '1000']
+Time elapsed stat:
+  count   10000
+  avg_us  108.676
+  max_us  430.700
+  min_us  85.704
+  stddev  14.133
+
+Exper: req_size 4096  #reqs 36  mode thread_pool_nproc
+['sudo', './microbench', '-d', '/mnt/ssd/josehu/microbench_dir', '-f', '64', '-n', '36', '-r', '4096', '--write', '-s', '134217728', '-a', 'thread_pool', '-t', '16', '--tr', '10000', '--wr', '1000']
+Time elapsed stat:
+  count   10000
+  avg_us  110.938
+  max_us  483.052
+  min_us  87.122
+  stddev  15.643
+
+Exper: req_size 4096  #reqs 40  mode thread_pool_nproc
+['sudo', './microbench', '-d', '/mnt/ssd/josehu/microbench_dir', '-f', '64', '-n', '40', '-r', '4096', '--write', '-s', '134217728', '-a', 'thread_pool', '-t', '16', '--tr', '10000', '--wr', '1000']
+Time elapsed stat:
+  count   10000
+  avg_us  111.741
+  max_us  489.833
+  min_us  88.919
+  stddev  15.555
+
+Exper: req_size 4096  #reqs 44  mode thread_pool_nproc
+['sudo', './microbench', '-d', '/mnt/ssd/josehu/microbench_dir', '-f', '64', '-n', '44', '-r', '4096', '--write', '-s', '134217728', '-a', 'thread_pool', '-t', '16', '--tr', '10000', '--wr', '1000']
+Time elapsed stat:
+  count   10000
+  avg_us  113.826
+  max_us  479.449
+  min_us  89.053
+  stddev  15.545
+
+Exper: req_size 4096  #reqs 48  mode thread_pool_nproc
+['sudo', './microbench', '-d', '/mnt/ssd/josehu/microbench_dir', '-f', '64', '-n', '48', '-r', '4096', '--write', '-s', '134217728', '-a', 'thread_pool', '-t', '16', '--tr', '10000', '--wr', '1000']
+Time elapsed stat:
+  count   10000
+  avg_us  114.981
+  max_us  467.228
+  min_us  90.026
+  stddev  15.887
+
+Exper: req_size 4096  #reqs 52  mode thread_pool_nproc
+['sudo', './microbench', '-d', '/mnt/ssd/josehu/microbench_dir', '-f', '64', '-n', '52', '-r', '4096', '--write', '-s', '134217728', '-a', 'thread_pool', '-t', '16', '--tr', '10000', '--wr', '1000']
+Time elapsed stat:
+  count   10000
+  avg_us  116.511
+  max_us  446.224
+  min_us  92.553
+  stddev  15.767
+
+Exper: req_size 4096  #reqs 56  mode thread_pool_nproc
+['sudo', './microbench', '-d', '/mnt/ssd/josehu/microbench_dir', '-f', '64', '-n', '56', '-r', '4096', '--write', '-s', '134217728', '-a', 'thread_pool', '-t', '16', '--tr', '10000', '--wr', '1000']
+Time elapsed stat:
+  count   10000
+  avg_us  118.225
+  max_us  523.509
+  min_us  92.724
+  stddev  16.083
+
+Exper: req_size 4096  #reqs 60  mode thread_pool_nproc
+['sudo', './microbench', '-d', '/mnt/ssd/josehu/microbench_dir', '-f', '64', '-n', '60', '-r', '4096', '--write', '-s', '134217728', '-a', 'thread_pool', '-t', '16', '--tr', '10000', '--wr', '1000']
+Time elapsed stat:
+  count   10000
+  avg_us  120.747
+  max_us  476.729
+  min_us  96.765
+  stddev  16.773
+
+Exper: req_size 4096  #reqs 64  mode thread_pool_nproc
+['sudo', './microbench', '-d', '/mnt/ssd/josehu/microbench_dir', '-f', '64', '-n', '64', '-r', '4096', '--write', '-s', '134217728', '-a', 'thread_pool', '-t', '16', '--tr', '10000', '--wr', '1000']
+Time elapsed stat:
+  count   10000
+  avg_us  121.819
+  max_us  459.785
+  min_us  95.394
+  stddev  16.415
+
+Exper: req_size 4096  #reqs 4  mode thread_pool_4xsocks
+['sudo', './microbench', '-d', '/mnt/ssd/josehu/microbench_dir', '-f', '64', '-n', '4', '-r', '4096', '--write', '-s', '134217728', '-a', 'thread_pool', '-t', '4', '--tr', '10000', '--wr', '1000']
+Time elapsed stat:
+  count   10000
+  avg_us  29.447
+  max_us  383.458
+  min_us  22.851
+  stddev  6.129
+
+Exper: req_size 4096  #reqs 8  mode thread_pool_4xsocks
+['sudo', './microbench', '-d', '/mnt/ssd/josehu/microbench_dir', '-f', '64', '-n', '8', '-r', '4096', '--write', '-s', '134217728', '-a', 'thread_pool', '-t', '8', '--tr', '10000', '--wr', '1000']
+Time elapsed stat:
+  count   10000
+  avg_us  52.703
+  max_us  389.455
+  min_us  39.494
+  stddev  9.522
+
+Exper: req_size 4096  #reqs 12  mode thread_pool_4xsocks
+['sudo', './microbench', '-d', '/mnt/ssd/josehu/microbench_dir', '-f', '64', '-n', '12', '-r', '4096', '--write', '-s', '134217728', '-a', 'thread_pool', '-t', '8', '--tr', '10000', '--wr', '1000']
+Time elapsed stat:
+  count   10000
+  avg_us  52.979
+  max_us  414.947
+  min_us  38.317
+  stddev  9.627
+
+Exper: req_size 4096  #reqs 16  mode thread_pool_4xsocks
+['sudo', './microbench', '-d', '/mnt/ssd/josehu/microbench_dir', '-f', '64', '-n', '16', '-r', '4096', '--write', '-s', '134217728', '-a', 'thread_pool', '-t', '8', '--tr', '10000', '--wr', '1000']
+Time elapsed stat:
+  count   10000
+  avg_us  54.599
+  max_us  349.724
+  min_us  42.017
+  stddev  10.375
+
+Exper: req_size 4096  #reqs 20  mode thread_pool_4xsocks
+['sudo', './microbench', '-d', '/mnt/ssd/josehu/microbench_dir', '-f', '64', '-n', '20', '-r', '4096', '--write', '-s', '134217728', '-a', 'thread_pool', '-t', '8', '--tr', '10000', '--wr', '1000']
+Time elapsed stat:
+  count   10000
+  avg_us  55.528
+  max_us  418.470
+  min_us  44.040
+  stddev  9.072
+
+Exper: req_size 4096  #reqs 24  mode thread_pool_4xsocks
+['sudo', './microbench', '-d', '/mnt/ssd/josehu/microbench_dir', '-f', '64', '-n', '24', '-r', '4096', '--write', '-s', '134217728', '-a', 'thread_pool', '-t', '8', '--tr', '10000', '--wr', '1000']
+Time elapsed stat:
+  count   10000
+  avg_us  62.263
+  max_us  373.885
+  min_us  45.111
+  stddev  14.256
+
+Exper: req_size 4096  #reqs 28  mode thread_pool_4xsocks
+['sudo', './microbench', '-d', '/mnt/ssd/josehu/microbench_dir', '-f', '64', '-n', '28', '-r', '4096', '--write', '-s', '134217728', '-a', 'thread_pool', '-t', '8', '--tr', '10000', '--wr', '1000']
+Time elapsed stat:
+  count   10000
+  avg_us  60.907
+  max_us  332.863
+  min_us  47.554
+  stddev  10.405
+
+Exper: req_size 4096  #reqs 32  mode thread_pool_4xsocks
+['sudo', './microbench', '-d', '/mnt/ssd/josehu/microbench_dir', '-f', '64', '-n', '32', '-r', '4096', '--write', '-s', '134217728', '-a', 'thread_pool', '-t', '8', '--tr', '10000', '--wr', '1000']
+Time elapsed stat:
+  count   10000
+  avg_us  62.092
+  max_us  331.955
+  min_us  50.612
+  stddev  10.609
+
+Exper: req_size 4096  #reqs 36  mode thread_pool_4xsocks
+['sudo', './microbench', '-d', '/mnt/ssd/josehu/microbench_dir', '-f', '64', '-n', '36', '-r', '4096', '--write', '-s', '134217728', '-a', 'thread_pool', '-t', '8', '--tr', '10000', '--wr', '1000']
+Time elapsed stat:
+  count   10000
+  avg_us  63.708
+  max_us  337.534
+  min_us  49.054
+  stddev  11.764
+
+Exper: req_size 4096  #reqs 40  mode thread_pool_4xsocks
+['sudo', './microbench', '-d', '/mnt/ssd/josehu/microbench_dir', '-f', '64', '-n', '40', '-r', '4096', '--write', '-s', '134217728', '-a', 'thread_pool', '-t', '8', '--tr', '10000', '--wr', '1000']
+Time elapsed stat:
+  count   10000
+  avg_us  65.500
+  max_us  435.680
+  min_us  53.007
+  stddev  12.260
+
+Exper: req_size 4096  #reqs 44  mode thread_pool_4xsocks
+['sudo', './microbench', '-d', '/mnt/ssd/josehu/microbench_dir', '-f', '64', '-n', '44', '-r', '4096', '--write', '-s', '134217728', '-a', 'thread_pool', '-t', '8', '--tr', '10000', '--wr', '1000']
+Time elapsed stat:
+  count   10000
+  avg_us  69.335
+  max_us  487.004
+  min_us  54.435
+  stddev  13.827
+
+Exper: req_size 4096  #reqs 48  mode thread_pool_4xsocks
+['sudo', './microbench', '-d', '/mnt/ssd/josehu/microbench_dir', '-f', '64', '-n', '48', '-r', '4096', '--write', '-s', '134217728', '-a', 'thread_pool', '-t', '8', '--tr', '10000', '--wr', '1000']
+Time elapsed stat:
+  count   10000
+  avg_us  68.525
+  max_us  338.036
+  min_us  52.306
+  stddev  12.347
+
+Exper: req_size 4096  #reqs 52  mode thread_pool_4xsocks
+['sudo', './microbench', '-d', '/mnt/ssd/josehu/microbench_dir', '-f', '64', '-n', '52', '-r', '4096', '--write', '-s', '134217728', '-a', 'thread_pool', '-t', '8', '--tr', '10000', '--wr', '1000']
+Time elapsed stat:
+  count   10000
+  avg_us  72.661
+  max_us  484.938
+  min_us  58.518
+  stddev  13.254
+
+Exper: req_size 4096  #reqs 56  mode thread_pool_4xsocks
+['sudo', './microbench', '-d', '/mnt/ssd/josehu/microbench_dir', '-f', '64', '-n', '56', '-r', '4096', '--write', '-s', '134217728', '-a', 'thread_pool', '-t', '8', '--tr', '10000', '--wr', '1000']
+Time elapsed stat:
+  count   10000
+  avg_us  72.981
+  max_us  446.860
+  min_us  58.451
+  stddev  12.802
+
+Exper: req_size 4096  #reqs 60  mode thread_pool_4xsocks
+['sudo', './microbench', '-d', '/mnt/ssd/josehu/microbench_dir', '-f', '64', '-n', '60', '-r', '4096', '--write', '-s', '134217728', '-a', 'thread_pool', '-t', '8', '--tr', '10000', '--wr', '1000']
+Time elapsed stat:
+  count   10000
+  avg_us  73.567
+  max_us  432.429
+  min_us  57.315
+  stddev  12.619
+
+Exper: req_size 4096  #reqs 64  mode thread_pool_4xsocks
+['sudo', './microbench', '-d', '/mnt/ssd/josehu/microbench_dir', '-f', '64', '-n', '64', '-r', '4096', '--write', '-s', '134217728', '-a', 'thread_pool', '-t', '8', '--tr', '10000', '--wr', '1000']
+Time elapsed stat:
+  count   10000
+  avg_us  75.319
+  max_us  417.860
+  min_us  60.509
+  stddev  11.770
+
+Exper: req_size 4096  #reqs 4  mode io_uring_default
+['sudo', './microbench', '-d', '/mnt/ssd/josehu/microbench_dir', '-f', '64', '-n', '4', '-r', '4096', '--write', '-s', '134217728', '-a', 'io_uring', '--tr', '10000', '--wr', '1000']
+Time elapsed stat:
+  count   10000
+  avg_us  19.611
+  max_us  265.594
+  min_us  11.572
+  stddev  8.638
+
+Exper: req_size 4096  #reqs 8  mode io_uring_default
+['sudo', './microbench', '-d', '/mnt/ssd/josehu/microbench_dir', '-f', '64', '-n', '8', '-r', '4096', '--write', '-s', '134217728', '-a', 'io_uring', '--tr', '10000', '--wr', '1000']
+Time elapsed stat:
+  count   10000
+  avg_us  33.326
+  max_us  425.118
+  min_us  19.355
+  stddev  18.926
+
+Exper: req_size 4096  #reqs 12  mode io_uring_default
+['sudo', './microbench', '-d', '/mnt/ssd/josehu/microbench_dir', '-f', '64', '-n', '12', '-r', '4096', '--write', '-s', '134217728', '-a', 'io_uring', '--tr', '10000', '--wr', '1000']
+Time elapsed stat:
+  count   10000
+  avg_us  47.445
+  max_us  453.515
+  min_us  27.101
+  stddev  25.594
+
+Exper: req_size 4096  #reqs 16  mode io_uring_default
+['sudo', './microbench', '-d', '/mnt/ssd/josehu/microbench_dir', '-f', '64', '-n', '16', '-r', '4096', '--write', '-s', '134217728', '-a', 'io_uring', '--tr', '10000', '--wr', '1000']
+Time elapsed stat:
+  count   10000
+  avg_us  64.973
+  max_us  518.022
+  min_us  32.652
+  stddev  34.734
+
+Exper: req_size 4096  #reqs 20  mode io_uring_default
+['sudo', './microbench', '-d', '/mnt/ssd/josehu/microbench_dir', '-f', '64', '-n', '20', '-r', '4096', '--write', '-s', '134217728', '-a', 'io_uring', '--tr', '10000', '--wr', '1000']
+Time elapsed stat:
+  count   10000
+  avg_us  68.831
+  max_us  502.338
+  min_us  35.742
+  stddev  38.550
+
+Exper: req_size 4096  #reqs 24  mode io_uring_default
+['sudo', './microbench', '-d', '/mnt/ssd/josehu/microbench_dir', '-f', '64', '-n', '24', '-r', '4096', '--write', '-s', '134217728', '-a', 'io_uring', '--tr', '10000', '--wr', '1000']
+Time elapsed stat:
+  count   10000
+  avg_us  79.577
+  max_us  554.191
+  min_us  42.247
+  stddev  47.095
+
+Exper: req_size 4096  #reqs 28  mode io_uring_default
+['sudo', './microbench', '-d', '/mnt/ssd/josehu/microbench_dir', '-f', '64', '-n', '28', '-r', '4096', '--write', '-s', '134217728', '-a', 'io_uring', '--tr', '10000', '--wr', '1000']
+Time elapsed stat:
+  count   10000
+  avg_us  100.079
+  max_us  667.674
+  min_us  49.725
+  stddev  56.542
+
+Exper: req_size 4096  #reqs 32  mode io_uring_default
+['sudo', './microbench', '-d', '/mnt/ssd/josehu/microbench_dir', '-f', '64', '-n', '32', '-r', '4096', '--write', '-s', '134217728', '-a', 'io_uring', '--tr', '10000', '--wr', '1000']
+Time elapsed stat:
+  count   10000
+  avg_us  110.056
+  max_us  626.382
+  min_us  58.657
+  stddev  61.237
+
+Exper: req_size 4096  #reqs 36  mode io_uring_default
+['sudo', './microbench', '-d', '/mnt/ssd/josehu/microbench_dir', '-f', '64', '-n', '36', '-r', '4096', '--write', '-s', '134217728', '-a', 'io_uring', '--tr', '10000', '--wr', '1000']
+Time elapsed stat:
+  count   10000
+  avg_us  168.461
+  max_us  741.401
+  min_us  79.693
+  stddev  84.080
+
+Exper: req_size 4096  #reqs 40  mode io_uring_default
+['sudo', './microbench', '-d', '/mnt/ssd/josehu/microbench_dir', '-f', '64', '-n', '40', '-r', '4096', '--write', '-s', '134217728', '-a', 'io_uring', '--tr', '10000', '--wr', '1000']
+Time elapsed stat:
+  count   10000
+  avg_us  182.321
+  max_us  709.251
+  min_us  87.461
+  stddev  89.573
+
+Exper: req_size 4096  #reqs 44  mode io_uring_default
+['sudo', './microbench', '-d', '/mnt/ssd/josehu/microbench_dir', '-f', '64', '-n', '44', '-r', '4096', '--write', '-s', '134217728', '-a', 'io_uring', '--tr', '10000', '--wr', '1000']
+Time elapsed stat:
+  count   10000
+  avg_us  201.054
+  max_us  759.330
+  min_us  97.264
+  stddev  99.787
+
+Exper: req_size 4096  #reqs 48  mode io_uring_default
+['sudo', './microbench', '-d', '/mnt/ssd/josehu/microbench_dir', '-f', '64', '-n', '48', '-r', '4096', '--write', '-s', '134217728', '-a', 'io_uring', '--tr', '10000', '--wr', '1000']
+Time elapsed stat:
+  count   10000
+  avg_us  229.469
+  max_us  875.881
+  min_us  105.800
+  stddev  111.807
+
+Exper: req_size 4096  #reqs 52  mode io_uring_default
+['sudo', './microbench', '-d', '/mnt/ssd/josehu/microbench_dir', '-f', '64', '-n', '52', '-r', '4096', '--write', '-s', '134217728', '-a', 'io_uring', '--tr', '10000', '--wr', '1000']
+Time elapsed stat:
+  count   10000
+  avg_us  228.951
+  max_us  823.609
+  min_us  113.927
+  stddev  116.399
+
+Exper: req_size 4096  #reqs 56  mode io_uring_default
+['sudo', './microbench', '-d', '/mnt/ssd/josehu/microbench_dir', '-f', '64', '-n', '56', '-r', '4096', '--write', '-s', '134217728', '-a', 'io_uring', '--tr', '10000', '--wr', '1000']
+Time elapsed stat:
+  count   10000
+  avg_us  287.408
+  max_us  878.502
+  min_us  125.999
+  stddev  132.575
+
+Exper: req_size 4096  #reqs 60  mode io_uring_default
+['sudo', './microbench', '-d', '/mnt/ssd/josehu/microbench_dir', '-f', '64', '-n', '60', '-r', '4096', '--write', '-s', '134217728', '-a', 'io_uring', '--tr', '10000', '--wr', '1000']
+Time elapsed stat:
+  count   10000
+  avg_us  271.320
+  max_us  967.748
+  min_us  133.233
+  stddev  138.393
+
+Exper: req_size 4096  #reqs 64  mode io_uring_default
+['sudo', './microbench', '-d', '/mnt/ssd/josehu/microbench_dir', '-f', '64', '-n', '64', '-r', '4096', '--write', '-s', '134217728', '-a', 'io_uring', '--tr', '10000', '--wr', '1000']
+Time elapsed stat:
+  count   10000
+  avg_us  309.172
+  max_us  995.549
+  min_us  143.612
+  stddev  151.288
+
+Exper: req_size 4096  #reqs 4  mode io_uring_sqeasync
+['sudo', './microbench', '-d', '/mnt/ssd/josehu/microbench_dir', '-f', '64', '-n', '4', '-r', '4096', '--write', '-s', '134217728', '-a', 'io_uring', '--iosqe_async', '--tr', '10000', '--wr', '1000']
+Time elapsed stat:
+  count   10000
+  avg_us  18.491
+  max_us  447.812
+  min_us  11.798
+  stddev  9.158
+
+Exper: req_size 4096  #reqs 8  mode io_uring_sqeasync
+['sudo', './microbench', '-d', '/mnt/ssd/josehu/microbench_dir', '-f', '64', '-n', '8', '-r', '4096', '--write', '-s', '134217728', '-a', 'io_uring', '--iosqe_async', '--tr', '10000', '--wr', '1000']
+Time elapsed stat:
+  count   10000
+  avg_us  30.084
+  max_us  418.677
+  min_us  13.658
+  stddev  15.106
+
+Exper: req_size 4096  #reqs 12  mode io_uring_sqeasync
+['sudo', './microbench', '-d', '/mnt/ssd/josehu/microbench_dir', '-f', '64', '-n', '12', '-r', '4096', '--write', '-s', '134217728', '-a', 'io_uring', '--iosqe_async', '--tr', '10000', '--wr', '1000']
+Time elapsed stat:
+  count   10000
+  avg_us  33.129
+  max_us  420.417
+  min_us  14.492
+  stddev  15.638
+
+Exper: req_size 4096  #reqs 16  mode io_uring_sqeasync
+['sudo', './microbench', '-d', '/mnt/ssd/josehu/microbench_dir', '-f', '64', '-n', '16', '-r', '4096', '--write', '-s', '134217728', '-a', 'io_uring', '--iosqe_async', '--tr', '10000', '--wr', '1000']
+Time elapsed stat:
+  count   10000
+  avg_us  30.792
+  max_us  310.048
+  min_us  17.497
+  stddev  13.306
+
+Exper: req_size 4096  #reqs 20  mode io_uring_sqeasync
+['sudo', './microbench', '-d', '/mnt/ssd/josehu/microbench_dir', '-f', '64', '-n', '20', '-r', '4096', '--write', '-s', '134217728', '-a', 'io_uring', '--iosqe_async', '--tr', '10000', '--wr', '1000']
+Time elapsed stat:
+  count   10000
+  avg_us  36.197
+  max_us  354.927
+  min_us  21.183
+  stddev  13.841
+
+Exper: req_size 4096  #reqs 24  mode io_uring_sqeasync
+['sudo', './microbench', '-d', '/mnt/ssd/josehu/microbench_dir', '-f', '64', '-n', '24', '-r', '4096', '--write', '-s', '134217728', '-a', 'io_uring', '--iosqe_async', '--tr', '10000', '--wr', '1000']
+Time elapsed stat:
+  count   10000
+  avg_us  38.394
+  max_us  398.955
+  min_us  24.616
+  stddev  10.864
+
+Exper: req_size 4096  #reqs 28  mode io_uring_sqeasync
+['sudo', './microbench', '-d', '/mnt/ssd/josehu/microbench_dir', '-f', '64', '-n', '28', '-r', '4096', '--write', '-s', '134217728', '-a', 'io_uring', '--iosqe_async', '--tr', '10000', '--wr', '1000']
+Time elapsed stat:
+  count   10000
+  avg_us  38.982
+  max_us  283.199
+  min_us  27.412
+  stddev  9.755
+
+Exper: req_size 4096  #reqs 32  mode io_uring_sqeasync
+['sudo', './microbench', '-d', '/mnt/ssd/josehu/microbench_dir', '-f', '64', '-n', '32', '-r', '4096', '--write', '-s', '134217728', '-a', 'io_uring', '--iosqe_async', '--tr', '10000', '--wr', '1000']
+Time elapsed stat:
+  count   10000
+  avg_us  50.313
+  max_us  382.502
+  min_us  31.708
+  stddev  15.206
+
+Exper: req_size 4096  #reqs 36  mode io_uring_sqeasync
+['sudo', './microbench', '-d', '/mnt/ssd/josehu/microbench_dir', '-f', '64', '-n', '36', '-r', '4096', '--write', '-s', '134217728', '-a', 'io_uring', '--iosqe_async', '--tr', '10000', '--wr', '1000']
+Time elapsed stat:
+  count   10000
+  avg_us  48.921
+  max_us  399.337
+  min_us  34.114
+  stddev  9.747
+
+Exper: req_size 4096  #reqs 40  mode io_uring_sqeasync
+['sudo', './microbench', '-d', '/mnt/ssd/josehu/microbench_dir', '-f', '64', '-n', '40', '-r', '4096', '--write', '-s', '134217728', '-a', 'io_uring', '--iosqe_async', '--tr', '10000', '--wr', '1000']
+Time elapsed stat:
+  count   10000
+  avg_us  59.644
+  max_us  472.535
+  min_us  37.690
+  stddev  13.790
+
+Exper: req_size 4096  #reqs 44  mode io_uring_sqeasync
+['sudo', './microbench', '-d', '/mnt/ssd/josehu/microbench_dir', '-f', '64', '-n', '44', '-r', '4096', '--write', '-s', '134217728', '-a', 'io_uring', '--iosqe_async', '--tr', '10000', '--wr', '1000']
+Time elapsed stat:
+  count   10000
+  avg_us  65.407
+  max_us  366.854
+  min_us  43.323
+  stddev  12.485
+
+Exper: req_size 4096  #reqs 48  mode io_uring_sqeasync
+['sudo', './microbench', '-d', '/mnt/ssd/josehu/microbench_dir', '-f', '64', '-n', '48', '-r', '4096', '--write', '-s', '134217728', '-a', 'io_uring', '--iosqe_async', '--tr', '10000', '--wr', '1000']
+Time elapsed stat:
+  count   10000
+  avg_us  65.322
+  max_us  356.950
+  min_us  44.904
+  stddev  10.443
+
+Exper: req_size 4096  #reqs 52  mode io_uring_sqeasync
+['sudo', './microbench', '-d', '/mnt/ssd/josehu/microbench_dir', '-f', '64', '-n', '52', '-r', '4096', '--write', '-s', '134217728', '-a', 'io_uring', '--iosqe_async', '--tr', '10000', '--wr', '1000']
+Time elapsed stat:
+  count   10000
+  avg_us  74.024
+  max_us  368.762
+  min_us  48.339
+  stddev  13.481
+
+Exper: req_size 4096  #reqs 56  mode io_uring_sqeasync
+['sudo', './microbench', '-d', '/mnt/ssd/josehu/microbench_dir', '-f', '64', '-n', '56', '-r', '4096', '--write', '-s', '134217728', '-a', 'io_uring', '--iosqe_async', '--tr', '10000', '--wr', '1000']
+Time elapsed stat:
+  count   10000
+  avg_us  83.792
+  max_us  474.071
+  min_us  52.979
+  stddev  16.060
+
+Exper: req_size 4096  #reqs 60  mode io_uring_sqeasync
+['sudo', './microbench', '-d', '/mnt/ssd/josehu/microbench_dir', '-f', '64', '-n', '60', '-r', '4096', '--write', '-s', '134217728', '-a', 'io_uring', '--iosqe_async', '--tr', '10000', '--wr', '1000']
+Time elapsed stat:
+  count   10000
+  avg_us  89.207
+  max_us  370.642
+  min_us  56.131
+  stddev  17.170
+
+Exper: req_size 4096  #reqs 64  mode io_uring_sqeasync
+['sudo', './microbench', '-d', '/mnt/ssd/josehu/microbench_dir', '-f', '64', '-n', '64', '-r', '4096', '--write', '-s', '134217728', '-a', 'io_uring', '--iosqe_async', '--tr', '10000', '--wr', '1000']
+Time elapsed stat:
+  count   10000
+  avg_us  94.552
+  max_us  575.521
+  min_us  60.487
+  stddev  16.212
+
+Exper: req_size 4096  #reqs 4  mode io_uring_sqpoll
+['sudo', './microbench', '-d', '/mnt/ssd/josehu/microbench_dir', '-f', '64', '-n', '4', '-r', '4096', '--write', '-s', '134217728', '-a', 'io_uring', '--fixed_file', '--sq_poll', '--tr', '10000', '--wr', '1000']
+kernel thread io_uring-sq NOT running.
+kernel thread io_uring-sq is running...
+Time elapsed stat:
+  count   10000
+  avg_us  20.646
+  max_us  418.704
+  min_us  13.275
+  stddev  8.140
+
+Exper: req_size 4096  #reqs 8  mode io_uring_sqpoll
+['sudo', './microbench', '-d', '/mnt/ssd/josehu/microbench_dir', '-f', '64', '-n', '8', '-r', '4096', '--write', '-s', '134217728', '-a', 'io_uring', '--fixed_file', '--sq_poll', '--tr', '10000', '--wr', '1000']
+kernel thread io_uring-sq NOT running.
+kernel thread io_uring-sq is running...
+Time elapsed stat:
+  count   10000
+  avg_us  34.477
+  max_us  441.736
+  min_us  20.557
+  stddev  16.383
+
+Exper: req_size 4096  #reqs 12  mode io_uring_sqpoll
+['sudo', './microbench', '-d', '/mnt/ssd/josehu/microbench_dir', '-f', '64', '-n', '12', '-r', '4096', '--write', '-s', '134217728', '-a', 'io_uring', '--fixed_file', '--sq_poll', '--tr', '10000', '--wr', '1000']
+kernel thread io_uring-sq NOT running.
+kernel thread io_uring-sq is running...
+Time elapsed stat:
+  count   10000
+  avg_us  49.094
+  max_us  467.597
+  min_us  26.851
+  stddev  23.673
+
+Exper: req_size 4096  #reqs 16  mode io_uring_sqpoll
+['sudo', './microbench', '-d', '/mnt/ssd/josehu/microbench_dir', '-f', '64', '-n', '16', '-r', '4096', '--write', '-s', '134217728', '-a', 'io_uring', '--fixed_file', '--sq_poll', '--tr', '10000', '--wr', '1000']
+kernel thread io_uring-sq NOT running.
+kernel thread io_uring-sq is running...
+Time elapsed stat:
+  count   10000
+  avg_us  61.613
+  max_us  409.678
+  min_us  36.975
+  stddev  30.487
+
+Exper: req_size 4096  #reqs 20  mode io_uring_sqpoll
+['sudo', './microbench', '-d', '/mnt/ssd/josehu/microbench_dir', '-f', '64', '-n', '20', '-r', '4096', '--write', '-s', '134217728', '-a', 'io_uring', '--fixed_file', '--sq_poll', '--tr', '10000', '--wr', '1000']
+kernel thread io_uring-sq NOT running.
+kernel thread io_uring-sq is running...
+Time elapsed stat:
+  count   10000
+  avg_us  87.873
+  max_us  472.460
+  min_us  44.729
+  stddev  44.053
+
+Exper: req_size 4096  #reqs 24  mode io_uring_sqpoll
+['sudo', './microbench', '-d', '/mnt/ssd/josehu/microbench_dir', '-f', '64', '-n', '24', '-r', '4096', '--write', '-s', '134217728', '-a', 'io_uring', '--fixed_file', '--sq_poll', '--tr', '10000', '--wr', '1000']
+kernel thread io_uring-sq NOT running.
+kernel thread io_uring-sq is running...
+Time elapsed stat:
+  count   10000
+  avg_us  86.662
+  max_us  643.109
+  min_us  47.773
+  stddev  45.275
+
+Exper: req_size 4096  #reqs 28  mode io_uring_sqpoll
+['sudo', './microbench', '-d', '/mnt/ssd/josehu/microbench_dir', '-f', '64', '-n', '28', '-r', '4096', '--write', '-s', '134217728', '-a', 'io_uring', '--fixed_file', '--sq_poll', '--tr', '10000', '--wr', '1000']
+kernel thread io_uring-sq NOT running.
+kernel thread io_uring-sq is running...
+Time elapsed stat:
+  count   10000
+  avg_us  136.092
+  max_us  637.521
+  min_us  53.118
+  stddev  65.284
+
+Exper: req_size 4096  #reqs 32  mode io_uring_sqpoll
+['sudo', './microbench', '-d', '/mnt/ssd/josehu/microbench_dir', '-f', '64', '-n', '32', '-r', '4096', '--write', '-s', '134217728', '-a', 'io_uring', '--fixed_file', '--sq_poll', '--tr', '10000', '--wr', '1000']
+kernel thread io_uring-sq NOT running.
+kernel thread io_uring-sq is running...
+Time elapsed stat:
+  count   10000
+  avg_us  139.128
+  max_us  743.840
+  min_us  63.220
+  stddev  71.858
+
+Exper: req_size 4096  #reqs 36  mode io_uring_sqpoll
+['sudo', './microbench', '-d', '/mnt/ssd/josehu/microbench_dir', '-f', '64', '-n', '36', '-r', '4096', '--write', '-s', '134217728', '-a', 'io_uring', '--fixed_file', '--sq_poll', '--tr', '10000', '--wr', '1000']
+kernel thread io_uring-sq NOT running.
+kernel thread io_uring-sq is running...
+Time elapsed stat:
+  count   10000
+  avg_us  139.939
+  max_us  647.122
+  min_us  68.425
+  stddev  69.424
+
+Exper: req_size 4096  #reqs 40  mode io_uring_sqpoll
+['sudo', './microbench', '-d', '/mnt/ssd/josehu/microbench_dir', '-f', '64', '-n', '40', '-r', '4096', '--write', '-s', '134217728', '-a', 'io_uring', '--fixed_file', '--sq_poll', '--tr', '10000', '--wr', '1000']
+kernel thread io_uring-sq NOT running.
+kernel thread io_uring-sq is running...
+Time elapsed stat:
+  count   10000
+  avg_us  163.805
+  max_us  722.092
+  min_us  83.880
+  stddev  81.941
+
+Exper: req_size 4096  #reqs 44  mode io_uring_sqpoll
+['sudo', './microbench', '-d', '/mnt/ssd/josehu/microbench_dir', '-f', '64', '-n', '44', '-r', '4096', '--write', '-s', '134217728', '-a', 'io_uring', '--fixed_file', '--sq_poll', '--tr', '10000', '--wr', '1000']
+kernel thread io_uring-sq NOT running.
+kernel thread io_uring-sq is running...
+Time elapsed stat:
+  count   10000
+  avg_us  153.683
+  max_us  679.281
+  min_us  83.049
+  stddev  66.128
+
+Exper: req_size 4096  #reqs 48  mode io_uring_sqpoll
+['sudo', './microbench', '-d', '/mnt/ssd/josehu/microbench_dir', '-f', '64', '-n', '48', '-r', '4096', '--write', '-s', '134217728', '-a', 'io_uring', '--fixed_file', '--sq_poll', '--tr', '10000', '--wr', '1000']
+kernel thread io_uring-sq NOT running.
+kernel thread io_uring-sq is running...
+Time elapsed stat:
+  count   10000
+  avg_us  224.456
+  max_us  735.122
+  min_us  90.385
+  stddev  112.727
+
+Exper: req_size 4096  #reqs 52  mode io_uring_sqpoll
+['sudo', './microbench', '-d', '/mnt/ssd/josehu/microbench_dir', '-f', '64', '-n', '52', '-r', '4096', '--write', '-s', '134217728', '-a', 'io_uring', '--fixed_file', '--sq_poll', '--tr', '10000', '--wr', '1000']
+kernel thread io_uring-sq NOT running.
+kernel thread io_uring-sq is running...
+Time elapsed stat:
+  count   10000
+  avg_us  206.967
+  max_us  782.516
+  min_us  109.525
+  stddev  105.818
+
+Exper: req_size 4096  #reqs 56  mode io_uring_sqpoll
+['sudo', './microbench', '-d', '/mnt/ssd/josehu/microbench_dir', '-f', '64', '-n', '56', '-r', '4096', '--write', '-s', '134217728', '-a', 'io_uring', '--fixed_file', '--sq_poll', '--tr', '10000', '--wr', '1000']
+kernel thread io_uring-sq NOT running.
+kernel thread io_uring-sq is running...
+Time elapsed stat:
+  count   10000
+  avg_us  276.211
+  max_us  909.364
+  min_us  112.037
+  stddev  132.591
+
+Exper: req_size 4096  #reqs 60  mode io_uring_sqpoll
+['sudo', './microbench', '-d', '/mnt/ssd/josehu/microbench_dir', '-f', '64', '-n', '60', '-r', '4096', '--write', '-s', '134217728', '-a', 'io_uring', '--fixed_file', '--sq_poll', '--tr', '10000', '--wr', '1000']
+kernel thread io_uring-sq NOT running.
+kernel thread io_uring-sq is running...
+Time elapsed stat:
+  count   10000
+  avg_us  244.727
+  max_us  961.401
+  min_us  111.038
+  stddev  124.500
+
+Exper: req_size 4096  #reqs 64  mode io_uring_sqpoll
+['sudo', './microbench', '-d', '/mnt/ssd/josehu/microbench_dir', '-f', '64', '-n', '64', '-r', '4096', '--write', '-s', '134217728', '-a', 'io_uring', '--fixed_file', '--sq_poll', '--tr', '10000', '--wr', '1000']
+kernel thread io_uring-sq NOT running.
+kernel thread io_uring-sq is running...
+Time elapsed stat:
+  count   10000
+  avg_us  299.978
+  max_us  1008.370
+  min_us  120.169
+  stddev  148.500
+
+Exper: req_size 4096  #reqs 4  mode io_uring_sqeasync_sqpoll
+['sudo', './microbench', '-d', '/mnt/ssd/josehu/microbench_dir', '-f', '64', '-n', '4', '-r', '4096', '--write', '-s', '134217728', '-a', 'io_uring', '--iosqe_async', '--fixed_file', '--sq_poll', '--tr', '10000', '--wr', '1000']
+kernel thread io_uring-sq NOT running.
+kernel thread io_uring-sq is running...
+Time elapsed stat:
+  count   10000
+  avg_us  19.117
+  max_us  395.238
+  min_us  12.920
+  stddev  7.773
+
+Exper: req_size 4096  #reqs 8  mode io_uring_sqeasync_sqpoll
+['sudo', './microbench', '-d', '/mnt/ssd/josehu/microbench_dir', '-f', '64', '-n', '8', '-r', '4096', '--write', '-s', '134217728', '-a', 'io_uring', '--iosqe_async', '--fixed_file', '--sq_poll', '--tr', '10000', '--wr', '1000']
+kernel thread io_uring-sq NOT running.
+kernel thread io_uring-sq is running...
+Time elapsed stat:
+  count   10000
+  avg_us  40.072
+  max_us  443.544
+  min_us  15.785
+  stddev  15.721
+
+Exper: req_size 4096  #reqs 12  mode io_uring_sqeasync_sqpoll
+['sudo', './microbench', '-d', '/mnt/ssd/josehu/microbench_dir', '-f', '64', '-n', '12', '-r', '4096', '--write', '-s', '134217728', '-a', 'io_uring', '--iosqe_async', '--fixed_file', '--sq_poll', '--tr', '10000', '--wr', '1000']
+kernel thread io_uring-sq NOT running.
+kernel thread io_uring-sq is running...
+Time elapsed stat:
+  count   10000
+  avg_us  42.487
+  max_us  492.593
+  min_us  18.013
+  stddev  19.837
+
+Exper: req_size 4096  #reqs 16  mode io_uring_sqeasync_sqpoll
+['sudo', './microbench', '-d', '/mnt/ssd/josehu/microbench_dir', '-f', '64', '-n', '16', '-r', '4096', '--write', '-s', '134217728', '-a', 'io_uring', '--iosqe_async', '--fixed_file', '--sq_poll', '--tr', '10000', '--wr', '1000']
+kernel thread io_uring-sq NOT running.
+kernel thread io_uring-sq is running...
+Time elapsed stat:
+  count   10000
+  avg_us  47.016
+  max_us  428.918
+  min_us  20.101
+  stddev  18.545
+
+Exper: req_size 4096  #reqs 20  mode io_uring_sqeasync_sqpoll
+['sudo', './microbench', '-d', '/mnt/ssd/josehu/microbench_dir', '-f', '64', '-n', '20', '-r', '4096', '--write', '-s', '134217728', '-a', 'io_uring', '--iosqe_async', '--fixed_file', '--sq_poll', '--tr', '10000', '--wr', '1000']
+kernel thread io_uring-sq NOT running.
+kernel thread io_uring-sq is running...
+Time elapsed stat:
+  count   10000
+  avg_us  40.211
+  max_us  324.181
+  min_us  22.330
+  stddev  15.231
+
+Exper: req_size 4096  #reqs 24  mode io_uring_sqeasync_sqpoll
+['sudo', './microbench', '-d', '/mnt/ssd/josehu/microbench_dir', '-f', '64', '-n', '24', '-r', '4096', '--write', '-s', '134217728', '-a', 'io_uring', '--iosqe_async', '--fixed_file', '--sq_poll', '--tr', '10000', '--wr', '1000']
+kernel thread io_uring-sq NOT running.
+kernel thread io_uring-sq is running...
+Time elapsed stat:
+  count   10000
+  avg_us  37.841
+  max_us  293.653
+  min_us  23.224
+  stddev  11.963
+
+Exper: req_size 4096  #reqs 28  mode io_uring_sqeasync_sqpoll
+['sudo', './microbench', '-d', '/mnt/ssd/josehu/microbench_dir', '-f', '64', '-n', '28', '-r', '4096', '--write', '-s', '134217728', '-a', 'io_uring', '--iosqe_async', '--fixed_file', '--sq_poll', '--tr', '10000', '--wr', '1000']
+kernel thread io_uring-sq NOT running.
+kernel thread io_uring-sq is running...
+Time elapsed stat:
+  count   10000
+  avg_us  39.703
+  max_us  338.260
+  min_us  26.799
+  stddev  10.751
+
+Exper: req_size 4096  #reqs 32  mode io_uring_sqeasync_sqpoll
+['sudo', './microbench', '-d', '/mnt/ssd/josehu/microbench_dir', '-f', '64', '-n', '32', '-r', '4096', '--write', '-s', '134217728', '-a', 'io_uring', '--iosqe_async', '--fixed_file', '--sq_poll', '--tr', '10000', '--wr', '1000']
+kernel thread io_uring-sq NOT running.
+kernel thread io_uring-sq is running...
+Time elapsed stat:
+  count   10000
+  avg_us  46.753
+  max_us  394.460
+  min_us  28.996
+  stddev  13.540
+
+Exper: req_size 4096  #reqs 36  mode io_uring_sqeasync_sqpoll
+['sudo', './microbench', '-d', '/mnt/ssd/josehu/microbench_dir', '-f', '64', '-n', '36', '-r', '4096', '--write', '-s', '134217728', '-a', 'io_uring', '--iosqe_async', '--fixed_file', '--sq_poll', '--tr', '10000', '--wr', '1000']
+kernel thread io_uring-sq NOT running.
+kernel thread io_uring-sq is running...
+Time elapsed stat:
+  count   10000
+  avg_us  56.736
+  max_us  359.324
+  min_us  33.697
+  stddev  13.888
+
+Exper: req_size 4096  #reqs 40  mode io_uring_sqeasync_sqpoll
+['sudo', './microbench', '-d', '/mnt/ssd/josehu/microbench_dir', '-f', '64', '-n', '40', '-r', '4096', '--write', '-s', '134217728', '-a', 'io_uring', '--iosqe_async', '--fixed_file', '--sq_poll', '--tr', '10000', '--wr', '1000']
+kernel thread io_uring-sq NOT running.
+kernel thread io_uring-sq is running...
+Time elapsed stat:
+  count   10000
+  avg_us  53.812
+  max_us  278.945
+  min_us  35.856
+  stddev  9.381
+
+Exper: req_size 4096  #reqs 44  mode io_uring_sqeasync_sqpoll
+['sudo', './microbench', '-d', '/mnt/ssd/josehu/microbench_dir', '-f', '64', '-n', '44', '-r', '4096', '--write', '-s', '134217728', '-a', 'io_uring', '--iosqe_async', '--fixed_file', '--sq_poll', '--tr', '10000', '--wr', '1000']
+kernel thread io_uring-sq NOT running.
+kernel thread io_uring-sq is running...
+Time elapsed stat:
+  count   10000
+  avg_us  56.100
+  max_us  418.787
+  min_us  38.249
+  stddev  10.380
+
+Exper: req_size 4096  #reqs 48  mode io_uring_sqeasync_sqpoll
+['sudo', './microbench', '-d', '/mnt/ssd/josehu/microbench_dir', '-f', '64', '-n', '48', '-r', '4096', '--write', '-s', '134217728', '-a', 'io_uring', '--iosqe_async', '--fixed_file', '--sq_poll', '--tr', '10000', '--wr', '1000']
+kernel thread io_uring-sq NOT running.
+kernel thread io_uring-sq is running...
+Time elapsed stat:
+  count   10000
+  avg_us  67.484
+  max_us  391.812
+  min_us  42.375
+  stddev  13.846
+
+Exper: req_size 4096  #reqs 52  mode io_uring_sqeasync_sqpoll
+['sudo', './microbench', '-d', '/mnt/ssd/josehu/microbench_dir', '-f', '64', '-n', '52', '-r', '4096', '--write', '-s', '134217728', '-a', 'io_uring', '--iosqe_async', '--fixed_file', '--sq_poll', '--tr', '10000', '--wr', '1000']
+kernel thread io_uring-sq NOT running.
+kernel thread io_uring-sq is running...
+Time elapsed stat:
+  count   10000
+  avg_us  68.455
+  max_us  428.720
+  min_us  45.720
+  stddev  9.644
+
+Exper: req_size 4096  #reqs 56  mode io_uring_sqeasync_sqpoll
+['sudo', './microbench', '-d', '/mnt/ssd/josehu/microbench_dir', '-f', '64', '-n', '56', '-r', '4096', '--write', '-s', '134217728', '-a', 'io_uring', '--iosqe_async', '--fixed_file', '--sq_poll', '--tr', '10000', '--wr', '1000']
+kernel thread io_uring-sq NOT running.
+kernel thread io_uring-sq is running...
+Time elapsed stat:
+  count   10000
+  avg_us  77.737
+  max_us  484.415
+  min_us  50.109
+  stddev  14.528
+
+Exper: req_size 4096  #reqs 60  mode io_uring_sqeasync_sqpoll
+['sudo', './microbench', '-d', '/mnt/ssd/josehu/microbench_dir', '-f', '64', '-n', '60', '-r', '4096', '--write', '-s', '134217728', '-a', 'io_uring', '--iosqe_async', '--fixed_file', '--sq_poll', '--tr', '10000', '--wr', '1000']
+kernel thread io_uring-sq NOT running.
+kernel thread io_uring-sq is running...
+Time elapsed stat:
+  count   10000
+  avg_us  79.132
+  max_us  500.533
+  min_us  51.468
+  stddev  11.371
+
+Exper: req_size 4096  #reqs 64  mode io_uring_sqeasync_sqpoll
+['sudo', './microbench', '-d', '/mnt/ssd/josehu/microbench_dir', '-f', '64', '-n', '64', '-r', '4096', '--write', '-s', '134217728', '-a', 'io_uring', '--iosqe_async', '--fixed_file', '--sq_poll', '--tr', '10000', '--wr', '1000']
+kernel thread io_uring-sq NOT running.
+kernel thread io_uring-sq is running...
+Time elapsed stat:
+  count   10000
+  avg_us  85.503
+  max_us  369.611
+  min_us  56.672
+  stddev  11.160
+
+Exper: req_size 65536  #reqs 4  mode sync
+['sudo', './microbench', '-d', '/mnt/ssd/josehu/microbench_dir', '-f', '64', '-n', '4', '-r', '65536', '--write', '-s', '134217728', '-a', 'basic', '--tr', '10000', '--wr', '1000']
+Time elapsed stat:
+  count   10000
+  avg_us  78.341
+  max_us  437.822
+  min_us  65.316
+  stddev  17.241
+
+Exper: req_size 65536  #reqs 8  mode sync
+['sudo', './microbench', '-d', '/mnt/ssd/josehu/microbench_dir', '-f', '64', '-n', '8', '-r', '65536', '--write', '-s', '134217728', '-a', 'basic', '--tr', '10000', '--wr', '1000']
+Time elapsed stat:
+  count   10000
+  avg_us  108.286
+  max_us  516.660
+  min_us  104.456
+  stddev  13.959
+
+Exper: req_size 65536  #reqs 12  mode sync
+['sudo', './microbench', '-d', '/mnt/ssd/josehu/microbench_dir', '-f', '64', '-n', '12', '-r', '65536', '--write', '-s', '134217728', '-a', 'basic', '--tr', '10000', '--wr', '1000']
+Time elapsed stat:
+  count   10000
+  avg_us  165.034
+  max_us  647.977
+  min_us  156.689
+  stddev  30.449
+
+Exper: req_size 65536  #reqs 16  mode sync
+['sudo', './microbench', '-d', '/mnt/ssd/josehu/microbench_dir', '-f', '64', '-n', '16', '-r', '65536', '--write', '-s', '134217728', '-a', 'basic', '--tr', '10000', '--wr', '1000']
+Time elapsed stat:
+  count   10000
+  avg_us  219.415
+  max_us  652.234
+  min_us  208.436
+  stddev  26.784
+
+Exper: req_size 65536  #reqs 20  mode sync
+['sudo', './microbench', '-d', '/mnt/ssd/josehu/microbench_dir', '-f', '64', '-n', '20', '-r', '65536', '--write', '-s', '134217728', '-a', 'basic', '--tr', '10000', '--wr', '1000']
+Time elapsed stat:
+  count   10000
+  avg_us  287.459
+  max_us  972.439
+  min_us  261.206
+  stddev  39.639
+
+Exper: req_size 65536  #reqs 24  mode sync
+['sudo', './microbench', '-d', '/mnt/ssd/josehu/microbench_dir', '-f', '64', '-n', '24', '-r', '65536', '--write', '-s', '134217728', '-a', 'basic', '--tr', '10000', '--wr', '1000']
+Time elapsed stat:
+  count   10000
+  avg_us  323.949
+  max_us  1324.522
+  min_us  313.605
+  stddev  62.287
+
+Exper: req_size 65536  #reqs 28  mode sync
+['sudo', './microbench', '-d', '/mnt/ssd/josehu/microbench_dir', '-f', '64', '-n', '28', '-r', '65536', '--write', '-s', '134217728', '-a', 'basic', '--tr', '10000', '--wr', '1000']
+Time elapsed stat:
+  count   10000
+  avg_us  381.005
+  max_us  1243.123
+  min_us  365.959
+  stddev  84.152
+
+Exper: req_size 65536  #reqs 32  mode sync
+['sudo', './microbench', '-d', '/mnt/ssd/josehu/microbench_dir', '-f', '64', '-n', '32', '-r', '65536', '--write', '-s', '134217728', '-a', 'basic', '--tr', '10000', '--wr', '1000']
+Time elapsed stat:
+  count   10000
+  avg_us  424.864
+  max_us  745.514
+  min_us  418.025
+  stddev  20.164
+
+Exper: req_size 65536  #reqs 36  mode sync
+['sudo', './microbench', '-d', '/mnt/ssd/josehu/microbench_dir', '-f', '64', '-n', '36', '-r', '65536', '--write', '-s', '134217728', '-a', 'basic', '--tr', '10000', '--wr', '1000']
+Time elapsed stat:
+  count   10000
+  avg_us  482.041
+  max_us  949.491
+  min_us  472.462
+  stddev  30.569
+
+Exper: req_size 65536  #reqs 40  mode sync
+['sudo', './microbench', '-d', '/mnt/ssd/josehu/microbench_dir', '-f', '64', '-n', '40', '-r', '65536', '--write', '-s', '134217728', '-a', 'basic', '--tr', '10000', '--wr', '1000']
+Time elapsed stat:
+  count   10000
+  avg_us  543.333
+  max_us  1094.257
+  min_us  523.746
+  stddev  48.331
+
+Exper: req_size 65536  #reqs 44  mode sync
+['sudo', './microbench', '-d', '/mnt/ssd/josehu/microbench_dir', '-f', '64', '-n', '44', '-r', '65536', '--write', '-s', '134217728', '-a', 'basic', '--tr', '10000', '--wr', '1000']
+Time elapsed stat:
+  count   10000
+  avg_us  602.682
+  max_us  1487.510
+  min_us  583.693
+  stddev  61.898
+
+Exper: req_size 65536  #reqs 48  mode sync
+['sudo', './microbench', '-d', '/mnt/ssd/josehu/microbench_dir', '-f', '64', '-n', '48', '-r', '65536', '--write', '-s', '134217728', '-a', 'basic', '--tr', '10000', '--wr', '1000']
+Time elapsed stat:
+  count   10000
+  avg_us  651.013
+  max_us  1229.280
+  min_us  633.163
+  stddev  44.385
+
+Exper: req_size 65536  #reqs 52  mode sync
+['sudo', './microbench', '-d', '/mnt/ssd/josehu/microbench_dir', '-f', '64', '-n', '52', '-r', '65536', '--write', '-s', '134217728', '-a', 'basic', '--tr', '10000', '--wr', '1000']
+Time elapsed stat:
+  count   10000
+  avg_us  723.764
+  max_us  1559.419
+  min_us  700.083
+  stddev  57.024
+
+Exper: req_size 65536  #reqs 56  mode sync
+['sudo', './microbench', '-d', '/mnt/ssd/josehu/microbench_dir', '-f', '64', '-n', '56', '-r', '65536', '--write', '-s', '134217728', '-a', 'basic', '--tr', '10000', '--wr', '1000']
+Time elapsed stat:
+  count   10000
+  avg_us  785.114
+  max_us  2596.697
+  min_us  756.048
+  stddev  124.081
+
+Exper: req_size 65536  #reqs 60  mode sync
+['sudo', './microbench', '-d', '/mnt/ssd/josehu/microbench_dir', '-f', '64', '-n', '60', '-r', '65536', '--write', '-s', '134217728', '-a', 'basic', '--tr', '10000', '--wr', '1000']
+Time elapsed stat:
+  count   10000
+  avg_us  875.929
+  max_us  3035.879
+  min_us  822.594
+  stddev  172.705
+
+Exper: req_size 65536  #reqs 64  mode sync
+['sudo', './microbench', '-d', '/mnt/ssd/josehu/microbench_dir', '-f', '64', '-n', '64', '-r', '65536', '--write', '-s', '134217728', '-a', 'basic', '--tr', '10000', '--wr', '1000']
+Time elapsed stat:
+  count   10000
+  avg_us  920.762
+  max_us  1459.352
+  min_us  893.427
+  stddev  44.791
+
+Exper: req_size 65536  #reqs 4  mode thread_pool_unbounded
+['sudo', './microbench', '-d', '/mnt/ssd/josehu/microbench_dir', '-f', '64', '-n', '4', '-r', '65536', '--write', '-s', '134217728', '-a', 'thread_pool', '-t', '4', '--tr', '10000', '--wr', '1000']
+Time elapsed stat:
+  count   10000
+  avg_us  57.757
+  max_us  427.586
+  min_us  40.956
+  stddev  14.205
+
+Exper: req_size 65536  #reqs 8  mode thread_pool_unbounded
+['sudo', './microbench', '-d', '/mnt/ssd/josehu/microbench_dir', '-f', '64', '-n', '8', '-r', '65536', '--write', '-s', '134217728', '-a', 'thread_pool', '-t', '8', '--tr', '10000', '--wr', '1000']
+Time elapsed stat:
+  count   10000
+  avg_us  86.357
+  max_us  521.995
+  min_us  71.852
+  stddev  12.632
+
+Exper: req_size 65536  #reqs 12  mode thread_pool_unbounded
+['sudo', './microbench', '-d', '/mnt/ssd/josehu/microbench_dir', '-f', '64', '-n', '12', '-r', '65536', '--write', '-s', '134217728', '-a', 'thread_pool', '-t', '12', '--tr', '10000', '--wr', '1000']
+Time elapsed stat:
+  count   10000
+  avg_us  114.173
+  max_us  412.063
+  min_us  98.137
+  stddev  14.928
+
+Exper: req_size 65536  #reqs 16  mode thread_pool_unbounded
+['sudo', './microbench', '-d', '/mnt/ssd/josehu/microbench_dir', '-f', '64', '-n', '16', '-r', '65536', '--write', '-s', '134217728', '-a', 'thread_pool', '-t', '16', '--tr', '10000', '--wr', '1000']
+Time elapsed stat:
+  count   10000
+  avg_us  177.495
+  max_us  563.899
+  min_us  141.732
+  stddev  20.759
+
+Exper: req_size 65536  #reqs 20  mode thread_pool_unbounded
+['sudo', './microbench', '-d', '/mnt/ssd/josehu/microbench_dir', '-f', '64', '-n', '20', '-r', '65536', '--write', '-s', '134217728', '-a', 'thread_pool', '-t', '20', '--tr', '10000', '--wr', '1000']
+Time elapsed stat:
+  count   10000
+  avg_us  196.700
+  max_us  533.696
+  min_us  167.338
+  stddev  21.670
+
+Exper: req_size 65536  #reqs 24  mode thread_pool_unbounded
+['sudo', './microbench', '-d', '/mnt/ssd/josehu/microbench_dir', '-f', '64', '-n', '24', '-r', '65536', '--write', '-s', '134217728', '-a', 'thread_pool', '-t', '24', '--tr', '10000', '--wr', '1000']
+Time elapsed stat:
+  count   10000
+  avg_us  218.930
+  max_us  574.499
+  min_us  189.615
+  stddev  20.404
+
+Exper: req_size 65536  #reqs 28  mode thread_pool_unbounded
+['sudo', './microbench', '-d', '/mnt/ssd/josehu/microbench_dir', '-f', '64', '-n', '28', '-r', '65536', '--write', '-s', '134217728', '-a', 'thread_pool', '-t', '28', '--tr', '10000', '--wr', '1000']
+Time elapsed stat:
+  count   10000
+  avg_us  245.329
+  max_us  641.268
+  min_us  209.574
+  stddev  22.400
+
+Exper: req_size 65536  #reqs 32  mode thread_pool_unbounded
+['sudo', './microbench', '-d', '/mnt/ssd/josehu/microbench_dir', '-f', '64', '-n', '32', '-r', '65536', '--write', '-s', '134217728', '-a', 'thread_pool', '-t', '32', '--tr', '10000', '--wr', '1000']
+Time elapsed stat:
+  count   10000
+  avg_us  279.098
+  max_us  677.511
+  min_us  239.968
+  stddev  24.318
+
+Exper: req_size 65536  #reqs 36  mode thread_pool_unbounded
+['sudo', './microbench', '-d', '/mnt/ssd/josehu/microbench_dir', '-f', '64', '-n', '36', '-r', '65536', '--write', '-s', '134217728', '-a', 'thread_pool', '-t', '36', '--tr', '10000', '--wr', '1000']
+Time elapsed stat:
+  count   10000
+  avg_us  301.979
+  max_us  951.811
+  min_us  263.476
+  stddev  26.400
+
+Exper: req_size 65536  #reqs 40  mode thread_pool_unbounded
+['sudo', './microbench', '-d', '/mnt/ssd/josehu/microbench_dir', '-f', '64', '-n', '40', '-r', '65536', '--write', '-s', '134217728', '-a', 'thread_pool', '-t', '40', '--tr', '10000', '--wr', '1000']
+Time elapsed stat:
+  count   10000
+  avg_us  320.355
+  max_us  735.997
+  min_us  284.789
+  stddev  25.427
+
+Exper: req_size 65536  #reqs 44  mode thread_pool_unbounded
+['sudo', './microbench', '-d', '/mnt/ssd/josehu/microbench_dir', '-f', '64', '-n', '44', '-r', '65536', '--write', '-s', '134217728', '-a', 'thread_pool', '-t', '44', '--tr', '10000', '--wr', '1000']
+Time elapsed stat:
+  count   10000
+  avg_us  345.513
+  max_us  687.264
+  min_us  302.568
+  stddev  27.077
+
+Exper: req_size 65536  #reqs 48  mode thread_pool_unbounded
+['sudo', './microbench', '-d', '/mnt/ssd/josehu/microbench_dir', '-f', '64', '-n', '48', '-r', '65536', '--write', '-s', '134217728', '-a', 'thread_pool', '-t', '48', '--tr', '10000', '--wr', '1000']
+Time elapsed stat:
+  count   10000
+  avg_us  374.307
+  max_us  747.628
+  min_us  326.368
+  stddev  27.920
+
+Exper: req_size 65536  #reqs 52  mode thread_pool_unbounded
+['sudo', './microbench', '-d', '/mnt/ssd/josehu/microbench_dir', '-f', '64', '-n', '52', '-r', '65536', '--write', '-s', '134217728', '-a', 'thread_pool', '-t', '52', '--tr', '10000', '--wr', '1000']
+Time elapsed stat:
+  count   10000
+  avg_us  399.575
+  max_us  765.320
+  min_us  353.603
+  stddev  29.080
+
+Exper: req_size 65536  #reqs 56  mode thread_pool_unbounded
+['sudo', './microbench', '-d', '/mnt/ssd/josehu/microbench_dir', '-f', '64', '-n', '56', '-r', '65536', '--write', '-s', '134217728', '-a', 'thread_pool', '-t', '56', '--tr', '10000', '--wr', '1000']
+Time elapsed stat:
+  count   10000
+  avg_us  421.172
+  max_us  1193.009
+  min_us  376.372
+  stddev  31.068
+
+Exper: req_size 65536  #reqs 60  mode thread_pool_unbounded
+['sudo', './microbench', '-d', '/mnt/ssd/josehu/microbench_dir', '-f', '64', '-n', '60', '-r', '65536', '--write', '-s', '134217728', '-a', 'thread_pool', '-t', '60', '--tr', '10000', '--wr', '1000']
+Time elapsed stat:
+  count   10000
+  avg_us  443.997
+  max_us  829.451
+  min_us  394.665
+  stddev  30.079
+
+Exper: req_size 65536  #reqs 64  mode thread_pool_unbounded
+['sudo', './microbench', '-d', '/mnt/ssd/josehu/microbench_dir', '-f', '64', '-n', '64', '-r', '65536', '--write', '-s', '134217728', '-a', 'thread_pool', '-t', '64', '--tr', '10000', '--wr', '1000']
+Time elapsed stat:
+  count   10000
+  avg_us  475.007
+  max_us  1292.346
+  min_us  424.127
+  stddev  32.876
+
+Exper: req_size 65536  #reqs 4  mode thread_pool_nproc
+['sudo', './microbench', '-d', '/mnt/ssd/josehu/microbench_dir', '-f', '64', '-n', '4', '-r', '65536', '--write', '-s', '134217728', '-a', 'thread_pool', '-t', '4', '--tr', '10000', '--wr', '1000']
+Time elapsed stat:
+  count   10000
+  avg_us  55.745
+  max_us  523.492
+  min_us  44.055
+  stddev  13.776
+
+Exper: req_size 65536  #reqs 8  mode thread_pool_nproc
+['sudo', './microbench', '-d', '/mnt/ssd/josehu/microbench_dir', '-f', '64', '-n', '8', '-r', '65536', '--write', '-s', '134217728', '-a', 'thread_pool', '-t', '8', '--tr', '10000', '--wr', '1000']
+Time elapsed stat:
+  count   10000
+  avg_us  85.731
+  max_us  489.799
+  min_us  72.626
+  stddev  13.675
+
+Exper: req_size 65536  #reqs 12  mode thread_pool_nproc
+['sudo', './microbench', '-d', '/mnt/ssd/josehu/microbench_dir', '-f', '64', '-n', '12', '-r', '65536', '--write', '-s', '134217728', '-a', 'thread_pool', '-t', '12', '--tr', '10000', '--wr', '1000']
+Time elapsed stat:
+  count   10000
+  avg_us  116.163
+  max_us  391.241
+  min_us  97.882
+  stddev  13.821
+
+Exper: req_size 65536  #reqs 16  mode thread_pool_nproc
+['sudo', './microbench', '-d', '/mnt/ssd/josehu/microbench_dir', '-f', '64', '-n', '16', '-r', '65536', '--write', '-s', '134217728', '-a', 'thread_pool', '-t', '16', '--tr', '10000', '--wr', '1000']
+Time elapsed stat:
+  count   10000
+  avg_us  175.979
+  max_us  502.492
+  min_us  140.816
+  stddev  20.867
+
+Exper: req_size 65536  #reqs 20  mode thread_pool_nproc
+['sudo', './microbench', '-d', '/mnt/ssd/josehu/microbench_dir', '-f', '64', '-n', '20', '-r', '65536', '--write', '-s', '134217728', '-a', 'thread_pool', '-t', '16', '--tr', '10000', '--wr', '1000']
+Time elapsed stat:
+  count   10000
+  avg_us  188.428
+  max_us  553.406
+  min_us  152.431
+  stddev  22.339
+
+Exper: req_size 65536  #reqs 24  mode thread_pool_nproc
+['sudo', './microbench', '-d', '/mnt/ssd/josehu/microbench_dir', '-f', '64', '-n', '24', '-r', '65536', '--write', '-s', '134217728', '-a', 'thread_pool', '-t', '16', '--tr', '10000', '--wr', '1000']
+Time elapsed stat:
+  count   10000
+  avg_us  211.235
+  max_us  583.001
+  min_us  160.578
+  stddev  24.972
+
+Exper: req_size 65536  #reqs 28  mode thread_pool_nproc
+['sudo', './microbench', '-d', '/mnt/ssd/josehu/microbench_dir', '-f', '64', '-n', '28', '-r', '65536', '--write', '-s', '134217728', '-a', 'thread_pool', '-t', '16', '--tr', '10000', '--wr', '1000']
+Time elapsed stat:
+  count   10000
+  avg_us  229.221
+  max_us  621.289
+  min_us  177.778
+  stddev  25.378
+
+Exper: req_size 65536  #reqs 32  mode thread_pool_nproc
+['sudo', './microbench', '-d', '/mnt/ssd/josehu/microbench_dir', '-f', '64', '-n', '32', '-r', '65536', '--write', '-s', '134217728', '-a', 'thread_pool', '-t', '16', '--tr', '10000', '--wr', '1000']
+Time elapsed stat:
+  count   10000
+  avg_us  237.350
+  max_us  584.010
+  min_us  193.715
+  stddev  24.239
+
+Exper: req_size 65536  #reqs 36  mode thread_pool_nproc
+['sudo', './microbench', '-d', '/mnt/ssd/josehu/microbench_dir', '-f', '64', '-n', '36', '-r', '65536', '--write', '-s', '134217728', '-a', 'thread_pool', '-t', '16', '--tr', '10000', '--wr', '1000']
+Time elapsed stat:
+  count   10000
+  avg_us  249.913
+  max_us  981.226
+  min_us  203.848
+  stddev  27.276
+
+Exper: req_size 65536  #reqs 40  mode thread_pool_nproc
+['sudo', './microbench', '-d', '/mnt/ssd/josehu/microbench_dir', '-f', '64', '-n', '40', '-r', '65536', '--write', '-s', '134217728', '-a', 'thread_pool', '-t', '16', '--tr', '10000', '--wr', '1000']
+Time elapsed stat:
+  count   10000
+  avg_us  275.282
+  max_us  680.510
+  min_us  226.561
+  stddev  30.291
+
+Exper: req_size 65536  #reqs 44  mode thread_pool_nproc
+['sudo', './microbench', '-d', '/mnt/ssd/josehu/microbench_dir', '-f', '64', '-n', '44', '-r', '65536', '--write', '-s', '134217728', '-a', 'thread_pool', '-t', '16', '--tr', '10000', '--wr', '1000']
+Time elapsed stat:
+  count   10000
+  avg_us  295.200
+  max_us  658.370
+  min_us  242.564
+  stddev  32.160
+
+Exper: req_size 65536  #reqs 48  mode thread_pool_nproc
+['sudo', './microbench', '-d', '/mnt/ssd/josehu/microbench_dir', '-f', '64', '-n', '48', '-r', '65536', '--write', '-s', '134217728', '-a', 'thread_pool', '-t', '16', '--tr', '10000', '--wr', '1000']
+Time elapsed stat:
+  count   10000
+  avg_us  294.293
+  max_us  602.559
+  min_us  233.635
+  stddev  33.054
+
+Exper: req_size 65536  #reqs 52  mode thread_pool_nproc
+['sudo', './microbench', '-d', '/mnt/ssd/josehu/microbench_dir', '-f', '64', '-n', '52', '-r', '65536', '--write', '-s', '134217728', '-a', 'thread_pool', '-t', '16', '--tr', '10000', '--wr', '1000']
+Time elapsed stat:
+  count   10000
+  avg_us  306.449
+  max_us  639.047
+  min_us  251.186
+  stddev  35.257
+
+Exper: req_size 65536  #reqs 56  mode thread_pool_nproc
+['sudo', './microbench', '-d', '/mnt/ssd/josehu/microbench_dir', '-f', '64', '-n', '56', '-r', '65536', '--write', '-s', '134217728', '-a', 'thread_pool', '-t', '16', '--tr', '10000', '--wr', '1000']
+Time elapsed stat:
+  count   10000
+  avg_us  319.699
+  max_us  656.522
+  min_us  266.586
+  stddev  34.657
+
+Exper: req_size 65536  #reqs 60  mode thread_pool_nproc
+['sudo', './microbench', '-d', '/mnt/ssd/josehu/microbench_dir', '-f', '64', '-n', '60', '-r', '65536', '--write', '-s', '134217728', '-a', 'thread_pool', '-t', '16', '--tr', '10000', '--wr', '1000']
+Time elapsed stat:
+  count   10000
+  avg_us  365.182
+  max_us  983.994
+  min_us  284.941
+  stddev  43.258
+
+Exper: req_size 65536  #reqs 64  mode thread_pool_nproc
+['sudo', './microbench', '-d', '/mnt/ssd/josehu/microbench_dir', '-f', '64', '-n', '64', '-r', '65536', '--write', '-s', '134217728', '-a', 'thread_pool', '-t', '16', '--tr', '10000', '--wr', '1000']
+Time elapsed stat:
+  count   10000
+  avg_us  358.916
+  max_us  701.842
+  min_us  283.350
+  stddev  39.267
+
+Exper: req_size 65536  #reqs 4  mode thread_pool_4xsocks
+['sudo', './microbench', '-d', '/mnt/ssd/josehu/microbench_dir', '-f', '64', '-n', '4', '-r', '65536', '--write', '-s', '134217728', '-a', 'thread_pool', '-t', '4', '--tr', '10000', '--wr', '1000']
+Time elapsed stat:
+  count   10000
+  avg_us  53.748
+  max_us  450.200
+  min_us  40.331
+  stddev  14.453
+
+Exper: req_size 65536  #reqs 8  mode thread_pool_4xsocks
+['sudo', './microbench', '-d', '/mnt/ssd/josehu/microbench_dir', '-f', '64', '-n', '8', '-r', '65536', '--write', '-s', '134217728', '-a', 'thread_pool', '-t', '8', '--tr', '10000', '--wr', '1000']
+Time elapsed stat:
+  count   10000
+  avg_us  79.852
+  max_us  398.530
+  min_us  68.472
+  stddev  10.314
+
+Exper: req_size 65536  #reqs 12  mode thread_pool_4xsocks
+['sudo', './microbench', '-d', '/mnt/ssd/josehu/microbench_dir', '-f', '64', '-n', '12', '-r', '65536', '--write', '-s', '134217728', '-a', 'thread_pool', '-t', '8', '--tr', '10000', '--wr', '1000']
+Time elapsed stat:
+  count   10000
+  avg_us  107.157
+  max_us  513.100
+  min_us  93.203
+  stddev  15.929
+
+Exper: req_size 65536  #reqs 16  mode thread_pool_4xsocks
+['sudo', './microbench', '-d', '/mnt/ssd/josehu/microbench_dir', '-f', '64', '-n', '16', '-r', '65536', '--write', '-s', '134217728', '-a', 'thread_pool', '-t', '8', '--tr', '10000', '--wr', '1000']
+Time elapsed stat:
+  count   10000
+  avg_us  128.757
+  max_us  385.929
+  min_us  112.711
+  stddev  12.974
+
+Exper: req_size 65536  #reqs 20  mode thread_pool_4xsocks
+['sudo', './microbench', '-d', '/mnt/ssd/josehu/microbench_dir', '-f', '64', '-n', '20', '-r', '65536', '--write', '-s', '134217728', '-a', 'thread_pool', '-t', '8', '--tr', '10000', '--wr', '1000']
+Time elapsed stat:
+  count   10000
+  avg_us  149.635
+  max_us  555.409
+  min_us  132.671
+  stddev  16.318
+
+Exper: req_size 65536  #reqs 24  mode thread_pool_4xsocks
+['sudo', './microbench', '-d', '/mnt/ssd/josehu/microbench_dir', '-f', '64', '-n', '24', '-r', '65536', '--write', '-s', '134217728', '-a', 'thread_pool', '-t', '8', '--tr', '10000', '--wr', '1000']
+Time elapsed stat:
+  count   10000
+  avg_us  161.776
+  max_us  561.569
+  min_us  137.180
+  stddev  19.997
+
+Exper: req_size 65536  #reqs 28  mode thread_pool_4xsocks
+['sudo', './microbench', '-d', '/mnt/ssd/josehu/microbench_dir', '-f', '64', '-n', '28', '-r', '65536', '--write', '-s', '134217728', '-a', 'thread_pool', '-t', '8', '--tr', '10000', '--wr', '1000']
+Time elapsed stat:
+  count   10000
+  avg_us  186.706
+  max_us  576.042
+  min_us  153.447
+  stddev  23.102
+
+Exper: req_size 65536  #reqs 32  mode thread_pool_4xsocks
+['sudo', './microbench', '-d', '/mnt/ssd/josehu/microbench_dir', '-f', '64', '-n', '32', '-r', '65536', '--write', '-s', '134217728', '-a', 'thread_pool', '-t', '8', '--tr', '10000', '--wr', '1000']
+Time elapsed stat:
+  count   10000
+  avg_us  205.940
+  max_us  599.206
+  min_us  173.310
+  stddev  28.640
+
+Exper: req_size 65536  #reqs 36  mode thread_pool_4xsocks
+['sudo', './microbench', '-d', '/mnt/ssd/josehu/microbench_dir', '-f', '64', '-n', '36', '-r', '65536', '--write', '-s', '134217728', '-a', 'thread_pool', '-t', '8', '--tr', '10000', '--wr', '1000']
+Time elapsed stat:
+  count   10000
+  avg_us  230.723
+  max_us  680.579
+  min_us  191.233
+  stddev  27.970
+
+Exper: req_size 65536  #reqs 40  mode thread_pool_4xsocks
+['sudo', './microbench', '-d', '/mnt/ssd/josehu/microbench_dir', '-f', '64', '-n', '40', '-r', '65536', '--write', '-s', '134217728', '-a', 'thread_pool', '-t', '8', '--tr', '10000', '--wr', '1000']
+Time elapsed stat:
+  count   10000
+  avg_us  234.666
+  max_us  630.225
+  min_us  197.670
+  stddev  34.020
+
+Exper: req_size 65536  #reqs 44  mode thread_pool_4xsocks
+['sudo', './microbench', '-d', '/mnt/ssd/josehu/microbench_dir', '-f', '64', '-n', '44', '-r', '65536', '--write', '-s', '134217728', '-a', 'thread_pool', '-t', '8', '--tr', '10000', '--wr', '1000']
+Time elapsed stat:
+  count   10000
+  avg_us  253.338
+  max_us  582.189
+  min_us  218.136
+  stddev  29.924
+
+Exper: req_size 65536  #reqs 48  mode thread_pool_4xsocks
+['sudo', './microbench', '-d', '/mnt/ssd/josehu/microbench_dir', '-f', '64', '-n', '48', '-r', '65536', '--write', '-s', '134217728', '-a', 'thread_pool', '-t', '8', '--tr', '10000', '--wr', '1000']
+Time elapsed stat:
+  count   10000
+  avg_us  276.301
+  max_us  674.039
+  min_us  231.022
+  stddev  36.093
+
+Exper: req_size 65536  #reqs 52  mode thread_pool_4xsocks
+['sudo', './microbench', '-d', '/mnt/ssd/josehu/microbench_dir', '-f', '64', '-n', '52', '-r', '65536', '--write', '-s', '134217728', '-a', 'thread_pool', '-t', '8', '--tr', '10000', '--wr', '1000']
+Time elapsed stat:
+  count   10000
+  avg_us  303.288
+  max_us  759.425
+  min_us  254.332
+  stddev  38.536
+
+Exper: req_size 65536  #reqs 56  mode thread_pool_4xsocks
+['sudo', './microbench', '-d', '/mnt/ssd/josehu/microbench_dir', '-f', '64', '-n', '56', '-r', '65536', '--write', '-s', '134217728', '-a', 'thread_pool', '-t', '8', '--tr', '10000', '--wr', '1000']
+Time elapsed stat:
+  count   10000
+  avg_us  347.769
+  max_us  775.437
+  min_us  275.621
+  stddev  51.901
+
+Exper: req_size 65536  #reqs 60  mode thread_pool_4xsocks
+['sudo', './microbench', '-d', '/mnt/ssd/josehu/microbench_dir', '-f', '64', '-n', '60', '-r', '65536', '--write', '-s', '134217728', '-a', 'thread_pool', '-t', '8', '--tr', '10000', '--wr', '1000']
+Time elapsed stat:
+  count   10000
+  avg_us  341.799
+  max_us  802.050
+  min_us  290.293
+  stddev  48.112
+
+Exper: req_size 65536  #reqs 64  mode thread_pool_4xsocks
+['sudo', './microbench', '-d', '/mnt/ssd/josehu/microbench_dir', '-f', '64', '-n', '64', '-r', '65536', '--write', '-s', '134217728', '-a', 'thread_pool', '-t', '8', '--tr', '10000', '--wr', '1000']
+Time elapsed stat:
+  count   10000
+  avg_us  361.464
+  max_us  875.873
+  min_us  297.003
+  stddev  48.883
+
+Exper: req_size 65536  #reqs 4  mode io_uring_default
+['sudo', './microbench', '-d', '/mnt/ssd/josehu/microbench_dir', '-f', '64', '-n', '4', '-r', '65536', '--write', '-s', '134217728', '-a', 'io_uring', '--tr', '10000', '--wr', '1000']
+Time elapsed stat:
+  count   10000
+  avg_us  93.492
+  max_us  464.716
+  min_us  65.015
+  stddev  44.128
+
+Exper: req_size 65536  #reqs 8  mode io_uring_default
+['sudo', './microbench', '-d', '/mnt/ssd/josehu/microbench_dir', '-f', '64', '-n', '8', '-r', '65536', '--write', '-s', '134217728', '-a', 'io_uring', '--tr', '10000', '--wr', '1000']
+Time elapsed stat:
+  count   10000
+  avg_us  195.311
+  max_us  844.540
+  min_us  154.166
+  stddev  69.415
+
+Exper: req_size 65536  #reqs 12  mode io_uring_default
+['sudo', './microbench', '-d', '/mnt/ssd/josehu/microbench_dir', '-f', '64', '-n', '12', '-r', '65536', '--write', '-s', '134217728', '-a', 'io_uring', '--tr', '10000', '--wr', '1000']
+Time elapsed stat:
+  count   10000
+  avg_us  268.893
+  max_us  901.178
+  min_us  187.635
+  stddev  69.874
+
+Exper: req_size 65536  #reqs 16  mode io_uring_default
+['sudo', './microbench', '-d', '/mnt/ssd/josehu/microbench_dir', '-f', '64', '-n', '16', '-r', '65536', '--write', '-s', '134217728', '-a', 'io_uring', '--tr', '10000', '--wr', '1000']
+Time elapsed stat:
+  count   10000
+  avg_us  314.193
+  max_us  1034.592
+  min_us  249.074
+  stddev  69.822
+
+Exper: req_size 65536  #reqs 20  mode io_uring_default
+['sudo', './microbench', '-d', '/mnt/ssd/josehu/microbench_dir', '-f', '64', '-n', '20', '-r', '65536', '--write', '-s', '134217728', '-a', 'io_uring', '--tr', '10000', '--wr', '1000']
+Time elapsed stat:
+  count   10000
+  avg_us  359.121
+  max_us  1064.788
+  min_us  304.625
+  stddev  85.463
+
+Exper: req_size 65536  #reqs 24  mode io_uring_default
+['sudo', './microbench', '-d', '/mnt/ssd/josehu/microbench_dir', '-f', '64', '-n', '24', '-r', '65536', '--write', '-s', '134217728', '-a', 'io_uring', '--tr', '10000', '--wr', '1000']
+Time elapsed stat:
+  count   10000
+  avg_us  384.871
+  max_us  823.672
+  min_us  366.703
+  stddev  25.612
+
+Exper: req_size 65536  #reqs 28  mode io_uring_default
+['sudo', './microbench', '-d', '/mnt/ssd/josehu/microbench_dir', '-f', '64', '-n', '28', '-r', '65536', '--write', '-s', '134217728', '-a', 'io_uring', '--tr', '10000', '--wr', '1000']
+Time elapsed stat:
+  count   10000
+  avg_us  474.459
+  max_us  1334.570
+  min_us  429.017
+  stddev  61.209
+
+Exper: req_size 65536  #reqs 32  mode io_uring_default
+['sudo', './microbench', '-d', '/mnt/ssd/josehu/microbench_dir', '-f', '64', '-n', '32', '-r', '65536', '--write', '-s', '134217728', '-a', 'io_uring', '--tr', '10000', '--wr', '1000']
+Time elapsed stat:
+  count   10000
+  avg_us  542.272
+  max_us  1621.120
+  min_us  492.113
+  stddev  88.895
+
+Exper: req_size 65536  #reqs 36  mode io_uring_default
+['sudo', './microbench', '-d', '/mnt/ssd/josehu/microbench_dir', '-f', '64', '-n', '36', '-r', '65536', '--write', '-s', '134217728', '-a', 'io_uring', '--tr', '10000', '--wr', '1000']
+Time elapsed stat:
+  count   10000
+  avg_us  613.936
+  max_us  2030.922
+  min_us  547.061
+  stddev  130.073
+
+Exper: req_size 65536  #reqs 40  mode io_uring_default
+['sudo', './microbench', '-d', '/mnt/ssd/josehu/microbench_dir', '-f', '64', '-n', '40', '-r', '65536', '--write', '-s', '134217728', '-a', 'io_uring', '--tr', '10000', '--wr', '1000']
+Time elapsed stat:
+  count   10000
+  avg_us  685.385
+  max_us  2068.535
+  min_us  609.359
+  stddev  130.623
+
+Exper: req_size 65536  #reqs 44  mode io_uring_default
+['sudo', './microbench', '-d', '/mnt/ssd/josehu/microbench_dir', '-f', '64', '-n', '44', '-r', '65536', '--write', '-s', '134217728', '-a', 'io_uring', '--tr', '10000', '--wr', '1000']
+Time elapsed stat:
+  count   10000
+  avg_us  761.801
+  max_us  2391.486
+  min_us  676.330
+  stddev  166.268
+
+Exper: req_size 65536  #reqs 48  mode io_uring_default
+['sudo', './microbench', '-d', '/mnt/ssd/josehu/microbench_dir', '-f', '64', '-n', '48', '-r', '65536', '--write', '-s', '134217728', '-a', 'io_uring', '--tr', '10000', '--wr', '1000']
+Time elapsed stat:
+  count   10000
+  avg_us  848.274
+  max_us  2707.134
+  min_us  679.331
+  stddev  170.726
+
+Exper: req_size 65536  #reqs 52  mode io_uring_default
+['sudo', './microbench', '-d', '/mnt/ssd/josehu/microbench_dir', '-f', '64', '-n', '52', '-r', '65536', '--write', '-s', '134217728', '-a', 'io_uring', '--tr', '10000', '--wr', '1000']
+Time elapsed stat:
+  count   10000
+  avg_us  872.732
+  max_us  2672.532
+  min_us  746.029
+  stddev  154.011
+
+Exper: req_size 65536  #reqs 56  mode io_uring_default
+['sudo', './microbench', '-d', '/mnt/ssd/josehu/microbench_dir', '-f', '64', '-n', '56', '-r', '65536', '--write', '-s', '134217728', '-a', 'io_uring', '--tr', '10000', '--wr', '1000']
+Time elapsed stat:
+  count   10000
+  avg_us  972.248
+  max_us  2785.052
+  min_us  793.377
+  stddev  153.329
+
+Exper: req_size 65536  #reqs 60  mode io_uring_default
+['sudo', './microbench', '-d', '/mnt/ssd/josehu/microbench_dir', '-f', '64', '-n', '60', '-r', '65536', '--write', '-s', '134217728', '-a', 'io_uring', '--tr', '10000', '--wr', '1000']
+Time elapsed stat:
+  count   10000
+  avg_us  1050.300
+  max_us  3345.021
+  min_us  883.640
+  stddev  220.296
+
+Exper: req_size 65536  #reqs 64  mode io_uring_default
+['sudo', './microbench', '-d', '/mnt/ssd/josehu/microbench_dir', '-f', '64', '-n', '64', '-r', '65536', '--write', '-s', '134217728', '-a', 'io_uring', '--tr', '10000', '--wr', '1000']
+Time elapsed stat:
+  count   10000
+  avg_us  1209.677
+  max_us  3570.465
+  min_us  1016.173
+  stddev  315.578
+
+Exper: req_size 65536  #reqs 4  mode io_uring_sqeasync
+['sudo', './microbench', '-d', '/mnt/ssd/josehu/microbench_dir', '-f', '64', '-n', '4', '-r', '65536', '--write', '-s', '134217728', '-a', 'io_uring', '--iosqe_async', '--tr', '10000', '--wr', '1000']
+Time elapsed stat:
+  count   10000
+  avg_us  144.830
+  max_us  592.564
+  min_us  51.654
+  stddev  50.448
+
+Exper: req_size 65536  #reqs 8  mode io_uring_sqeasync
+['sudo', './microbench', '-d', '/mnt/ssd/josehu/microbench_dir', '-f', '64', '-n', '8', '-r', '65536', '--write', '-s', '134217728', '-a', 'io_uring', '--iosqe_async', '--tr', '10000', '--wr', '1000']
+Time elapsed stat:
+  count   10000
+  avg_us  167.554
+  max_us  672.007
+  min_us  83.712
+  stddev  84.497
+
+Exper: req_size 65536  #reqs 12  mode io_uring_sqeasync
+['sudo', './microbench', '-d', '/mnt/ssd/josehu/microbench_dir', '-f', '64', '-n', '12', '-r', '65536', '--write', '-s', '134217728', '-a', 'io_uring', '--iosqe_async', '--tr', '10000', '--wr', '1000']
+Time elapsed stat:
+  count   10000
+  avg_us  164.862
+  max_us  712.601
+  min_us  93.582
+  stddev  94.931
+
+Exper: req_size 65536  #reqs 16  mode io_uring_sqeasync
+['sudo', './microbench', '-d', '/mnt/ssd/josehu/microbench_dir', '-f', '64', '-n', '16', '-r', '65536', '--write', '-s', '134217728', '-a', 'io_uring', '--iosqe_async', '--tr', '10000', '--wr', '1000']
+Time elapsed stat:
+  count   10000
+  avg_us  175.795
+  max_us  972.206
+  min_us  109.956
+  stddev  94.654
+
+Exper: req_size 65536  #reqs 20  mode io_uring_sqeasync
+['sudo', './microbench', '-d', '/mnt/ssd/josehu/microbench_dir', '-f', '64', '-n', '20', '-r', '65536', '--write', '-s', '134217728', '-a', 'io_uring', '--iosqe_async', '--tr', '10000', '--wr', '1000']
+Time elapsed stat:
+  count   10000
+  avg_us  178.456
+  max_us  1308.148
+  min_us  126.625
+  stddev  82.985
+
+Exper: req_size 65536  #reqs 24  mode io_uring_sqeasync
+['sudo', './microbench', '-d', '/mnt/ssd/josehu/microbench_dir', '-f', '64', '-n', '24', '-r', '65536', '--write', '-s', '134217728', '-a', 'io_uring', '--iosqe_async', '--tr', '10000', '--wr', '1000']
+Time elapsed stat:
+  count   10000
+  avg_us  188.308
+  max_us  1542.150
+  min_us  139.935
+  stddev  77.087
+
+Exper: req_size 65536  #reqs 28  mode io_uring_sqeasync
+['sudo', './microbench', '-d', '/mnt/ssd/josehu/microbench_dir', '-f', '64', '-n', '28', '-r', '65536', '--write', '-s', '134217728', '-a', 'io_uring', '--iosqe_async', '--tr', '10000', '--wr', '1000']
+Time elapsed stat:
+  count   10000
+  avg_us  201.359
+  max_us  1449.235
+  min_us  158.285
+  stddev  72.716
+
+Exper: req_size 65536  #reqs 32  mode io_uring_sqeasync
+['sudo', './microbench', '-d', '/mnt/ssd/josehu/microbench_dir', '-f', '64', '-n', '32', '-r', '65536', '--write', '-s', '134217728', '-a', 'io_uring', '--iosqe_async', '--tr', '10000', '--wr', '1000']
+Time elapsed stat:
+  count   10000
+  avg_us  217.695
+  max_us  1602.993
+  min_us  172.892
+  stddev  69.532
+
+Exper: req_size 65536  #reqs 36  mode io_uring_sqeasync
+['sudo', './microbench', '-d', '/mnt/ssd/josehu/microbench_dir', '-f', '64', '-n', '36', '-r', '65536', '--write', '-s', '134217728', '-a', 'io_uring', '--iosqe_async', '--tr', '10000', '--wr', '1000']
+Time elapsed stat:
+  count   10000
+  avg_us  226.691
+  max_us  1688.904
+  min_us  186.147
+  stddev  58.224
+
+Exper: req_size 65536  #reqs 40  mode io_uring_sqeasync
+['sudo', './microbench', '-d', '/mnt/ssd/josehu/microbench_dir', '-f', '64', '-n', '40', '-r', '65536', '--write', '-s', '134217728', '-a', 'io_uring', '--iosqe_async', '--tr', '10000', '--wr', '1000']
+Time elapsed stat:
+  count   10000
+  avg_us  234.599
+  max_us  1884.254
+  min_us  201.317
+  stddev  48.728
+
+Exper: req_size 65536  #reqs 44  mode io_uring_sqeasync
+['sudo', './microbench', '-d', '/mnt/ssd/josehu/microbench_dir', '-f', '64', '-n', '44', '-r', '65536', '--write', '-s', '134217728', '-a', 'io_uring', '--iosqe_async', '--tr', '10000', '--wr', '1000']
+Time elapsed stat:
+  count   10000
+  avg_us  252.383
+  max_us  2088.420
+  min_us  218.210
+  stddev  56.645
+
+Exper: req_size 65536  #reqs 48  mode io_uring_sqeasync
+['sudo', './microbench', '-d', '/mnt/ssd/josehu/microbench_dir', '-f', '64', '-n', '48', '-r', '65536', '--write', '-s', '134217728', '-a', 'io_uring', '--iosqe_async', '--tr', '10000', '--wr', '1000']
+Time elapsed stat:
+  count   10000
+  avg_us  266.296
+  max_us  1976.841
+  min_us  232.150
+  stddev  40.103
+
+Exper: req_size 65536  #reqs 52  mode io_uring_sqeasync
+['sudo', './microbench', '-d', '/mnt/ssd/josehu/microbench_dir', '-f', '64', '-n', '52', '-r', '65536', '--write', '-s', '134217728', '-a', 'io_uring', '--iosqe_async', '--tr', '10000', '--wr', '1000']
+Time elapsed stat:
+  count   10000
+  avg_us  279.040
+  max_us  2470.091
+  min_us  246.920
+  stddev  53.353
+
+Exper: req_size 65536  #reqs 56  mode io_uring_sqeasync
+['sudo', './microbench', '-d', '/mnt/ssd/josehu/microbench_dir', '-f', '64', '-n', '56', '-r', '65536', '--write', '-s', '134217728', '-a', 'io_uring', '--iosqe_async', '--tr', '10000', '--wr', '1000']
+Time elapsed stat:
+  count   10000
+  avg_us  294.756
+  max_us  1603.899
+  min_us  263.533
+  stddev  35.494
+
+Exper: req_size 65536  #reqs 60  mode io_uring_sqeasync
+['sudo', './microbench', '-d', '/mnt/ssd/josehu/microbench_dir', '-f', '64', '-n', '60', '-r', '65536', '--write', '-s', '134217728', '-a', 'io_uring', '--iosqe_async', '--tr', '10000', '--wr', '1000']
+Time elapsed stat:
+  count   10000
+  avg_us  311.923
+  max_us  2284.011
+  min_us  280.022
+  stddev  56.087
+
+Exper: req_size 65536  #reqs 64  mode io_uring_sqeasync
+['sudo', './microbench', '-d', '/mnt/ssd/josehu/microbench_dir', '-f', '64', '-n', '64', '-r', '65536', '--write', '-s', '134217728', '-a', 'io_uring', '--iosqe_async', '--tr', '10000', '--wr', '1000']
+Time elapsed stat:
+  count   10000
+  avg_us  329.061
+  max_us  1753.703
+  min_us  296.416
+  stddev  61.193
+
+Exper: req_size 65536  #reqs 4  mode io_uring_sqpoll
+['sudo', './microbench', '-d', '/mnt/ssd/josehu/microbench_dir', '-f', '64', '-n', '4', '-r', '65536', '--write', '-s', '134217728', '-a', 'io_uring', '--fixed_file', '--sq_poll', '--tr', '10000', '--wr', '1000']
+kernel thread io_uring-sq NOT running.
+kernel thread io_uring-sq is running...
+Time elapsed stat:
+  count   10000
+  avg_us  124.221
+  max_us  450.107
+  min_us  78.699
+  stddev  50.080
+
+Exper: req_size 65536  #reqs 8  mode io_uring_sqpoll
+['sudo', './microbench', '-d', '/mnt/ssd/josehu/microbench_dir', '-f', '64', '-n', '8', '-r', '65536', '--write', '-s', '134217728', '-a', 'io_uring', '--fixed_file', '--sq_poll', '--tr', '10000', '--wr', '1000']
+kernel thread io_uring-sq NOT running.
+kernel thread io_uring-sq is running...
+Time elapsed stat:
+  count   10000
+  avg_us  182.479
+  max_us  646.613
+  min_us  128.459
+  stddev  70.348
+
+Exper: req_size 65536  #reqs 12  mode io_uring_sqpoll
+['sudo', './microbench', '-d', '/mnt/ssd/josehu/microbench_dir', '-f', '64', '-n', '12', '-r', '65536', '--write', '-s', '134217728', '-a', 'io_uring', '--fixed_file', '--sq_poll', '--tr', '10000', '--wr', '1000']
+kernel thread io_uring-sq NOT running.
+kernel thread io_uring-sq is running...
+Time elapsed stat:
+  count   10000
+  avg_us  232.740
+  max_us  647.284
+  min_us  169.389
+  stddev  47.914
+
+Exper: req_size 65536  #reqs 16  mode io_uring_sqpoll
+['sudo', './microbench', '-d', '/mnt/ssd/josehu/microbench_dir', '-f', '64', '-n', '16', '-r', '65536', '--write', '-s', '134217728', '-a', 'io_uring', '--fixed_file', '--sq_poll', '--tr', '10000', '--wr', '1000']
+kernel thread io_uring-sq NOT running.
+kernel thread io_uring-sq is running...
+Time elapsed stat:
+  count   10000
+  avg_us  309.685
+  max_us  1016.433
+  min_us  249.200
+  stddev  92.088
+
+Exper: req_size 65536  #reqs 20  mode io_uring_sqpoll
+['sudo', './microbench', '-d', '/mnt/ssd/josehu/microbench_dir', '-f', '64', '-n', '20', '-r', '65536', '--write', '-s', '134217728', '-a', 'io_uring', '--fixed_file', '--sq_poll', '--tr', '10000', '--wr', '1000']
+kernel thread io_uring-sq NOT running.
+kernel thread io_uring-sq is running...
+Time elapsed stat:
+  count   10000
+  avg_us  340.510
+  max_us  1063.588
+  min_us  309.204
+  stddev  65.398
+
+Exper: req_size 65536  #reqs 24  mode io_uring_sqpoll
+['sudo', './microbench', '-d', '/mnt/ssd/josehu/microbench_dir', '-f', '64', '-n', '24', '-r', '65536', '--write', '-s', '134217728', '-a', 'io_uring', '--fixed_file', '--sq_poll', '--tr', '10000', '--wr', '1000']
+kernel thread io_uring-sq NOT running.
+kernel thread io_uring-sq is running...
+Time elapsed stat:
+  count   10000
+  avg_us  390.270
+  max_us  861.950
+  min_us  369.658
+  stddev  31.251
+
+Exper: req_size 65536  #reqs 28  mode io_uring_sqpoll
+['sudo', './microbench', '-d', '/mnt/ssd/josehu/microbench_dir', '-f', '64', '-n', '28', '-r', '65536', '--write', '-s', '134217728', '-a', 'io_uring', '--fixed_file', '--sq_poll', '--tr', '10000', '--wr', '1000']
+kernel thread io_uring-sq NOT running.
+kernel thread io_uring-sq is running...
+Time elapsed stat:
+  count   10000
+  avg_us  497.395
+  max_us  1432.368
+  min_us  428.716
+  stddev  107.560
+
+Exper: req_size 65536  #reqs 32  mode io_uring_sqpoll
+['sudo', './microbench', '-d', '/mnt/ssd/josehu/microbench_dir', '-f', '64', '-n', '32', '-r', '65536', '--write', '-s', '134217728', '-a', 'io_uring', '--fixed_file', '--sq_poll', '--tr', '10000', '--wr', '1000']
+kernel thread io_uring-sq NOT running.
+kernel thread io_uring-sq is running...
+Time elapsed stat:
+  count   10000
+  avg_us  633.901
+  max_us  1870.373
+  min_us  488.772
+  stddev  252.143
+
+Exper: req_size 65536  #reqs 36  mode io_uring_sqpoll
+['sudo', './microbench', '-d', '/mnt/ssd/josehu/microbench_dir', '-f', '64', '-n', '36', '-r', '65536', '--write', '-s', '134217728', '-a', 'io_uring', '--fixed_file', '--sq_poll', '--tr', '10000', '--wr', '1000']
+kernel thread io_uring-sq NOT running.
+kernel thread io_uring-sq is running...
+Time elapsed stat:
+  count   10000
+  avg_us  573.680
+  max_us  1052.289
+  min_us  548.795
+  stddev  33.933
+
+Exper: req_size 65536  #reqs 40  mode io_uring_sqpoll
+['sudo', './microbench', '-d', '/mnt/ssd/josehu/microbench_dir', '-f', '64', '-n', '40', '-r', '65536', '--write', '-s', '134217728', '-a', 'io_uring', '--fixed_file', '--sq_poll', '--tr', '10000', '--wr', '1000']
+kernel thread io_uring-sq NOT running.
+kernel thread io_uring-sq is running...
+Time elapsed stat:
+  count   10000
+  avg_us  671.674
+  max_us  2226.567
+  min_us  613.406
+  stddev  135.657
+
+Exper: req_size 65536  #reqs 44  mode io_uring_sqpoll
+['sudo', './microbench', '-d', '/mnt/ssd/josehu/microbench_dir', '-f', '64', '-n', '44', '-r', '65536', '--write', '-s', '134217728', '-a', 'io_uring', '--fixed_file', '--sq_poll', '--tr', '10000', '--wr', '1000']
+kernel thread io_uring-sq NOT running.
+kernel thread io_uring-sq is running...
+Time elapsed stat:
+  count   10000
+  avg_us  761.217
+  max_us  2175.180
+  min_us  672.595
+  stddev  127.927
+
+Exper: req_size 65536  #reqs 48  mode io_uring_sqpoll
+['sudo', './microbench', '-d', '/mnt/ssd/josehu/microbench_dir', '-f', '64', '-n', '48', '-r', '65536', '--write', '-s', '134217728', '-a', 'io_uring', '--fixed_file', '--sq_poll', '--tr', '10000', '--wr', '1000']
+kernel thread io_uring-sq NOT running.
+kernel thread io_uring-sq is running...
+Time elapsed stat:
+  count   10000
+  avg_us  795.882
+  max_us  2572.909
+  min_us  651.637
+  stddev  111.785
+
+Exper: req_size 65536  #reqs 52  mode io_uring_sqpoll
+['sudo', './microbench', '-d', '/mnt/ssd/josehu/microbench_dir', '-f', '64', '-n', '52', '-r', '65536', '--write', '-s', '134217728', '-a', 'io_uring', '--fixed_file', '--sq_poll', '--tr', '10000', '--wr', '1000']
+kernel thread io_uring-sq NOT running.
+kernel thread io_uring-sq is running...
+Time elapsed stat:
+  count   10000
+  avg_us  845.200
+  max_us  1209.976
+  min_us  777.589
+  stddev  35.977
+
+Exper: req_size 65536  #reqs 56  mode io_uring_sqpoll
+['sudo', './microbench', '-d', '/mnt/ssd/josehu/microbench_dir', '-f', '64', '-n', '56', '-r', '65536', '--write', '-s', '134217728', '-a', 'io_uring', '--fixed_file', '--sq_poll', '--tr', '10000', '--wr', '1000']
+kernel thread io_uring-sq NOT running.
+kernel thread io_uring-sq is running...
+Time elapsed stat:
+  count   10000
+  avg_us  1067.631
+  max_us  3040.423
+  min_us  813.968
+  stddev  301.538
+
+Exper: req_size 65536  #reqs 60  mode io_uring_sqpoll
+['sudo', './microbench', '-d', '/mnt/ssd/josehu/microbench_dir', '-f', '64', '-n', '60', '-r', '65536', '--write', '-s', '134217728', '-a', 'io_uring', '--fixed_file', '--sq_poll', '--tr', '10000', '--wr', '1000']
+kernel thread io_uring-sq NOT running.
+kernel thread io_uring-sq is running...
+Time elapsed stat:
+  count   10000
+  avg_us  1020.396
+  max_us  3052.770
+  min_us  883.396
+  stddev  119.207
+
+Exper: req_size 65536  #reqs 64  mode io_uring_sqpoll
+['sudo', './microbench', '-d', '/mnt/ssd/josehu/microbench_dir', '-f', '64', '-n', '64', '-r', '65536', '--write', '-s', '134217728', '-a', 'io_uring', '--fixed_file', '--sq_poll', '--tr', '10000', '--wr', '1000']
+kernel thread io_uring-sq NOT running.
+kernel thread io_uring-sq is running...
+Time elapsed stat:
+  count   10000
+  avg_us  1124.511
+  max_us  3438.235
+  min_us  965.484
+  stddev  256.258
+
+Exper: req_size 65536  #reqs 4  mode io_uring_sqeasync_sqpoll
+['sudo', './microbench', '-d', '/mnt/ssd/josehu/microbench_dir', '-f', '64', '-n', '4', '-r', '65536', '--write', '-s', '134217728', '-a', 'io_uring', '--iosqe_async', '--fixed_file', '--sq_poll', '--tr', '10000', '--wr', '1000']
+kernel thread io_uring-sq NOT running.
+kernel thread io_uring-sq is running...
+Time elapsed stat:
+  count   10000
+  avg_us  112.395
+  max_us  592.528
+  min_us  66.883
+  stddev  49.648
+
+Exper: req_size 65536  #reqs 8  mode io_uring_sqeasync_sqpoll
+['sudo', './microbench', '-d', '/mnt/ssd/josehu/microbench_dir', '-f', '64', '-n', '8', '-r', '65536', '--write', '-s', '134217728', '-a', 'io_uring', '--iosqe_async', '--fixed_file', '--sq_poll', '--tr', '10000', '--wr', '1000']
+kernel thread io_uring-sq NOT running.
+kernel thread io_uring-sq is running...
+Time elapsed stat:
+  count   10000
+  avg_us  303.478
+  max_us  783.728
+  min_us  87.827
+  stddev  88.666
+
+Exper: req_size 65536  #reqs 12  mode io_uring_sqeasync_sqpoll
+['sudo', './microbench', '-d', '/mnt/ssd/josehu/microbench_dir', '-f', '64', '-n', '12', '-r', '65536', '--write', '-s', '134217728', '-a', 'io_uring', '--iosqe_async', '--fixed_file', '--sq_poll', '--tr', '10000', '--wr', '1000']
+kernel thread io_uring-sq NOT running.
+kernel thread io_uring-sq is running...
+Time elapsed stat:
+  count   10000
+  avg_us  254.718
+  max_us  1020.087
+  min_us  93.729
+  stddev  147.539
+
+Exper: req_size 65536  #reqs 16  mode io_uring_sqeasync_sqpoll
+['sudo', './microbench', '-d', '/mnt/ssd/josehu/microbench_dir', '-f', '64', '-n', '16', '-r', '65536', '--write', '-s', '134217728', '-a', 'io_uring', '--iosqe_async', '--fixed_file', '--sq_poll', '--tr', '10000', '--wr', '1000']
+kernel thread io_uring-sq NOT running.
+kernel thread io_uring-sq is running...
+Time elapsed stat:
+  count   10000
+  avg_us  274.814
+  max_us  1147.804
+  min_us  109.037
+  stddev  163.430
+
+Exper: req_size 65536  #reqs 20  mode io_uring_sqeasync_sqpoll
+['sudo', './microbench', '-d', '/mnt/ssd/josehu/microbench_dir', '-f', '64', '-n', '20', '-r', '65536', '--write', '-s', '134217728', '-a', 'io_uring', '--iosqe_async', '--fixed_file', '--sq_poll', '--tr', '10000', '--wr', '1000']
+kernel thread io_uring-sq NOT running.
+kernel thread io_uring-sq is running...
+Time elapsed stat:
+  count   10000
+  avg_us  250.101
+  max_us  1220.751
+  min_us  125.600
+  stddev  147.243
+
+Exper: req_size 65536  #reqs 24  mode io_uring_sqeasync_sqpoll
+['sudo', './microbench', '-d', '/mnt/ssd/josehu/microbench_dir', '-f', '64', '-n', '24', '-r', '65536', '--write', '-s', '134217728', '-a', 'io_uring', '--iosqe_async', '--fixed_file', '--sq_poll', '--tr', '10000', '--wr', '1000']
+kernel thread io_uring-sq NOT running.
+kernel thread io_uring-sq is running...
+Time elapsed stat:
+  count   10000
+  avg_us  277.909
+  max_us  1382.219
+  min_us  144.091
+  stddev  160.410
+
+Exper: req_size 65536  #reqs 28  mode io_uring_sqeasync_sqpoll
+['sudo', './microbench', '-d', '/mnt/ssd/josehu/microbench_dir', '-f', '64', '-n', '28', '-r', '65536', '--write', '-s', '134217728', '-a', 'io_uring', '--iosqe_async', '--fixed_file', '--sq_poll', '--tr', '10000', '--wr', '1000']
+kernel thread io_uring-sq NOT running.
+kernel thread io_uring-sq is running...
+Time elapsed stat:
+  count   10000
+  avg_us  239.418
+  max_us  1560.414
+  min_us  156.184
+  stddev  129.667
+
+Exper: req_size 65536  #reqs 32  mode io_uring_sqeasync_sqpoll
+['sudo', './microbench', '-d', '/mnt/ssd/josehu/microbench_dir', '-f', '64', '-n', '32', '-r', '65536', '--write', '-s', '134217728', '-a', 'io_uring', '--iosqe_async', '--fixed_file', '--sq_poll', '--tr', '10000', '--wr', '1000']
+kernel thread io_uring-sq NOT running.
+kernel thread io_uring-sq is running...
+Time elapsed stat:
+  count   10000
+  avg_us  241.225
+  max_us  1631.254
+  min_us  170.514
+  stddev  102.493
+
+Exper: req_size 65536  #reqs 36  mode io_uring_sqeasync_sqpoll
+['sudo', './microbench', '-d', '/mnt/ssd/josehu/microbench_dir', '-f', '64', '-n', '36', '-r', '65536', '--write', '-s', '134217728', '-a', 'io_uring', '--iosqe_async', '--fixed_file', '--sq_poll', '--tr', '10000', '--wr', '1000']
+kernel thread io_uring-sq NOT running.
+kernel thread io_uring-sq is running...
+Time elapsed stat:
+  count   10000
+  avg_us  235.428
+  max_us  1825.089
+  min_us  185.691
+  stddev  75.618
+
+Exper: req_size 65536  #reqs 40  mode io_uring_sqeasync_sqpoll
+['sudo', './microbench', '-d', '/mnt/ssd/josehu/microbench_dir', '-f', '64', '-n', '40', '-r', '65536', '--write', '-s', '134217728', '-a', 'io_uring', '--iosqe_async', '--fixed_file', '--sq_poll', '--tr', '10000', '--wr', '1000']
+kernel thread io_uring-sq NOT running.
+kernel thread io_uring-sq is running...
+Time elapsed stat:
+  count   10000
+  avg_us  267.763
+  max_us  1971.068
+  min_us  203.552
+  stddev  90.782
+
+Exper: req_size 65536  #reqs 44  mode io_uring_sqeasync_sqpoll
+['sudo', './microbench', '-d', '/mnt/ssd/josehu/microbench_dir', '-f', '64', '-n', '44', '-r', '65536', '--write', '-s', '134217728', '-a', 'io_uring', '--iosqe_async', '--fixed_file', '--sq_poll', '--tr', '10000', '--wr', '1000']
+kernel thread io_uring-sq NOT running.
+kernel thread io_uring-sq is running...
+Time elapsed stat:
+  count   10000
+  avg_us  256.251
+  max_us  2248.855
+  min_us  213.751
+  stddev  59.359
+
+Exper: req_size 65536  #reqs 48  mode io_uring_sqeasync_sqpoll
+['sudo', './microbench', '-d', '/mnt/ssd/josehu/microbench_dir', '-f', '64', '-n', '48', '-r', '65536', '--write', '-s', '134217728', '-a', 'io_uring', '--iosqe_async', '--fixed_file', '--sq_poll', '--tr', '10000', '--wr', '1000']
+kernel thread io_uring-sq NOT running.
+kernel thread io_uring-sq is running...
+Time elapsed stat:
+  count   10000
+  avg_us  268.558
+  max_us  2269.286
+  min_us  224.962
+  stddev  58.251
+
+Exper: req_size 65536  #reqs 52  mode io_uring_sqeasync_sqpoll
+['sudo', './microbench', '-d', '/mnt/ssd/josehu/microbench_dir', '-f', '64', '-n', '52', '-r', '65536', '--write', '-s', '134217728', '-a', 'io_uring', '--iosqe_async', '--fixed_file', '--sq_poll', '--tr', '10000', '--wr', '1000']
+kernel thread io_uring-sq NOT running.
+kernel thread io_uring-sq is running...
+Time elapsed stat:
+  count   10000
+  avg_us  284.010
+  max_us  2468.866
+  min_us  237.873
+  stddev  57.260
+
+Exper: req_size 65536  #reqs 56  mode io_uring_sqeasync_sqpoll
+['sudo', './microbench', '-d', '/mnt/ssd/josehu/microbench_dir', '-f', '64', '-n', '56', '-r', '65536', '--write', '-s', '134217728', '-a', 'io_uring', '--iosqe_async', '--fixed_file', '--sq_poll', '--tr', '10000', '--wr', '1000']
+kernel thread io_uring-sq NOT running.
+kernel thread io_uring-sq is running...
+Time elapsed stat:
+  count   10000
+  avg_us  297.295
+  max_us  1978.915
+  min_us  254.566
+  stddev  41.813
+
+Exper: req_size 65536  #reqs 60  mode io_uring_sqeasync_sqpoll
+['sudo', './microbench', '-d', '/mnt/ssd/josehu/microbench_dir', '-f', '64', '-n', '60', '-r', '65536', '--write', '-s', '134217728', '-a', 'io_uring', '--iosqe_async', '--fixed_file', '--sq_poll', '--tr', '10000', '--wr', '1000']
+kernel thread io_uring-sq NOT running.
+kernel thread io_uring-sq is running...
+Time elapsed stat:
+  count   10000
+  avg_us  300.491
+  max_us  1255.671
+  min_us  266.020
+  stddev  24.886
+
+Exper: req_size 65536  #reqs 64  mode io_uring_sqeasync_sqpoll
+['sudo', './microbench', '-d', '/mnt/ssd/josehu/microbench_dir', '-f', '64', '-n', '64', '-r', '65536', '--write', '-s', '134217728', '-a', 'io_uring', '--iosqe_async', '--fixed_file', '--sq_poll', '--tr', '10000', '--wr', '1000']
+kernel thread io_uring-sq NOT running.
+kernel thread io_uring-sq is running...
+Time elapsed stat:
+  count   10000
+  avg_us  331.367
+  max_us  2562.027
+  min_us  295.520
+  stddev  34.436
+
+Exper: req_size 1048576  #reqs 4  mode sync
+['sudo', './microbench', '-d', '/mnt/ssd/josehu/microbench_dir', '-f', '64', '-n', '4', '-r', '1048576', '--write', '-s', '134217728', '-a', 'basic', '--tr', '10000', '--wr', '1000']
+Time elapsed stat:
+  count   10000
+  avg_us  856.447
+  max_us  1344.045
+  min_us  840.412
+  stddev  37.749
+
+Exper: req_size 1048576  #reqs 8  mode sync
+['sudo', './microbench', '-d', '/mnt/ssd/josehu/microbench_dir', '-f', '64', '-n', '8', '-r', '1048576', '--write', '-s', '134217728', '-a', 'basic', '--tr', '10000', '--wr', '1000']
+Time elapsed stat:
+  count   10000
+  avg_us  2475.017
+  max_us  3686.248
+  min_us  2418.857
+  stddev  86.487
+
+Exper: req_size 1048576  #reqs 12  mode sync
+['sudo', './microbench', '-d', '/mnt/ssd/josehu/microbench_dir', '-f', '64', '-n', '12', '-r', '1048576', '--write', '-s', '134217728', '-a', 'basic', '--tr', '10000', '--wr', '1000']
+Time elapsed stat:
+  count   10000
+  avg_us  4154.109
+  max_us  9541.907
+  min_us  4050.464
+  stddev  301.522
+
+Exper: req_size 1048576  #reqs 16  mode sync
+['sudo', './microbench', '-d', '/mnt/ssd/josehu/microbench_dir', '-f', '64', '-n', '16', '-r', '1048576', '--write', '-s', '134217728', '-a', 'basic', '--tr', '10000', '--wr', '1000']
+Time elapsed stat:
+  count   10000
+  avg_us  5575.922
+  max_us  12700.063
+  min_us  5475.889
+  stddev  243.062
+
+Exper: req_size 1048576  #reqs 20  mode sync
+['sudo', './microbench', '-d', '/mnt/ssd/josehu/microbench_dir', '-f', '64', '-n', '20', '-r', '1048576', '--write', '-s', '134217728', '-a', 'basic', '--tr', '10000', '--wr', '1000']
+Time elapsed stat:
+  count   10000
+  avg_us  6954.808
+  max_us  15809.694
+  min_us  6823.527
+  stddev  429.550
+
+Exper: req_size 1048576  #reqs 24  mode sync
+['sudo', './microbench', '-d', '/mnt/ssd/josehu/microbench_dir', '-f', '64', '-n', '24', '-r', '1048576', '--write', '-s', '134217728', '-a', 'basic', '--tr', '10000', '--wr', '1000']
+Time elapsed stat:
+  count   10000
+  avg_us  8307.797
+  max_us  18845.339
+  min_us  8167.927
+  stddev  453.940
+
+Exper: req_size 1048576  #reqs 28  mode sync
+['sudo', './microbench', '-d', '/mnt/ssd/josehu/microbench_dir', '-f', '64', '-n', '28', '-r', '1048576', '--write', '-s', '134217728', '-a', 'basic', '--tr', '10000', '--wr', '1000']
+Time elapsed stat:
+  count   10000
+  avg_us  9575.535
+  max_us  21742.983
+  min_us  9436.596
+  stddev  504.218
+
+Exper: req_size 1048576  #reqs 32  mode sync
+['sudo', './microbench', '-d', '/mnt/ssd/josehu/microbench_dir', '-f', '64', '-n', '32', '-r', '1048576', '--write', '-s', '134217728', '-a', 'basic', '--tr', '10000', '--wr', '1000']
+Time elapsed stat:
+  count   10000
+  avg_us  10928.268
+  max_us  25511.799
+  min_us  10742.104
+  stddev  814.668
+
+Exper: req_size 1048576  #reqs 36  mode sync
+['sudo', './microbench', '-d', '/mnt/ssd/josehu/microbench_dir', '-f', '64', '-n', '36', '-r', '1048576', '--write', '-s', '134217728', '-a', 'basic', '--tr', '10000', '--wr', '1000']
+Time elapsed stat:
+  count   10000
+  avg_us  12333.490
+  max_us  28355.603
+  min_us  12071.417
+  stddev  761.615
+
+Exper: req_size 1048576  #reqs 40  mode sync
+['sudo', './microbench', '-d', '/mnt/ssd/josehu/microbench_dir', '-f', '64', '-n', '40', '-r', '1048576', '--write', '-s', '134217728', '-a', 'basic', '--tr', '10000', '--wr', '1000']
+Time elapsed stat:
+  count   10000
+  avg_us  13552.256
+  max_us  31046.238
+  min_us  13371.302
+  stddev  591.349
+
+Exper: req_size 1048576  #reqs 44  mode sync
+['sudo', './microbench', '-d', '/mnt/ssd/josehu/microbench_dir', '-f', '64', '-n', '44', '-r', '1048576', '--write', '-s', '134217728', '-a', 'basic', '--tr', '10000', '--wr', '1000']
+Time elapsed stat:
+  count   10000
+  avg_us  14971.596
+  max_us  34683.192
+  min_us  14739.465
+  stddev  1005.657
+
+Exper: req_size 1048576  #reqs 48  mode sync
+['sudo', './microbench', '-d', '/mnt/ssd/josehu/microbench_dir', '-f', '64', '-n', '48', '-r', '1048576', '--write', '-s', '134217728', '-a', 'basic', '--tr', '10000', '--wr', '1000']
+Time elapsed stat:
+  count   10000
+  avg_us  16367.945
+  max_us  37305.400
+  min_us  16053.408
+  stddev  861.212
+
+Exper: req_size 1048576  #reqs 52  mode sync
+['sudo', './microbench', '-d', '/mnt/ssd/josehu/microbench_dir', '-f', '64', '-n', '52', '-r', '1048576', '--write', '-s', '134217728', '-a', 'basic', '--tr', '10000', '--wr', '1000']
+Time elapsed stat:
+  count   10000
+  avg_us  17648.063
+  max_us  39894.870
+  min_us  17415.895
+  stddev  905.533
+
+Exper: req_size 1048576  #reqs 56  mode sync
+['sudo', './microbench', '-d', '/mnt/ssd/josehu/microbench_dir', '-f', '64', '-n', '56', '-r', '1048576', '--write', '-s', '134217728', '-a', 'basic', '--tr', '10000', '--wr', '1000']
+Time elapsed stat:
+  count   10000
+  avg_us  18913.548
+  max_us  42827.857
+  min_us  18685.944
+  stddev  697.277
+
+Exper: req_size 1048576  #reqs 60  mode sync
+['sudo', './microbench', '-d', '/mnt/ssd/josehu/microbench_dir', '-f', '64', '-n', '60', '-r', '1048576', '--write', '-s', '134217728', '-a', 'basic', '--tr', '10000', '--wr', '1000']
+Time elapsed stat:
+  count   10000
+  avg_us  20348.383
+  max_us  46200.095
+  min_us  20044.047
+  stddev  1205.968
+
+Exper: req_size 1048576  #reqs 64  mode sync
+['sudo', './microbench', '-d', '/mnt/ssd/josehu/microbench_dir', '-f', '64', '-n', '64', '-r', '1048576', '--write', '-s', '134217728', '-a', 'basic', '--tr', '10000', '--wr', '1000']
+Time elapsed stat:
+  count   10000
+  avg_us  21711.671
+  max_us  49390.685
+  min_us  21422.681
+  stddev  1198.363
+
+Exper: req_size 1048576  #reqs 4  mode thread_pool_unbounded
+['sudo', './microbench', '-d', '/mnt/ssd/josehu/microbench_dir', '-f', '64', '-n', '4', '-r', '1048576', '--write', '-s', '134217728', '-a', 'thread_pool', '-t', '4', '--tr', '10000', '--wr', '1000']
+Time elapsed stat:
+  count   10000
+  avg_us  421.957
+  max_us  1054.386
+  min_us  335.509
+  stddev  76.361
+
+Exper: req_size 1048576  #reqs 8  mode thread_pool_unbounded
+['sudo', './microbench', '-d', '/mnt/ssd/josehu/microbench_dir', '-f', '64', '-n', '8', '-r', '1048576', '--write', '-s', '134217728', '-a', 'thread_pool', '-t', '8', '--tr', '10000', '--wr', '1000']
+Time elapsed stat:
+  count   10000
+  avg_us  771.773
+  max_us  1443.238
+  min_us  635.330
+  stddev  115.108
+
+Exper: req_size 1048576  #reqs 12  mode thread_pool_unbounded
+['sudo', './microbench', '-d', '/mnt/ssd/josehu/microbench_dir', '-f', '64', '-n', '12', '-r', '1048576', '--write', '-s', '134217728', '-a', 'thread_pool', '-t', '12', '--tr', '10000', '--wr', '1000']
+Time elapsed stat:
+  count   10000
+  avg_us  1099.389
+  max_us  1528.695
+  min_us  1044.088
+  stddev  57.479
+
+Exper: req_size 1048576  #reqs 16  mode thread_pool_unbounded
+['sudo', './microbench', '-d', '/mnt/ssd/josehu/microbench_dir', '-f', '64', '-n', '16', '-r', '1048576', '--write', '-s', '134217728', '-a', 'thread_pool', '-t', '16', '--tr', '10000', '--wr', '1000']
+Time elapsed stat:
+  count   10000
+  avg_us  1571.759
+  max_us  2217.923
+  min_us  1363.698
+  stddev  142.801
+
+Exper: req_size 1048576  #reqs 20  mode thread_pool_unbounded
+['sudo', './microbench', '-d', '/mnt/ssd/josehu/microbench_dir', '-f', '64', '-n', '20', '-r', '1048576', '--write', '-s', '134217728', '-a', 'thread_pool', '-t', '20', '--tr', '10000', '--wr', '1000']
+Time elapsed stat:
+  count   10000
+  avg_us  2075.265
+  max_us  3313.494
+  min_us  1804.821
+  stddev  189.817
+
+Exper: req_size 1048576  #reqs 24  mode thread_pool_unbounded
+['sudo', './microbench', '-d', '/mnt/ssd/josehu/microbench_dir', '-f', '64', '-n', '24', '-r', '1048576', '--write', '-s', '134217728', '-a', 'thread_pool', '-t', '24', '--tr', '10000', '--wr', '1000']
+Time elapsed stat:
+  count   10000
+  avg_us  2371.253
+  max_us  3744.767
+  min_us  2116.400
+  stddev  162.629
+
+Exper: req_size 1048576  #reqs 28  mode thread_pool_unbounded
+['sudo', './microbench', '-d', '/mnt/ssd/josehu/microbench_dir', '-f', '64', '-n', '28', '-r', '1048576', '--write', '-s', '134217728', '-a', 'thread_pool', '-t', '28', '--tr', '10000', '--wr', '1000']
+Time elapsed stat:
+  count   10000
+  avg_us  2661.764
+  max_us  3577.016
+  min_us  2412.876
+  stddev  147.895
+
+Exper: req_size 1048576  #reqs 32  mode thread_pool_unbounded
+['sudo', './microbench', '-d', '/mnt/ssd/josehu/microbench_dir', '-f', '64', '-n', '32', '-r', '1048576', '--write', '-s', '134217728', '-a', 'thread_pool', '-t', '32', '--tr', '10000', '--wr', '1000']
+Time elapsed stat:
+  count   10000
+  avg_us  3036.045
+  max_us  3940.344
+  min_us  2737.663
+  stddev  114.168
+
+Exper: req_size 1048576  #reqs 36  mode thread_pool_unbounded
+['sudo', './microbench', '-d', '/mnt/ssd/josehu/microbench_dir', '-f', '64', '-n', '36', '-r', '1048576', '--write', '-s', '134217728', '-a', 'thread_pool', '-t', '36', '--tr', '10000', '--wr', '1000']
+Time elapsed stat:
+  count   10000
+  avg_us  3337.437
+  max_us  4208.116
+  min_us  3117.721
+  stddev  126.885
+
+Exper: req_size 1048576  #reqs 40  mode thread_pool_unbounded
+['sudo', './microbench', '-d', '/mnt/ssd/josehu/microbench_dir', '-f', '64', '-n', '40', '-r', '1048576', '--write', '-s', '134217728', '-a', 'thread_pool', '-t', '40', '--tr', '10000', '--wr', '1000']
+Time elapsed stat:
+  count   10000
+  avg_us  3689.658
+  max_us  4491.235
+  min_us  3462.911
+  stddev  129.839
+
+Exper: req_size 1048576  #reqs 44  mode thread_pool_unbounded
+['sudo', './microbench', '-d', '/mnt/ssd/josehu/microbench_dir', '-f', '64', '-n', '44', '-r', '1048576', '--write', '-s', '134217728', '-a', 'thread_pool', '-t', '44', '--tr', '10000', '--wr', '1000']
+Time elapsed stat:
+  count   10000
+  avg_us  4036.547
+  max_us  4896.074
+  min_us  3783.364
+  stddev  133.227
+
+Exper: req_size 1048576  #reqs 48  mode thread_pool_unbounded
+['sudo', './microbench', '-d', '/mnt/ssd/josehu/microbench_dir', '-f', '64', '-n', '48', '-r', '1048576', '--write', '-s', '134217728', '-a', 'thread_pool', '-t', '48', '--tr', '10000', '--wr', '1000']
+Time elapsed stat:
+  count   10000
+  avg_us  4421.337
+  max_us  5155.285
+  min_us  4127.503
+  stddev  107.288
+
+Exper: req_size 1048576  #reqs 52  mode thread_pool_unbounded
+['sudo', './microbench', '-d', '/mnt/ssd/josehu/microbench_dir', '-f', '64', '-n', '52', '-r', '1048576', '--write', '-s', '134217728', '-a', 'thread_pool', '-t', '52', '--tr', '10000', '--wr', '1000']
+Time elapsed stat:
+  count   10000
+  avg_us  4720.935
+  max_us  6764.309
+  min_us  4503.535
+  stddev  125.650
+
+Exper: req_size 1048576  #reqs 56  mode thread_pool_unbounded
+['sudo', './microbench', '-d', '/mnt/ssd/josehu/microbench_dir', '-f', '64', '-n', '56', '-r', '1048576', '--write', '-s', '134217728', '-a', 'thread_pool', '-t', '56', '--tr', '10000', '--wr', '1000']
+Time elapsed stat:
+  count   10000
+  avg_us  5076.794
+  max_us  6953.685
+  min_us  4850.591
+  stddev  128.531
+
+Exper: req_size 1048576  #reqs 60  mode thread_pool_unbounded
+['sudo', './microbench', '-d', '/mnt/ssd/josehu/microbench_dir', '-f', '64', '-n', '60', '-r', '1048576', '--write', '-s', '134217728', '-a', 'thread_pool', '-t', '60', '--tr', '10000', '--wr', '1000']
+Time elapsed stat:
+  count   10000
+  avg_us  5437.966
+  max_us  7713.406
+  min_us  5155.830
+  stddev  131.666
+
+Exper: req_size 1048576  #reqs 64  mode thread_pool_unbounded
+['sudo', './microbench', '-d', '/mnt/ssd/josehu/microbench_dir', '-f', '64', '-n', '64', '-r', '1048576', '--write', '-s', '134217728', '-a', 'thread_pool', '-t', '64', '--tr', '10000', '--wr', '1000']
+Time elapsed stat:
+  count   10000
+  avg_us  5786.764
+  max_us  8928.970
+  min_us  5511.834
+  stddev  114.185
+
+Exper: req_size 1048576  #reqs 4  mode thread_pool_nproc
+['sudo', './microbench', '-d', '/mnt/ssd/josehu/microbench_dir', '-f', '64', '-n', '4', '-r', '1048576', '--write', '-s', '134217728', '-a', 'thread_pool', '-t', '4', '--tr', '10000', '--wr', '1000']
+Time elapsed stat:
+  count   10000
+  avg_us  358.776
+  max_us  1172.272
+  min_us  302.522
+  stddev  86.525
+
+Exper: req_size 1048576  #reqs 8  mode thread_pool_nproc
+['sudo', './microbench', '-d', '/mnt/ssd/josehu/microbench_dir', '-f', '64', '-n', '8', '-r', '1048576', '--write', '-s', '134217728', '-a', 'thread_pool', '-t', '8', '--tr', '10000', '--wr', '1000']
+Time elapsed stat:
+  count   10000
+  avg_us  748.785
+  max_us  1201.822
+  min_us  627.739
+  stddev  88.894
+
+Exper: req_size 1048576  #reqs 12  mode thread_pool_nproc
+['sudo', './microbench', '-d', '/mnt/ssd/josehu/microbench_dir', '-f', '64', '-n', '12', '-r', '1048576', '--write', '-s', '134217728', '-a', 'thread_pool', '-t', '12', '--tr', '10000', '--wr', '1000']
+Time elapsed stat:
+  count   10000
+  avg_us  1097.202
+  max_us  1701.271
+  min_us  1032.512
+  stddev  56.513
+
+Exper: req_size 1048576  #reqs 16  mode thread_pool_nproc
+['sudo', './microbench', '-d', '/mnt/ssd/josehu/microbench_dir', '-f', '64', '-n', '16', '-r', '1048576', '--write', '-s', '134217728', '-a', 'thread_pool', '-t', '16', '--tr', '10000', '--wr', '1000']
+Time elapsed stat:
+  count   10000
+  avg_us  1582.907
+  max_us  2409.141
+  min_us  1362.220
+  stddev  145.631
+
+Exper: req_size 1048576  #reqs 20  mode thread_pool_nproc
+['sudo', './microbench', '-d', '/mnt/ssd/josehu/microbench_dir', '-f', '64', '-n', '20', '-r', '1048576', '--write', '-s', '134217728', '-a', 'thread_pool', '-t', '16', '--tr', '10000', '--wr', '1000']
+Time elapsed stat:
+  count   10000
+  avg_us  2150.744
+  max_us  3207.088
+  min_us  1856.216
+  stddev  154.511
+
+Exper: req_size 1048576  #reqs 24  mode thread_pool_nproc
+['sudo', './microbench', '-d', '/mnt/ssd/josehu/microbench_dir', '-f', '64', '-n', '24', '-r', '1048576', '--write', '-s', '134217728', '-a', 'thread_pool', '-t', '16', '--tr', '10000', '--wr', '1000']
+Time elapsed stat:
+  count   10000
+  avg_us  2437.529
+  max_us  3462.460
+  min_us  2196.770
+  stddev  165.106
+
+Exper: req_size 1048576  #reqs 28  mode thread_pool_nproc
+['sudo', './microbench', '-d', '/mnt/ssd/josehu/microbench_dir', '-f', '64', '-n', '28', '-r', '1048576', '--write', '-s', '134217728', '-a', 'thread_pool', '-t', '16', '--tr', '10000', '--wr', '1000']
+Time elapsed stat:
+  count   10000
+  avg_us  2666.766
+  max_us  6845.495
+  min_us  2439.303
+  stddev  169.754
+
+Exper: req_size 1048576  #reqs 32  mode thread_pool_nproc
+['sudo', './microbench', '-d', '/mnt/ssd/josehu/microbench_dir', '-f', '64', '-n', '32', '-r', '1048576', '--write', '-s', '134217728', '-a', 'thread_pool', '-t', '16', '--tr', '10000', '--wr', '1000']
+Time elapsed stat:
+  count   10000
+  avg_us  3037.467
+  max_us  3968.574
+  min_us  2720.338
+  stddev  259.712
+
+Exper: req_size 1048576  #reqs 36  mode thread_pool_nproc
+['sudo', './microbench', '-d', '/mnt/ssd/josehu/microbench_dir', '-f', '64', '-n', '36', '-r', '1048576', '--write', '-s', '134217728', '-a', 'thread_pool', '-t', '16', '--tr', '10000', '--wr', '1000']
+Time elapsed stat:
+  count   10000
+  avg_us  3489.288
+  max_us  8018.303
+  min_us  3175.267
+  stddev  199.528
+
+Exper: req_size 1048576  #reqs 40  mode thread_pool_nproc
+['sudo', './microbench', '-d', '/mnt/ssd/josehu/microbench_dir', '-f', '64', '-n', '40', '-r', '1048576', '--write', '-s', '134217728', '-a', 'thread_pool', '-t', '16', '--tr', '10000', '--wr', '1000']
+Time elapsed stat:
+  count   10000
+  avg_us  3743.933
+  max_us  4676.428
+  min_us  3448.890
+  stddev  226.125
+
+Exper: req_size 1048576  #reqs 44  mode thread_pool_nproc
+['sudo', './microbench', '-d', '/mnt/ssd/josehu/microbench_dir', '-f', '64', '-n', '44', '-r', '1048576', '--write', '-s', '134217728', '-a', 'thread_pool', '-t', '16', '--tr', '10000', '--wr', '1000']
+Time elapsed stat:
+  count   10000
+  avg_us  4024.737
+  max_us  5097.074
+  min_us  3759.264
+  stddev  225.512
+
+Exper: req_size 1048576  #reqs 48  mode thread_pool_nproc
+['sudo', './microbench', '-d', '/mnt/ssd/josehu/microbench_dir', '-f', '64', '-n', '48', '-r', '1048576', '--write', '-s', '134217728', '-a', 'thread_pool', '-t', '16', '--tr', '10000', '--wr', '1000']
+Time elapsed stat:
+  count   10000
+  avg_us  4447.428
+  max_us  5999.679
+  min_us  4080.522
+  stddev  347.316
+
+Exper: req_size 1048576  #reqs 52  mode thread_pool_nproc
+['sudo', './microbench', '-d', '/mnt/ssd/josehu/microbench_dir', '-f', '64', '-n', '52', '-r', '1048576', '--write', '-s', '134217728', '-a', 'thread_pool', '-t', '16', '--tr', '10000', '--wr', '1000']
+Time elapsed stat:
+  count   10000
+  avg_us  4874.491
+  max_us  6000.241
+  min_us  4512.212
+  stddev  254.862
+
+Exper: req_size 1048576  #reqs 56  mode thread_pool_nproc
+['sudo', './microbench', '-d', '/mnt/ssd/josehu/microbench_dir', '-f', '64', '-n', '56', '-r', '1048576', '--write', '-s', '134217728', '-a', 'thread_pool', '-t', '16', '--tr', '10000', '--wr', '1000']
+Time elapsed stat:
+  count   10000
+  avg_us  5135.460
+  max_us  6332.120
+  min_us  4792.615
+  stddev  285.594
+
+Exper: req_size 1048576  #reqs 60  mode thread_pool_nproc
+['sudo', './microbench', '-d', '/mnt/ssd/josehu/microbench_dir', '-f', '64', '-n', '60', '-r', '1048576', '--write', '-s', '134217728', '-a', 'thread_pool', '-t', '16', '--tr', '10000', '--wr', '1000']
+Time elapsed stat:
+  count   10000
+  avg_us  5491.268
+  max_us  6620.466
+  min_us  5108.646
+  stddev  305.419
+
+Exper: req_size 1048576  #reqs 64  mode thread_pool_nproc
+['sudo', './microbench', '-d', '/mnt/ssd/josehu/microbench_dir', '-f', '64', '-n', '64', '-r', '1048576', '--write', '-s', '134217728', '-a', 'thread_pool', '-t', '16', '--tr', '10000', '--wr', '1000']
+Time elapsed stat:
+  count   10000
+  avg_us  5836.719
+  max_us  9221.779
+  min_us  5427.653
+  stddev  399.297
+
+Exper: req_size 1048576  #reqs 4  mode thread_pool_4xsocks
+['sudo', './microbench', '-d', '/mnt/ssd/josehu/microbench_dir', '-f', '64', '-n', '4', '-r', '1048576', '--write', '-s', '134217728', '-a', 'thread_pool', '-t', '4', '--tr', '10000', '--wr', '1000']
+Time elapsed stat:
+  count   10000
+  avg_us  408.768
+  max_us  1126.917
+  min_us  317.976
+  stddev  81.766
+
+Exper: req_size 1048576  #reqs 8  mode thread_pool_4xsocks
+['sudo', './microbench', '-d', '/mnt/ssd/josehu/microbench_dir', '-f', '64', '-n', '8', '-r', '1048576', '--write', '-s', '134217728', '-a', 'thread_pool', '-t', '8', '--tr', '10000', '--wr', '1000']
+Time elapsed stat:
+  count   10000
+  avg_us  808.862
+  max_us  1818.943
+  min_us  628.649
+  stddev  117.652
+
+Exper: req_size 1048576  #reqs 12  mode thread_pool_4xsocks
+['sudo', './microbench', '-d', '/mnt/ssd/josehu/microbench_dir', '-f', '64', '-n', '12', '-r', '1048576', '--write', '-s', '134217728', '-a', 'thread_pool', '-t', '8', '--tr', '10000', '--wr', '1000']
+Time elapsed stat:
+  count   10000
+  avg_us  1393.602
+  max_us  2438.976
+  min_us  1231.185
+  stddev  107.731
+
+Exper: req_size 1048576  #reqs 16  mode thread_pool_4xsocks
+['sudo', './microbench', '-d', '/mnt/ssd/josehu/microbench_dir', '-f', '64', '-n', '16', '-r', '1048576', '--write', '-s', '134217728', '-a', 'thread_pool', '-t', '8', '--tr', '10000', '--wr', '1000']
+Time elapsed stat:
+  count   10000
+  avg_us  1639.043
+  max_us  2799.931
+  min_us  1421.210
+  stddev  178.748
+
+Exper: req_size 1048576  #reqs 20  mode thread_pool_4xsocks
+['sudo', './microbench', '-d', '/mnt/ssd/josehu/microbench_dir', '-f', '64', '-n', '20', '-r', '1048576', '--write', '-s', '134217728', '-a', 'thread_pool', '-t', '8', '--tr', '10000', '--wr', '1000']
+Time elapsed stat:
+  count   10000
+  avg_us  2198.430
+  max_us  3337.977
+  min_us  1891.285
+  stddev  145.957
+
+Exper: req_size 1048576  #reqs 24  mode thread_pool_4xsocks
+['sudo', './microbench', '-d', '/mnt/ssd/josehu/microbench_dir', '-f', '64', '-n', '24', '-r', '1048576', '--write', '-s', '134217728', '-a', 'thread_pool', '-t', '8', '--tr', '10000', '--wr', '1000']
+Time elapsed stat:
+  count   10000
+  avg_us  2419.471
+  max_us  4386.885
+  min_us  2120.680
+  stddev  306.383
+
+Exper: req_size 1048576  #reqs 28  mode thread_pool_4xsocks
+['sudo', './microbench', '-d', '/mnt/ssd/josehu/microbench_dir', '-f', '64', '-n', '28', '-r', '1048576', '--write', '-s', '134217728', '-a', 'thread_pool', '-t', '8', '--tr', '10000', '--wr', '1000']
+Time elapsed stat:
+  count   10000
+  avg_us  2906.739
+  max_us  5149.519
+  min_us  2562.122
+  stddev  304.430
+
+Exper: req_size 1048576  #reqs 32  mode thread_pool_4xsocks
+['sudo', './microbench', '-d', '/mnt/ssd/josehu/microbench_dir', '-f', '64', '-n', '32', '-r', '1048576', '--write', '-s', '134217728', '-a', 'thread_pool', '-t', '8', '--tr', '10000', '--wr', '1000']
+Time elapsed stat:
+  count   10000
+  avg_us  3179.408
+  max_us  5450.156
+  min_us  2815.461
+  stddev  375.721
+
+Exper: req_size 1048576  #reqs 36  mode thread_pool_4xsocks
+['sudo', './microbench', '-d', '/mnt/ssd/josehu/microbench_dir', '-f', '64', '-n', '36', '-r', '1048576', '--write', '-s', '134217728', '-a', 'thread_pool', '-t', '8', '--tr', '10000', '--wr', '1000']
+Time elapsed stat:
+  count   10000
+  avg_us  3692.589
+  max_us  6077.612
+  min_us  3262.750
+  stddev  344.910
+
+Exper: req_size 1048576  #reqs 40  mode thread_pool_4xsocks
+['sudo', './microbench', '-d', '/mnt/ssd/josehu/microbench_dir', '-f', '64', '-n', '40', '-r', '1048576', '--write', '-s', '134217728', '-a', 'thread_pool', '-t', '8', '--tr', '10000', '--wr', '1000']
+Time elapsed stat:
+  count   10000
+  avg_us  4126.368
+  max_us  7069.490
+  min_us  3505.280
+  stddev  404.156
+
+Exper: req_size 1048576  #reqs 44  mode thread_pool_4xsocks
+['sudo', './microbench', '-d', '/mnt/ssd/josehu/microbench_dir', '-f', '64', '-n', '44', '-r', '1048576', '--write', '-s', '134217728', '-a', 'thread_pool', '-t', '8', '--tr', '10000', '--wr', '1000']
+Time elapsed stat:
+  count   10000
+  avg_us  4533.338
+  max_us  8389.952
+  min_us  3962.465
+  stddev  400.112
+
+Exper: req_size 1048576  #reqs 48  mode thread_pool_4xsocks
+['sudo', './microbench', '-d', '/mnt/ssd/josehu/microbench_dir', '-f', '64', '-n', '48', '-r', '1048576', '--write', '-s', '134217728', '-a', 'thread_pool', '-t', '8', '--tr', '10000', '--wr', '1000']
+Time elapsed stat:
+  count   10000
+  avg_us  4667.803
+  max_us  8412.210
+  min_us  4185.660
+  stddev  559.556
+
+Exper: req_size 1048576  #reqs 52  mode thread_pool_4xsocks
+['sudo', './microbench', '-d', '/mnt/ssd/josehu/microbench_dir', '-f', '64', '-n', '52', '-r', '1048576', '--write', '-s', '134217728', '-a', 'thread_pool', '-t', '8', '--tr', '10000', '--wr', '1000']
+Time elapsed stat:
+  count   10000
+  avg_us  5397.813
+  max_us  9538.907
+  min_us  4665.677
+  stddev  497.073
+
+Exper: req_size 1048576  #reqs 56  mode thread_pool_4xsocks
+['sudo', './microbench', '-d', '/mnt/ssd/josehu/microbench_dir', '-f', '64', '-n', '56', '-r', '1048576', '--write', '-s', '134217728', '-a', 'thread_pool', '-t', '8', '--tr', '10000', '--wr', '1000']
+Time elapsed stat:
+  count   10000
+  avg_us  5615.138
+  max_us  9282.077
+  min_us  4882.698
+  stddev  597.181
+
+Exper: req_size 1048576  #reqs 60  mode thread_pool_4xsocks
+['sudo', './microbench', '-d', '/mnt/ssd/josehu/microbench_dir', '-f', '64', '-n', '60', '-r', '1048576', '--write', '-s', '134217728', '-a', 'thread_pool', '-t', '8', '--tr', '10000', '--wr', '1000']
+Time elapsed stat:
+  count   10000
+  avg_us  6100.227
+  max_us  11250.356
+  min_us  5328.598
+  stddev  450.138
+
+Exper: req_size 1048576  #reqs 64  mode thread_pool_4xsocks
+['sudo', './microbench', '-d', '/mnt/ssd/josehu/microbench_dir', '-f', '64', '-n', '64', '-r', '1048576', '--write', '-s', '134217728', '-a', 'thread_pool', '-t', '8', '--tr', '10000', '--wr', '1000']
+Time elapsed stat:
+  count   10000
+  avg_us  6416.806
+  max_us  11434.375
+  min_us  5569.148
+  stddev  635.500
+
+Exper: req_size 1048576  #reqs 4  mode io_uring_default
+['sudo', './microbench', '-d', '/mnt/ssd/josehu/microbench_dir', '-f', '64', '-n', '4', '-r', '1048576', '--write', '-s', '134217728', '-a', 'io_uring', '--tr', '10000', '--wr', '1000']
+Time elapsed stat:
+  count   10000
+  avg_us  896.393
+  max_us  1369.780
+  min_us  884.029
+  stddev  36.333
+
+Exper: req_size 1048576  #reqs 8  mode io_uring_default
+['sudo', './microbench', '-d', '/mnt/ssd/josehu/microbench_dir', '-f', '64', '-n', '8', '-r', '1048576', '--write', '-s', '134217728', '-a', 'io_uring', '--tr', '10000', '--wr', '1000']
+Time elapsed stat:
+  count   10000
+  avg_us  2901.126
+  max_us  6105.393
+  min_us  2215.007
+  stddev  386.884
+
+Exper: req_size 1048576  #reqs 12  mode io_uring_default
+['sudo', './microbench', '-d', '/mnt/ssd/josehu/microbench_dir', '-f', '64', '-n', '12', '-r', '1048576', '--write', '-s', '134217728', '-a', 'io_uring', '--tr', '10000', '--wr', '1000']
+Time elapsed stat:
+  count   10000
+  avg_us  4536.575
+  max_us  9952.467
+  min_us  2542.723
+  stddev  666.227
+
+Exper: req_size 1048576  #reqs 16  mode io_uring_default
+['sudo', './microbench', '-d', '/mnt/ssd/josehu/microbench_dir', '-f', '64', '-n', '16', '-r', '1048576', '--write', '-s', '134217728', '-a', 'io_uring', '--tr', '10000', '--wr', '1000']
+Time elapsed stat:
+  count   10000
+  avg_us  5997.334
+  max_us  12915.086
+  min_us  2961.818
+  stddev  643.609
+
+Exper: req_size 1048576  #reqs 20  mode io_uring_default
+['sudo', './microbench', '-d', '/mnt/ssd/josehu/microbench_dir', '-f', '64', '-n', '20', '-r', '1048576', '--write', '-s', '134217728', '-a', 'io_uring', '--tr', '10000', '--wr', '1000']
+Time elapsed stat:
+  count   10000
+  avg_us  7573.020
+  max_us  16697.698
+  min_us  3723.731
+  stddev  915.475
+
+Exper: req_size 1048576  #reqs 24  mode io_uring_default
+['sudo', './microbench', '-d', '/mnt/ssd/josehu/microbench_dir', '-f', '64', '-n', '24', '-r', '1048576', '--write', '-s', '134217728', '-a', 'io_uring', '--tr', '10000', '--wr', '1000']
+Time elapsed stat:
+  count   10000
+  avg_us  8961.561
+  max_us  19436.052
+  min_us  4831.369
+  stddev  775.913
+
+Exper: req_size 1048576  #reqs 28  mode io_uring_default
+['sudo', './microbench', '-d', '/mnt/ssd/josehu/microbench_dir', '-f', '64', '-n', '28', '-r', '1048576', '--write', '-s', '134217728', '-a', 'io_uring', '--tr', '10000', '--wr', '1000']
+Time elapsed stat:
+  count   10000
+  avg_us  10584.829
+  max_us  23067.679
+  min_us  4448.509
+  stddev  1478.574
+
+Exper: req_size 1048576  #reqs 32  mode io_uring_default
+['sudo', './microbench', '-d', '/mnt/ssd/josehu/microbench_dir', '-f', '64', '-n', '32', '-r', '1048576', '--write', '-s', '134217728', '-a', 'io_uring', '--tr', '10000', '--wr', '1000']
+Time elapsed stat:
+  count   10000
+  avg_us  11924.643
+  max_us  26217.113
+  min_us  5879.833
+  stddev  995.586
+
+Exper: req_size 1048576  #reqs 36  mode io_uring_default
+['sudo', './microbench', '-d', '/mnt/ssd/josehu/microbench_dir', '-f', '64', '-n', '36', '-r', '1048576', '--write', '-s', '134217728', '-a', 'io_uring', '--tr', '10000', '--wr', '1000']
+Time elapsed stat:
+  count   10000
+  avg_us  13501.805
+  max_us  29600.621
+  min_us  6605.351
+  stddev  1519.213
+
+Exper: req_size 1048576  #reqs 40  mode io_uring_default
+['sudo', './microbench', '-d', '/mnt/ssd/josehu/microbench_dir', '-f', '64', '-n', '40', '-r', '1048576', '--write', '-s', '134217728', '-a', 'io_uring', '--tr', '10000', '--wr', '1000']
+Time elapsed stat:
+  count   10000
+  avg_us  14909.961
+  max_us  33249.254
+  min_us  6078.480
+  stddev  1681.411
+
+Exper: req_size 1048576  #reqs 44  mode io_uring_default
+['sudo', './microbench', '-d', '/mnt/ssd/josehu/microbench_dir', '-f', '64', '-n', '44', '-r', '1048576', '--write', '-s', '134217728', '-a', 'io_uring', '--tr', '10000', '--wr', '1000']
+Time elapsed stat:
+  count   10000
+  avg_us  16370.517
+  max_us  34464.225
+  min_us  7253.210
+  stddev  1329.187
+
+Exper: req_size 1048576  #reqs 48  mode io_uring_default
+['sudo', './microbench', '-d', '/mnt/ssd/josehu/microbench_dir', '-f', '64', '-n', '48', '-r', '1048576', '--write', '-s', '134217728', '-a', 'io_uring', '--tr', '10000', '--wr', '1000']
+Time elapsed stat:
+  count   10000
+  avg_us  17901.174
+  max_us  38701.406
+  min_us  6909.232
+  stddev  2107.687
+
+Exper: req_size 1048576  #reqs 52  mode io_uring_default
+['sudo', './microbench', '-d', '/mnt/ssd/josehu/microbench_dir', '-f', '64', '-n', '52', '-r', '1048576', '--write', '-s', '134217728', '-a', 'io_uring', '--tr', '10000', '--wr', '1000']
+Time elapsed stat:
+  count   10000
+  avg_us  19320.904
+  max_us  41672.708
+  min_us  7925.323
+  stddev  1776.150
+
+Exper: req_size 1048576  #reqs 56  mode io_uring_default
+['sudo', './microbench', '-d', '/mnt/ssd/josehu/microbench_dir', '-f', '64', '-n', '56', '-r', '1048576', '--write', '-s', '134217728', '-a', 'io_uring', '--tr', '10000', '--wr', '1000']
+Time elapsed stat:
+  count   10000
+  avg_us  20601.968
+  max_us  44201.394
+  min_us  8889.332
+  stddev  1454.662
+
+Exper: req_size 1048576  #reqs 60  mode io_uring_default
+['sudo', './microbench', '-d', '/mnt/ssd/josehu/microbench_dir', '-f', '64', '-n', '60', '-r', '1048576', '--write', '-s', '134217728', '-a', 'io_uring', '--tr', '10000', '--wr', '1000']
+Time elapsed stat:
+  count   10000
+  avg_us  22284.646
+  max_us  47891.795
+  min_us  9973.465
+  stddev  2391.928
+
+Exper: req_size 1048576  #reqs 64  mode io_uring_default
+['sudo', './microbench', '-d', '/mnt/ssd/josehu/microbench_dir', '-f', '64', '-n', '64', '-r', '1048576', '--write', '-s', '134217728', '-a', 'io_uring', '--tr', '10000', '--wr', '1000']
+Time elapsed stat:
+  count   10000
+  avg_us  23812.629
+  max_us  51624.792
+  min_us  8771.802
+  stddev  2284.080
+
+Exper: req_size 1048576  #reqs 4  mode io_uring_sqeasync
+['sudo', './microbench', '-d', '/mnt/ssd/josehu/microbench_dir', '-f', '64', '-n', '4', '-r', '1048576', '--write', '-s', '134217728', '-a', 'io_uring', '--iosqe_async', '--tr', '10000', '--wr', '1000']
+Time elapsed stat:
+  count   10000
+  avg_us  858.963
+  max_us  3237.953
+  min_us  621.150
+  stddev  340.304
+
+Exper: req_size 1048576  #reqs 8  mode io_uring_sqeasync
+['sudo', './microbench', '-d', '/mnt/ssd/josehu/microbench_dir', '-f', '64', '-n', '8', '-r', '1048576', '--write', '-s', '134217728', '-a', 'io_uring', '--iosqe_async', '--tr', '10000', '--wr', '1000']
+Time elapsed stat:
+  count   10000
+  avg_us  1471.464
+  max_us  6310.761
+  min_us  950.023
+  stddev  500.813
+
+Exper: req_size 1048576  #reqs 12  mode io_uring_sqeasync
+['sudo', './microbench', '-d', '/mnt/ssd/josehu/microbench_dir', '-f', '64', '-n', '12', '-r', '1048576', '--write', '-s', '134217728', '-a', 'io_uring', '--iosqe_async', '--tr', '10000', '--wr', '1000']
+Time elapsed stat:
+  count   10000
+  avg_us  2574.855
+  max_us  10521.151
+  min_us  1481.840
+  stddev  997.151
+
+Exper: req_size 1048576  #reqs 16  mode io_uring_sqeasync
+['sudo', './microbench', '-d', '/mnt/ssd/josehu/microbench_dir', '-f', '64', '-n', '16', '-r', '1048576', '--write', '-s', '134217728', '-a', 'io_uring', '--iosqe_async', '--tr', '10000', '--wr', '1000']
+Time elapsed stat:
+  count   10000
+  avg_us  3539.847
+  max_us  12772.325
+  min_us  2063.539
+  stddev  1241.748
+
+Exper: req_size 1048576  #reqs 20  mode io_uring_sqeasync
+['sudo', './microbench', '-d', '/mnt/ssd/josehu/microbench_dir', '-f', '64', '-n', '20', '-r', '1048576', '--write', '-s', '134217728', '-a', 'io_uring', '--iosqe_async', '--tr', '10000', '--wr', '1000']
+Time elapsed stat:
+  count   10000
+  avg_us  3956.686
+  max_us  15648.244
+  min_us  2219.301
+  stddev  1428.680
+
+Exper: req_size 1048576  #reqs 24  mode io_uring_sqeasync
+['sudo', './microbench', '-d', '/mnt/ssd/josehu/microbench_dir', '-f', '64', '-n', '24', '-r', '1048576', '--write', '-s', '134217728', '-a', 'io_uring', '--iosqe_async', '--tr', '10000', '--wr', '1000']
+Time elapsed stat:
+  count   10000
+  avg_us  5069.422
+  max_us  18605.922
+  min_us  2477.534
+  stddev  1787.828
+
+Exper: req_size 1048576  #reqs 28  mode io_uring_sqeasync
+['sudo', './microbench', '-d', '/mnt/ssd/josehu/microbench_dir', '-f', '64', '-n', '28', '-r', '1048576', '--write', '-s', '134217728', '-a', 'io_uring', '--iosqe_async', '--tr', '10000', '--wr', '1000']
+Time elapsed stat:
+  count   10000
+  avg_us  5589.908
+  max_us  21636.016
+  min_us  2820.402
+  stddev  1622.242
+
+Exper: req_size 1048576  #reqs 32  mode io_uring_sqeasync
+['sudo', './microbench', '-d', '/mnt/ssd/josehu/microbench_dir', '-f', '64', '-n', '32', '-r', '1048576', '--write', '-s', '134217728', '-a', 'io_uring', '--iosqe_async', '--tr', '10000', '--wr', '1000']
+Time elapsed stat:
+  count   10000
+  avg_us  6120.196
+  max_us  25025.580
+  min_us  3070.638
+  stddev  2065.901
+
+Exper: req_size 1048576  #reqs 36  mode io_uring_sqeasync
+['sudo', './microbench', '-d', '/mnt/ssd/josehu/microbench_dir', '-f', '64', '-n', '36', '-r', '1048576', '--write', '-s', '134217728', '-a', 'io_uring', '--iosqe_async', '--tr', '10000', '--wr', '1000']
+Time elapsed stat:
+  count   10000
+  avg_us  6038.507
+  max_us  27937.296
+  min_us  3544.870
+  stddev  2031.706
+
+Exper: req_size 1048576  #reqs 40  mode io_uring_sqeasync
+['sudo', './microbench', '-d', '/mnt/ssd/josehu/microbench_dir', '-f', '64', '-n', '40', '-r', '1048576', '--write', '-s', '134217728', '-a', 'io_uring', '--iosqe_async', '--tr', '10000', '--wr', '1000']
+Time elapsed stat:
+  count   10000
+  avg_us  6533.877
+  max_us  31036.342
+  min_us  3818.298
+  stddev  2311.301
+
+Exper: req_size 1048576  #reqs 44  mode io_uring_sqeasync
+['sudo', './microbench', '-d', '/mnt/ssd/josehu/microbench_dir', '-f', '64', '-n', '44', '-r', '1048576', '--write', '-s', '134217728', '-a', 'io_uring', '--iosqe_async', '--tr', '10000', '--wr', '1000']
+Time elapsed stat:
+  count   10000
+  avg_us  6649.358
+  max_us  34148.630
+  min_us  4010.730
+  stddev  2320.312
+
+Exper: req_size 1048576  #reqs 48  mode io_uring_sqeasync
+['sudo', './microbench', '-d', '/mnt/ssd/josehu/microbench_dir', '-f', '64', '-n', '48', '-r', '1048576', '--write', '-s', '134217728', '-a', 'io_uring', '--iosqe_async', '--tr', '10000', '--wr', '1000']
+Time elapsed stat:
+  count   10000
+  avg_us  6803.275
+  max_us  36437.937
+  min_us  4380.859
+  stddev  2246.567
+
+Exper: req_size 1048576  #reqs 52  mode io_uring_sqeasync
+['sudo', './microbench', '-d', '/mnt/ssd/josehu/microbench_dir', '-f', '64', '-n', '52', '-r', '1048576', '--write', '-s', '134217728', '-a', 'io_uring', '--iosqe_async', '--tr', '10000', '--wr', '1000']
+Time elapsed stat:
+  count   10000
+  avg_us  7360.716
+  max_us  40428.983
+  min_us  4570.432
+  stddev  2169.222
+
+Exper: req_size 1048576  #reqs 56  mode io_uring_sqeasync
+['sudo', './microbench', '-d', '/mnt/ssd/josehu/microbench_dir', '-f', '64', '-n', '56', '-r', '1048576', '--write', '-s', '134217728', '-a', 'io_uring', '--iosqe_async', '--tr', '10000', '--wr', '1000']
+Time elapsed stat:
+  count   10000
+  avg_us  7875.008
+  max_us  43421.201
+  min_us  4979.434
+  stddev  2431.788
+
+Exper: req_size 1048576  #reqs 60  mode io_uring_sqeasync
+['sudo', './microbench', '-d', '/mnt/ssd/josehu/microbench_dir', '-f', '64', '-n', '60', '-r', '1048576', '--write', '-s', '134217728', '-a', 'io_uring', '--iosqe_async', '--tr', '10000', '--wr', '1000']
+Time elapsed stat:
+  count   10000
+  avg_us  7956.688
+  max_us  46214.061
+  min_us  5281.447
+  stddev  2275.935
+
+Exper: req_size 1048576  #reqs 64  mode io_uring_sqeasync
+['sudo', './microbench', '-d', '/mnt/ssd/josehu/microbench_dir', '-f', '64', '-n', '64', '-r', '1048576', '--write', '-s', '134217728', '-a', 'io_uring', '--iosqe_async', '--tr', '10000', '--wr', '1000']
+Time elapsed stat:
+  count   10000
+  avg_us  7979.450
+  max_us  48594.699
+  min_us  5583.368
+  stddev  2102.686
+
+Exper: req_size 1048576  #reqs 4  mode io_uring_sqpoll
+['sudo', './microbench', '-d', '/mnt/ssd/josehu/microbench_dir', '-f', '64', '-n', '4', '-r', '1048576', '--write', '-s', '134217728', '-a', 'io_uring', '--fixed_file', '--sq_poll', '--tr', '10000', '--wr', '1000']
+kernel thread io_uring-sq NOT running.
+kernel thread io_uring-sq is running...
+Time elapsed stat:
+  count   10000
+  avg_us  1101.014
+  max_us  2830.602
+  min_us  888.420
+  stddev  269.253
+
+Exper: req_size 1048576  #reqs 8  mode io_uring_sqpoll
+['sudo', './microbench', '-d', '/mnt/ssd/josehu/microbench_dir', '-f', '64', '-n', '8', '-r', '1048576', '--write', '-s', '134217728', '-a', 'io_uring', '--fixed_file', '--sq_poll', '--tr', '10000', '--wr', '1000']
+kernel thread io_uring-sq NOT running.
+kernel thread io_uring-sq is running...
+Time elapsed stat:
+  count   10000
+  avg_us  2632.990
+  max_us  6080.635
+  min_us  2308.076
+  stddev  368.048
+
+Exper: req_size 1048576  #reqs 12  mode io_uring_sqpoll
+['sudo', './microbench', '-d', '/mnt/ssd/josehu/microbench_dir', '-f', '64', '-n', '12', '-r', '1048576', '--write', '-s', '134217728', '-a', 'io_uring', '--fixed_file', '--sq_poll', '--tr', '10000', '--wr', '1000']
+kernel thread io_uring-sq NOT running.
+kernel thread io_uring-sq is running...
+Time elapsed stat:
+  count   10000
+  avg_us  4276.552
+  max_us  9430.075
+  min_us  2515.363
+  stddev  305.031
+
+Exper: req_size 1048576  #reqs 16  mode io_uring_sqpoll
+['sudo', './microbench', '-d', '/mnt/ssd/josehu/microbench_dir', '-f', '64', '-n', '16', '-r', '1048576', '--write', '-s', '134217728', '-a', 'io_uring', '--fixed_file', '--sq_poll', '--tr', '10000', '--wr', '1000']
+kernel thread io_uring-sq NOT running.
+kernel thread io_uring-sq is running...
+Time elapsed stat:
+  count   10000
+  avg_us  5728.892
+  max_us  12482.364
+  min_us  3062.265
+  stddev  527.795
+
+Exper: req_size 1048576  #reqs 20  mode io_uring_sqpoll
+['sudo', './microbench', '-d', '/mnt/ssd/josehu/microbench_dir', '-f', '64', '-n', '20', '-r', '1048576', '--write', '-s', '134217728', '-a', 'io_uring', '--fixed_file', '--sq_poll', '--tr', '10000', '--wr', '1000']
+kernel thread io_uring-sq NOT running.
+kernel thread io_uring-sq is running...
+Time elapsed stat:
+  count   10000
+  avg_us  7246.779
+  max_us  15526.949
+  min_us  5574.904
+  stddev  866.592
+
+Exper: req_size 1048576  #reqs 24  mode io_uring_sqpoll
+['sudo', './microbench', '-d', '/mnt/ssd/josehu/microbench_dir', '-f', '64', '-n', '24', '-r', '1048576', '--write', '-s', '134217728', '-a', 'io_uring', '--fixed_file', '--sq_poll', '--tr', '10000', '--wr', '1000']
+kernel thread io_uring-sq NOT running.
+kernel thread io_uring-sq is running...
+Time elapsed stat:
+  count   10000
+  avg_us  8602.544
+  max_us  18272.195
+  min_us  3874.928
+  stddev  743.688
+
+Exper: req_size 1048576  #reqs 28  mode io_uring_sqpoll
+['sudo', './microbench', '-d', '/mnt/ssd/josehu/microbench_dir', '-f', '64', '-n', '28', '-r', '1048576', '--write', '-s', '134217728', '-a', 'io_uring', '--fixed_file', '--sq_poll', '--tr', '10000', '--wr', '1000']
+kernel thread io_uring-sq NOT running.
+kernel thread io_uring-sq is running...
+Time elapsed stat:
+  count   10000
+  avg_us  10022.593
+  max_us  21373.845
+  min_us  4613.486
+  stddev  1264.224
+
+Exper: req_size 1048576  #reqs 32  mode io_uring_sqpoll
+['sudo', './microbench', '-d', '/mnt/ssd/josehu/microbench_dir', '-f', '64', '-n', '32', '-r', '1048576', '--write', '-s', '134217728', '-a', 'io_uring', '--fixed_file', '--sq_poll', '--tr', '10000', '--wr', '1000']
+kernel thread io_uring-sq NOT running.
+kernel thread io_uring-sq is running...
+Time elapsed stat:
+  count   10000
+  avg_us  11498.811
+  max_us  24122.428
+  min_us  4639.696
+  stddev  1303.495
+
+Exper: req_size 1048576  #reqs 36  mode io_uring_sqpoll
+['sudo', './microbench', '-d', '/mnt/ssd/josehu/microbench_dir', '-f', '64', '-n', '36', '-r', '1048576', '--write', '-s', '134217728', '-a', 'io_uring', '--fixed_file', '--sq_poll', '--tr', '10000', '--wr', '1000']
+kernel thread io_uring-sq NOT running.
+kernel thread io_uring-sq is running...
+Time elapsed stat:
+  count   10000
+  avg_us  12819.993
+  max_us  26982.423
+  min_us  5535.953
+  stddev  1164.888
+
+Exper: req_size 1048576  #reqs 40  mode io_uring_sqpoll
+['sudo', './microbench', '-d', '/mnt/ssd/josehu/microbench_dir', '-f', '64', '-n', '40', '-r', '1048576', '--write', '-s', '134217728', '-a', 'io_uring', '--fixed_file', '--sq_poll', '--tr', '10000', '--wr', '1000']
+kernel thread io_uring-sq NOT running.
+kernel thread io_uring-sq is running...
+Time elapsed stat:
+  count   10000
+  avg_us  14223.941
+  max_us  30508.576
+  min_us  6569.874
+  stddev  1457.496
+
+Exper: req_size 1048576  #reqs 44  mode io_uring_sqpoll
+['sudo', './microbench', '-d', '/mnt/ssd/josehu/microbench_dir', '-f', '64', '-n', '44', '-r', '1048576', '--write', '-s', '134217728', '-a', 'io_uring', '--fixed_file', '--sq_poll', '--tr', '10000', '--wr', '1000']
+kernel thread io_uring-sq NOT running.
+kernel thread io_uring-sq is running...
+Time elapsed stat:
+  count   10000
+  avg_us  15657.547
+  max_us  33835.264
+  min_us  6945.423
+  stddev  1857.205
+
+Exper: req_size 1048576  #reqs 48  mode io_uring_sqpoll
+['sudo', './microbench', '-d', '/mnt/ssd/josehu/microbench_dir', '-f', '64', '-n', '48', '-r', '1048576', '--write', '-s', '134217728', '-a', 'io_uring', '--fixed_file', '--sq_poll', '--tr', '10000', '--wr', '1000']
+kernel thread io_uring-sq NOT running.
+kernel thread io_uring-sq is running...
+Time elapsed stat:
+  count   10000
+  avg_us  16907.256
+  max_us  35935.346
+  min_us  13096.151
+  stddev  1698.950
+
+Exper: req_size 1048576  #reqs 52  mode io_uring_sqpoll
+['sudo', './microbench', '-d', '/mnt/ssd/josehu/microbench_dir', '-f', '64', '-n', '52', '-r', '1048576', '--write', '-s', '134217728', '-a', 'io_uring', '--fixed_file', '--sq_poll', '--tr', '10000', '--wr', '1000']
+kernel thread io_uring-sq NOT running.
+kernel thread io_uring-sq is running...
+Time elapsed stat:
+  count   10000
+  avg_us  18360.044
+  max_us  39357.531
+  min_us  8044.235
+  stddev  1668.189
+
+Exper: req_size 1048576  #reqs 56  mode io_uring_sqpoll
+['sudo', './microbench', '-d', '/mnt/ssd/josehu/microbench_dir', '-f', '64', '-n', '56', '-r', '1048576', '--write', '-s', '134217728', '-a', 'io_uring', '--fixed_file', '--sq_poll', '--tr', '10000', '--wr', '1000']
+kernel thread io_uring-sq NOT running.
+kernel thread io_uring-sq is running...
+Time elapsed stat:
+  count   10000
+  avg_us  19950.057
+  max_us  42594.393
+  min_us  8096.952
+  stddev  2629.775
+
+Exper: req_size 1048576  #reqs 60  mode io_uring_sqpoll
+['sudo', './microbench', '-d', '/mnt/ssd/josehu/microbench_dir', '-f', '64', '-n', '60', '-r', '1048576', '--write', '-s', '134217728', '-a', 'io_uring', '--fixed_file', '--sq_poll', '--tr', '10000', '--wr', '1000']
+kernel thread io_uring-sq NOT running.
+kernel thread io_uring-sq is running...
+Time elapsed stat:
+  count   10000
+  avg_us  21094.830
+  max_us  45533.832
+  min_us  7983.972
+  stddev  1930.253
+
+Exper: req_size 1048576  #reqs 64  mode io_uring_sqpoll
+['sudo', './microbench', '-d', '/mnt/ssd/josehu/microbench_dir', '-f', '64', '-n', '64', '-r', '1048576', '--write', '-s', '134217728', '-a', 'io_uring', '--fixed_file', '--sq_poll', '--tr', '10000', '--wr', '1000']
+kernel thread io_uring-sq NOT running.
+kernel thread io_uring-sq is running...
+Time elapsed stat:
+  count   10000
+  avg_us  22686.176
+  max_us  49363.433
+  min_us  8316.193
+  stddev  2336.724
+
+Exper: req_size 1048576  #reqs 4  mode io_uring_sqeasync_sqpoll
+['sudo', './microbench', '-d', '/mnt/ssd/josehu/microbench_dir', '-f', '64', '-n', '4', '-r', '1048576', '--write', '-s', '134217728', '-a', 'io_uring', '--iosqe_async', '--fixed_file', '--sq_poll', '--tr', '10000', '--wr', '1000']
+kernel thread io_uring-sq NOT running.
+kernel thread io_uring-sq is running...
+Time elapsed stat:
+  count   10000
+  avg_us  949.119
+  max_us  2921.910
+  min_us  826.328
+  stddev  160.555
+
+Exper: req_size 1048576  #reqs 8  mode io_uring_sqeasync_sqpoll
+['sudo', './microbench', '-d', '/mnt/ssd/josehu/microbench_dir', '-f', '64', '-n', '8', '-r', '1048576', '--write', '-s', '134217728', '-a', 'io_uring', '--iosqe_async', '--fixed_file', '--sq_poll', '--tr', '10000', '--wr', '1000']
+kernel thread io_uring-sq NOT running.
+kernel thread io_uring-sq is running...
+Time elapsed stat:
+  count   10000
+  avg_us  3811.049
+  max_us  6729.426
+  min_us  1556.422
+  stddev  1467.313
+
+Exper: req_size 1048576  #reqs 12  mode io_uring_sqeasync_sqpoll
+['sudo', './microbench', '-d', '/mnt/ssd/josehu/microbench_dir', '-f', '64', '-n', '12', '-r', '1048576', '--write', '-s', '134217728', '-a', 'io_uring', '--iosqe_async', '--fixed_file', '--sq_poll', '--tr', '10000', '--wr', '1000']
+kernel thread io_uring-sq NOT running.
+kernel thread io_uring-sq is running...
+Time elapsed stat:
+  count   10000
+  avg_us  3253.712
+  max_us  9498.886
+  min_us  1663.141
+  stddev  1625.488
+
+Exper: req_size 1048576  #reqs 16  mode io_uring_sqeasync_sqpoll
+['sudo', './microbench', '-d', '/mnt/ssd/josehu/microbench_dir', '-f', '64', '-n', '16', '-r', '1048576', '--write', '-s', '134217728', '-a', 'io_uring', '--iosqe_async', '--fixed_file', '--sq_poll', '--tr', '10000', '--wr', '1000']
+kernel thread io_uring-sq NOT running.
+kernel thread io_uring-sq is running...
+Time elapsed stat:
+  count   10000
+  avg_us  4016.582
+  max_us  12576.074
+  min_us  2043.584
+  stddev  1701.109
+
+Exper: req_size 1048576  #reqs 20  mode io_uring_sqeasync_sqpoll
+['sudo', './microbench', '-d', '/mnt/ssd/josehu/microbench_dir', '-f', '64', '-n', '20', '-r', '1048576', '--write', '-s', '134217728', '-a', 'io_uring', '--iosqe_async', '--fixed_file', '--sq_poll', '--tr', '10000', '--wr', '1000']
+kernel thread io_uring-sq NOT running.
+kernel thread io_uring-sq is running...
+Time elapsed stat:
+  count   10000
+  avg_us  4322.869
+  max_us  15486.172
+  min_us  2252.811
+  stddev  2067.995
+
+Exper: req_size 1048576  #reqs 24  mode io_uring_sqeasync_sqpoll
+['sudo', './microbench', '-d', '/mnt/ssd/josehu/microbench_dir', '-f', '64', '-n', '24', '-r', '1048576', '--write', '-s', '134217728', '-a', 'io_uring', '--iosqe_async', '--fixed_file', '--sq_poll', '--tr', '10000', '--wr', '1000']
+kernel thread io_uring-sq NOT running.
+kernel thread io_uring-sq is running...
+Time elapsed stat:
+  count   10000
+  avg_us  5342.751
+  max_us  18391.533
+  min_us  2370.667
+  stddev  2399.916
+
+Exper: req_size 1048576  #reqs 28  mode io_uring_sqeasync_sqpoll
+['sudo', './microbench', '-d', '/mnt/ssd/josehu/microbench_dir', '-f', '64', '-n', '28', '-r', '1048576', '--write', '-s', '134217728', '-a', 'io_uring', '--iosqe_async', '--fixed_file', '--sq_poll', '--tr', '10000', '--wr', '1000']
+kernel thread io_uring-sq NOT running.
+kernel thread io_uring-sq is running...
+Time elapsed stat:
+  count   10000
+  avg_us  5915.022
+  max_us  21433.828
+  min_us  2792.588
+  stddev  2550.235
+
+Exper: req_size 1048576  #reqs 32  mode io_uring_sqeasync_sqpoll
+['sudo', './microbench', '-d', '/mnt/ssd/josehu/microbench_dir', '-f', '64', '-n', '32', '-r', '1048576', '--write', '-s', '134217728', '-a', 'io_uring', '--iosqe_async', '--fixed_file', '--sq_poll', '--tr', '10000', '--wr', '1000']
+kernel thread io_uring-sq NOT running.
+kernel thread io_uring-sq is running...
+Time elapsed stat:
+  count   10000
+  avg_us  6449.252
+  max_us  24404.768
+  min_us  3297.810
+  stddev  2702.732
+
+Exper: req_size 1048576  #reqs 36  mode io_uring_sqeasync_sqpoll
+['sudo', './microbench', '-d', '/mnt/ssd/josehu/microbench_dir', '-f', '64', '-n', '36', '-r', '1048576', '--write', '-s', '134217728', '-a', 'io_uring', '--iosqe_async', '--fixed_file', '--sq_poll', '--tr', '10000', '--wr', '1000']
+kernel thread io_uring-sq NOT running.
+kernel thread io_uring-sq is running...
+Time elapsed stat:
+  count   10000
+  avg_us  7136.579
+  max_us  27774.680
+  min_us  3733.688
+  stddev  3052.810
+
+Exper: req_size 1048576  #reqs 40  mode io_uring_sqeasync_sqpoll
+['sudo', './microbench', '-d', '/mnt/ssd/josehu/microbench_dir', '-f', '64', '-n', '40', '-r', '1048576', '--write', '-s', '134217728', '-a', 'io_uring', '--iosqe_async', '--fixed_file', '--sq_poll', '--tr', '10000', '--wr', '1000']
+kernel thread io_uring-sq NOT running.
+kernel thread io_uring-sq is running...
+Time elapsed stat:
+  count   10000
+  avg_us  7824.793
+  max_us  30780.298
+  min_us  3640.804
+  stddev  3128.275
+
+Exper: req_size 1048576  #reqs 44  mode io_uring_sqeasync_sqpoll
+['sudo', './microbench', '-d', '/mnt/ssd/josehu/microbench_dir', '-f', '64', '-n', '44', '-r', '1048576', '--write', '-s', '134217728', '-a', 'io_uring', '--iosqe_async', '--fixed_file', '--sq_poll', '--tr', '10000', '--wr', '1000']
+kernel thread io_uring-sq NOT running.
+kernel thread io_uring-sq is running...
+Time elapsed stat:
+  count   10000
+  avg_us  8541.289
+  max_us  33558.730
+  min_us  4126.038
+  stddev  3631.909
+
+Exper: req_size 1048576  #reqs 48  mode io_uring_sqeasync_sqpoll
+['sudo', './microbench', '-d', '/mnt/ssd/josehu/microbench_dir', '-f', '64', '-n', '48', '-r', '1048576', '--write', '-s', '134217728', '-a', 'io_uring', '--iosqe_async', '--fixed_file', '--sq_poll', '--tr', '10000', '--wr', '1000']
+kernel thread io_uring-sq NOT running.
+kernel thread io_uring-sq is running...
+Time elapsed stat:
+  count   10000
+  avg_us  8969.922
+  max_us  36553.880
+  min_us  4334.523
+  stddev  3999.775
+
+Exper: req_size 1048576  #reqs 52  mode io_uring_sqeasync_sqpoll
+['sudo', './microbench', '-d', '/mnt/ssd/josehu/microbench_dir', '-f', '64', '-n', '52', '-r', '1048576', '--write', '-s', '134217728', '-a', 'io_uring', '--iosqe_async', '--fixed_file', '--sq_poll', '--tr', '10000', '--wr', '1000']
+kernel thread io_uring-sq NOT running.
+kernel thread io_uring-sq is running...
+Time elapsed stat:
+  count   10000
+  avg_us  9808.663
+  max_us  39600.550
+  min_us  4550.920
+  stddev  4277.231
+
+Exper: req_size 1048576  #reqs 56  mode io_uring_sqeasync_sqpoll
+['sudo', './microbench', '-d', '/mnt/ssd/josehu/microbench_dir', '-f', '64', '-n', '56', '-r', '1048576', '--write', '-s', '134217728', '-a', 'io_uring', '--iosqe_async', '--fixed_file', '--sq_poll', '--tr', '10000', '--wr', '1000']
+kernel thread io_uring-sq NOT running.
+kernel thread io_uring-sq is running...
+Time elapsed stat:
+  count   10000
+  avg_us  9882.144
+  max_us  43005.777
+  min_us  5050.370
+  stddev  4393.396
+
+Exper: req_size 1048576  #reqs 60  mode io_uring_sqeasync_sqpoll
+['sudo', './microbench', '-d', '/mnt/ssd/josehu/microbench_dir', '-f', '64', '-n', '60', '-r', '1048576', '--write', '-s', '134217728', '-a', 'io_uring', '--iosqe_async', '--fixed_file', '--sq_poll', '--tr', '10000', '--wr', '1000']
+kernel thread io_uring-sq NOT running.
+kernel thread io_uring-sq is running...
+Time elapsed stat:
+  count   10000
+  avg_us  10879.638
+  max_us  45923.054
+  min_us  5186.730
+  stddev  4893.547
+
+Exper: req_size 1048576  #reqs 64  mode io_uring_sqeasync_sqpoll
+['sudo', './microbench', '-d', '/mnt/ssd/josehu/microbench_dir', '-f', '64', '-n', '64', '-r', '1048576', '--write', '-s', '134217728', '-a', 'io_uring', '--iosqe_async', '--fixed_file', '--sq_poll', '--tr', '10000', '--wr', '1000']
+kernel thread io_uring-sq NOT running.
+kernel thread io_uring-sq is running...
+Time elapsed stat:
+  count   10000
+  avg_us  11369.271
+  max_us  49393.298
+  min_us  5556.879
+  stddev  5033.827
+
