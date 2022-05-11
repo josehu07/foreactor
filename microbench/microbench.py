@@ -14,6 +14,7 @@ FILE_SIZE = 128 * 1024 * 1024
 FILE_SIZE_WHEN_LIMIT = 16 * 1024 * 1024
 NUM_REQS_LIST = list(range(4, 68, 4))
 REQ_SIZE_LIST = [(4**i) * 1024 for i in range(1, 7, 2)]
+REQ_SIZE_LIST_WHEN_LIMIT = [(4**i) * 1024 for i in range(1, 5, 2)]
 ASYNC_MODES = ["sync", "thread_pool_unbounded", "thread_pool_nproc", "thread_pool_4xsocks",
                "io_uring_default", "io_uring_sqeasync", "io_uring_sqpoll", "io_uring_sqeasync_sqpoll"]
 LINE_STYLES = [':', '--', '--', '--',
@@ -164,7 +165,11 @@ def plot_results(req_size, avg_us_l, stddev_l, output_prefix):
 
 def run_expers(dir_path, rw_mode, file_src, page_cache,
                timing_rounds, warmup_rounds, output_prefix):
-    for req_size in REQ_SIZE_LIST:
+    req_size_list = REQ_SIZE_LIST
+    if page_cache != "unlimited" and page_cache != "direct":
+        req_size_list = REQ_SIZE_LIST_WHEN_LIMIT
+        
+    for req_size in req_size_list:
         avg_us_l, stddev_l = [], []
 
         for async_mode in ASYNC_MODES:
