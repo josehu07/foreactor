@@ -2,7 +2,7 @@
 // Application/plugin only needs to include this header file, <foreactor.h>.
 // 
 // This header hides all C++ class-specific details, so that it is safe to
-// include in C applications.
+// be included by C applications.
 //
 //
 // The foreactor library expects the following environment variables:
@@ -21,6 +21,7 @@
 //   (i.e., SCGraph type) involved in the application; for example, giving
 //   QUEUE_0=32 and DEPTH_0=8 says that the IOUring queue length for SCGraph
 //   type 0 is 32 and the pre-issuing depth is set to be 8
+//
 
 
 #include <fcntl.h>
