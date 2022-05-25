@@ -7,28 +7,32 @@
 #include <sys/file.h>
 
 #include "debug.hpp"
+#include "posix_itf.hpp"
 #include "scg_graph.hpp"
 #include "syscalls.hpp"
-#include "posix_itf.hpp"
 #include "value_pool.hpp"
 
+
+///////////////////////////////////////////
+// Find original POSIX library functions //
+///////////////////////////////////////////
 
 namespace foreactor::posix {
 
 
 // Credit to uLayFS code by Shawn Zhong (https://github.com/ShawnZhong).
-#define INIT_FN(fn)                                                          \
+#define FIND_POSIX_FN(fn)                                                    \
     const decltype(&::fn) fn = []() noexcept {                               \
         auto res = reinterpret_cast<decltype(&::fn)>(dlsym(RTLD_NEXT, #fn)); \
         assert(res != nullptr);                                              \
         return res;                                                          \
     }()
 
-INIT_FN(open);
-INIT_FN(close);
-INIT_FN(pread);
+FIND_POSIX_FN(open);
+FIND_POSIX_FN(close);
+FIND_POSIX_FN(pread);
 
-#undef INIT_FN
+#undef FIND_POSIX_FN
 
 
 }
@@ -62,7 +66,7 @@ int open(const char *pathname, int flags, ...) {
         assert(node->sc_type == SC_OPEN);
         node->CheckArgs(epoch, pathname, flags, mode);
         DEBUG("open<%p>->Issue(%s)\n",
-              node, StreamStr<EpochListBase>(epoch).c_str());
+              node, StreamStr(epoch).c_str());
         return static_cast<int>(node->Issue(epoch));
     }
 }
@@ -84,7 +88,7 @@ ssize_t pread(int fd, void *buf, size_t count, off_t offset) {
         assert(node->sc_type == SC_PREAD);
         node->CheckArgs(epoch, fd, count, offset);
         DEBUG("pread<%p>->Issue(%s, %p)\n",
-              node, StreamStr<EpochListBase>(epoch).c_str(), buf);
+              node, StreamStr(epoch).c_str(), buf);
         return static_cast<ssize_t>(node->Issue(epoch, buf));
     }
 }

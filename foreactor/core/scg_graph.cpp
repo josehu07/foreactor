@@ -1,12 +1,11 @@
 #include <iostream>
 #include <fstream>
-#include <tuple>
 #include <string>
+#include <tuple>
 #include <unordered_set>
 #include <stdexcept>
 #include <assert.h>
 #include <unistd.h>
-#include <liburing.h>
 
 #include "debug.hpp"
 #include "timer.hpp"
@@ -18,20 +17,20 @@
 namespace foreactor {
 
 
-///////////////////////////////////////////////////////////////
-// For plugins to register/unregister current active SCGraph //
-///////////////////////////////////////////////////////////////
+////////////////////////////////////////////////
+// Register/unregister current active SCGraph //
+////////////////////////////////////////////////
 
 thread_local SCGraph *active_scgraph = nullptr;
 
-void RegisterSCGraph(SCGraph *scgraph) {
+void SCGraph::RegisterSCGraph(SCGraph *scgraph) {
     assert(active_scgraph == nullptr);
     assert(scgraph != nullptr);
     active_scgraph = scgraph;
     DEBUG("registered SCGraph @ %p as active\n", scgraph);
 }
 
-void UnregisterSCGraph() {
+void SCGraph::UnregisterSCGraph() {
     assert(active_scgraph != nullptr);
     DEBUG("unregister SCGraph @ %p\n", active_scgraph);
     active_scgraph = nullptr;
@@ -42,60 +41,41 @@ void UnregisterSCGraph() {
 // SCGraph implementation //
 ////////////////////////////
 
-SCGraph::SCGraph(unsigned graph_id, unsigned max_dims)
-        : graph_id(graph_id), max_dims(max_dims),
-          graph_built(false), ring_associated(false),
-          num_prepared(0), prepared_distance(-1),
-          frontier_epoch(EpochListBase::New(max_dims)),
-          peekhead_epoch(EpochListBase::New(max_dims)),
-          peekhead_distance(-1), peekhead_hit_end(false) {
+SCGraph::SCGraph(unsigned graph_id, unsigned total_dims, IOUring *ring,
+                 int pre_issue_depth)
+        : graph_id(graph_id), total_dims(total_dims), graph_built(false),
+          ring(ring), pre_issue_depth(pre_issue_depth), nodes{},
+          num_prepared(0), prepared_distance(-1), frontier(nullptr),
+          peekhead(nullptr), peekhead_edge(EDGE_BASE),
+          peekhead_distance(-1), peekhead_hit_end(false),
+          frontier_epoch(total_dims), peekhead_epoch(total_dims) {
+    assert(ring != nullptr);
+    assert(pre_issue_depth >= 0);
 }
 
 SCGraph::~SCGraph() {
-    // TIMER_PRINT(TimerNameStr("build-graph"), TIME_MICRO);
-    // TIMER_RESET(TimerNameStr("build-graph"));
-
-    EpochListBase::Delete(frontier_epoch);
-    EpochListBase::Delete(peekhead_epoch);
-
     // clean up and delete all nodes added
-    for (auto& node : nodes)
+    for (auto&& [_, node] : nodes)
         delete node;
 }
 
 
-void SCGraph::StartTimer(std::string timer) const {
+std::string SCGraph::TimerNameStr(std::string& timer) const {
+    return "g" + std::to_string(graph_id) + "-" + timer;
+}
+
+void SCGraph::StartTimer(std::string& timer) const {
     TIMER_START(TimerNameStr(timer));
 }
 
-void SCGraph::PauseTimer(std::string timer) const {
+void SCGraph::PauseTimer(std::string& timer) const {
     TIMER_PAUSE(TimerNameStr(timer));
 }
 
 
-void SCGraph::AssociateRing(IOUring *ring_, int pre_issue_depth_) {
-    assert(ring_ != nullptr);
-    assert(ring_->ring_initialized);
-
-    assert(pre_issue_depth_ >= 0);
-    assert(pre_issue_depth_ <= ring_->sq_length);
-
-    ring = ring_;
-    pre_issue_depth = pre_issue_depth_;
-    ring_associated = true;
-    DEBUG("associate SCGraph %u to IOUring %p\n", graph_id, ring);
-}
-
-bool SCGraph::IsRingAssociated() const {
-    return ring_associated;
-}
-
-
 void SCGraph::SetBuilt() {
+    assert(!graph_built);
     graph_built = true;
-    DEBUG("built SCGraph %u\n", graph_id);
-
-    // DumpDotImg("version_get");
 }
 
 bool SCGraph::IsBuilt() const {
@@ -103,51 +83,52 @@ bool SCGraph::IsBuilt() const {
 }
 
 
+void SCGraph::ClearAllReqs() {
+    TIMER_START(TimerNameStr("clear-prog"));
+    ring->CleanUp();
+    TIMER_PAUSE(TimerNameStr("clear-prog"));
+    DEBUG("cleared SCGraph %u\n", graph_id);
+
+    TIMER_PRINT(TimerNameStr("pool-flush"),  TIME_MICRO);
+    TIMER_PRINT(TimerNameStr("pool-clear"),  TIME_MICRO);
+    TIMER_PRINT(TimerNameStr("peek-algo"),   TIME_MICRO);
+    TIMER_PRINT(TimerNameStr("ring-submit"), TIME_MICRO);
+    TIMER_PRINT(TimerNameStr("sync-call"),   TIME_MICRO);
+    TIMER_PRINT(TimerNameStr("ring-cmpl"),   TIME_MICRO);
+    TIMER_PRINT(TimerNameStr("clear-prog"),  TIME_MICRO);
+    TIMER_RESET(TimerNameStr("pool-flush"));
+    TIMER_RESET(TimerNameStr("peek-algo"));
+    TIMER_RESET(TimerNameStr("ring-submit"));
+    TIMER_RESET(TimerNameStr("sync-call"));
+    TIMER_RESET(TimerNameStr("ring-cmpl"));
+    TIMER_RESET(TimerNameStr("clear-prog"));
+}
+
 void SCGraph::ResetToStart() {
     num_prepared = 0;
     prepared_distance = -1;
 
     frontier = initial_frontier;
-    frontier_epoch->ClearEpochs();
+    frontier_epoch->Reset();
     
     peekhead = nullptr;
     peekhead_edge = EDGE_BASE;
-    peekhead_epoch->ClearEpochs();
+    peekhead_epoch->Reset();
     peekhead_distance = -1;
     peekhead_hit_end = false;
-}
 
-void SCGraph::ClearAllReqs() {
-    TIMER_START(TimerNameStr("clear-prog"));
-    ring->ClearAllInProgress();
-    ring->DeleteAllPrepared();
-    TIMER_PAUSE(TimerNameStr("clear-prog"));
-    DEBUG("cleared SCGraph %u\n", graph_id);
-
-    // TIMER_PRINT(TimerNameStr("pool-flush"),  TIME_MICRO);
-    // TIMER_PRINT(TimerNameStr("pool-clear"),  TIME_MICRO);
-    // TIMER_PRINT(TimerNameStr("peek-algo"),   TIME_MICRO);
-    // TIMER_PRINT(TimerNameStr("ring-submit"), TIME_MICRO);
-    // TIMER_PRINT(TimerNameStr("sync-call"),   TIME_MICRO);
-    // TIMER_PRINT(TimerNameStr("ring-cmpl"),   TIME_MICRO);
-    // TIMER_PRINT(TimerNameStr("clear-prog"),  TIME_MICRO);
-    // TIMER_RESET(TimerNameStr("pool-flush"));
-    // TIMER_RESET(TimerNameStr("pool-clear"));
-    // TIMER_RESET(TimerNameStr("peek-algo"));
-    // TIMER_RESET(TimerNameStr("ring-submit"));
-    // TIMER_RESET(TimerNameStr("sync-call"));
-    // TIMER_RESET(TimerNameStr("ring-cmpl"));
-    // TIMER_RESET(TimerNameStr("clear-prog"));
+    for (auto&& [_, node] : nodes)
+        node->Reset();
 }
 
 
 void SCGraph::AddNode(SCGraphNode *node, bool is_start) {
     assert(node != nullptr);
-    assert(nodes.find(node) == nodes.end());
+    assert(!nodes.contains(node->node_id));
+    assert(node->scgraph == this);
 
-    nodes.insert(node);
-    node->scgraph = this;
-    DEBUG("added node %s<%p>\n", StreamStr<SCGraphNode>(node).c_str(), node);
+    nodes[node->node_id] = node;
+    DEBUG("added node %s<%p>\n", StreamStr(node).c_str(), node);
 
     if (is_start) {
         assert(frontier == nullptr);
@@ -158,14 +139,14 @@ void SCGraph::AddNode(SCGraphNode *node, bool is_start) {
 }
 
 
-// GetFrontier implementation inside header due to genericity.
+// GetFrontier implementation inside header due to templating.
 
 
 ///////////////////////////
 // Visualization helpers //
 ///////////////////////////
 
-static std::string NodeName(const SCGraphNode *node) {
+static inline std::string NodeName(const SCGraphNode *node) {
     if (node == nullptr)
         return "end";
     return node->name;
@@ -196,8 +177,8 @@ void SCGraph::DumpDotImg(std::string filestem) const {
             fdot << " [style=dashed]";
         fdot << ";" << std::endl;
 
-        if (plotted.find(node->next_node) == plotted.end() &&
-            pending.find(node->next_node) == pending.end())
+        if ((!plotted.contains(node->next_node)) &&
+            (!pending.contains(node->next_node)))
             pending.insert(node->next_node);
     };
 
@@ -221,8 +202,8 @@ void SCGraph::DumpDotImg(std::string filestem) const {
                 fdot << ",dir=both,arrowtail=odot";
             fdot << "];" << std::endl;
 
-            if (plotted.find(child) == plotted.end() &&
-                pending.find(child) == pending.end())
+            if ((!plotted.contains(child)) &&
+                (!pending.contains(child)))
                 pending.insert(child);
         }
     };
@@ -254,7 +235,7 @@ void SCGraph::DumpDotImg(std::string filestem) const {
             throw std::runtime_error("unknown node type");
         }
 
-        if (plotted.find(node) == plotted.end())
+        if (!plotted.contains(node))
             plotted.insert(node);
     }
 
@@ -263,7 +244,7 @@ void SCGraph::DumpDotImg(std::string filestem) const {
 
     std::string dot_cmd = "dot -T svg -o " + filestem + ".svg "
                           + filestem + ".dot";
-    int rc __attribute__((unused)) = system(dot_cmd.c_str());
+    [[maybe_unused]] int rc = system(dot_cmd.c_str());
     assert(rc == 0);
 }
 

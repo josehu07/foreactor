@@ -29,36 +29,36 @@
 #define TIMER_START(id)                       \
     do {                                      \
         std::string uid = tid_str + "-" + id; \
-        if (timers.find(uid) == timers.end()) \
+        if (!timers.contains(uid))            \
             timers.emplace((uid), (uid));     \
         timers.at(uid).Start();               \
     } while (0)
 
-#define TIMER_PAUSE(id)                           \
-    do {                                          \
-        std::string uid = tid_str + "-" + id;     \
-        assert(timers.find(uid) != timers.end()); \
-        timers.at(uid).Pause();                   \
+#define TIMER_PAUSE(id)                       \
+    do {                                      \
+        std::string uid = tid_str + "-" + id; \
+        assert(timers.contains(uid));         \
+        timers.at(uid).Pause();               \
     } while (0)
 
 #define TIMER_PRINT(id, unit)                 \
     do {                                      \
         std::string uid = tid_str + "-" + id; \
-        if (timers.find(uid) != timers.end()) \
+        if (timers.contains(uid))             \
             timers.at(uid).ShowStat(unit);    \
     } while (0)
 
 #define TIMER_RESET(id)                       \
     do {                                      \
         std::string uid = tid_str + "-" + id; \
-        if (timers.find(uid) != timers.end()) \
+        if (timers.contains(uid))             \
             timers.at(uid).Reset();           \
     } while (0)
 
 #define TIMER_CLEAR(id)                       \
     do {                                      \
         std::string uid = tid_str + "-" + id; \
-        if (timers.find(uid) != timers.end()) \
+        if (timers.contains(uid))             \
             timers.erase(uid);                \
     } while (0)
 
@@ -73,9 +73,9 @@
 #endif
 
 
-//////////////////////////////////
-// Timers internally use chrono //
-//////////////////////////////////
+////////////////////////////////////
+// Timers internal implementation //
+////////////////////////////////////
 
 namespace foreactor {
 

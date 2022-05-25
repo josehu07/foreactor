@@ -37,15 +37,13 @@ void Timer::Reset() {
 
 void Timer::Start() {
     assert(!started);
-    int ret __attribute__((unused)) =
-        clock_gettime(CLOCK_REALTIME, &start_ts);
+    [[maybe_unused]] int ret = clock_gettime(CLOCK_REALTIME, &start_ts);
     assert(ret == 0);
 }
 
 void Timer::Pause() {
     assert(started);
-    int ret __attribute__((unused)) =
-        clock_gettime(CLOCK_REALTIME, &pause_ts);
+    [[maybe_unused]] int ret = clock_gettime(CLOCK_REALTIME, &pause_ts);
     assert(ret == 0);
 
     uint64_t nsecs = (pause_ts.tv_sec - start_ts.tv_sec) * 1e9

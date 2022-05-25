@@ -3,6 +3,8 @@
 #include <vector>
 #include <fcntl.h>
 #include <unistd.h>
+#include <assert.h>
+#include <liburing.h>
 
 #include "scg_nodes.hpp"
 #include "value_pool.hpp"
@@ -18,26 +20,22 @@ namespace foreactor {
 // open
 class SyscallOpen final : public SyscallNode {
     private:
-        ValuePoolBase<std::string> *pathname;
-        ValuePoolBase<int> *flags;
-        ValuePoolBase<mode_t> *mode;
+        ValuePool<std::string> pathname;
+        ValuePool<int> flags;
+        ValuePool<mode_t> mode;
 
-        bool RefreshStage(EpochListBase *epoch);
-        long SyscallSync(EpochListBase *epoch, void *output_buf);
-        void PrepUring(EpochListBase *epoch, struct io_uring_sqe *sqe);
-        void ReflectResult(EpochListBase *epoch, void *output_buf);
+        long SyscallSync(const EpochList& epoch, void *output_buf);
+        void PrepUringSqe(const EpochList& epoch, struct io_uring_sqe *sqe);
+        void ReflectResult(const EpochList& epoch, void *output_buf);
+        void Reset();
 
     public:
         SyscallOpen() = delete;
         // Arguments could be not ready at the point of constructing the
         // SCGraph, in which case those they must be set before calling
         // Issue on this syscall node.
-        SyscallOpen(std::string name,
-                    ValuePoolBase<SyscallStage> *stage,
-                    ValuePoolBase<long> *rc,
-                    ValuePoolBase<std::string> *pathname,
-                    ValuePoolBase<int> *flags,
-                    ValuePoolBase<mode_t> *mode);
+        SyscallOpen(unsigned node_id, std::string name, SCGraph *scgraph,
+                    const std::unordered_set<int>& assoc_dims);
         ~SyscallOpen() {}
 
         friend std::ostream& operator<<(std::ostream& s,
@@ -48,7 +46,7 @@ class SyscallOpen final : public SyscallNode {
         // submissions) have the same value as fed by the invocation.
         // For syscalls that have non-ready arguments until the timepoint of
         // invocation, this function will install their values.
-        void CheckArgs(EpochListBase *epoch,
+        void CheckArgs(const EpochList& epoch,
                        const char *pathname_, int flags_, mode_t mode_);
 };
 
@@ -56,33 +54,28 @@ class SyscallOpen final : public SyscallNode {
 // pread
 class SyscallPread final : public SyscallNode {
     private:
-        ValuePoolBase<int> *fd;
-        ValuePoolBase<size_t> *count;
-        ValuePoolBase<off_t> *offset;
+        ValuePool<int> fd;
+        ValuePool<size_t> count;
+        ValuePool<off_t> offset;
 
         // Used when issued async.
-        ValuePoolBase<char *> *internal_buf;
+        ValuePool<char *> internal_buf;
 
-        bool RefreshStage(EpochListBase *epoch);
-        long SyscallSync(EpochListBase *epoch, void *output_buf);
-        void PrepUring(EpochListBase *epoch, struct io_uring_sqe *sqe);
-        void ReflectResult(EpochListBase *epoch, void *output_buf);
+        long SyscallSync(const EpochList& epoch, void *output_buf);
+        void PrepUringSqe(const EpochList& epoch, struct io_uring_sqe *sqe);
+        void ReflectResult(const EpochList& epoch, void *output_buf);
+        void Reset();
 
     public:
         SyscallPread() = delete;
-        SyscallPread(std::string name,
-                     ValuePoolBase<SyscallStage> *stage,
-                     ValuePoolBase<long> *rc,
-                     ValuePoolBase<int> *fd,
-                     ValuePoolBase<size_t> *count,
-                     ValuePoolBase<off_t> *offset,
-                     ValuePoolBase<char *> *internal_buf);
+        SyscallPread(unsigned node_id, std::string name, SCGraph *scgraph,
+                     const std::unordered_set<int>& assoc_dims);
         ~SyscallPread() {}
 
         friend std::ostream& operator<<(std::ostream& s,
                                         const SyscallPread& n);
 
-        void CheckArgs(EpochListBase *epoch,
+        void CheckArgs(const EpochList& epoch,
                        int fd_, size_t count_, off_t offset_);
 };
 

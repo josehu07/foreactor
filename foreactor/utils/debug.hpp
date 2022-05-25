@@ -56,12 +56,22 @@
     } while (0)
 
 
+///////////////////////////
+// Stringization helpers //
+///////////////////////////
+
+
 namespace foreactor {
 
-
-// thread ID
 extern thread_local const pid_t tid;
 extern thread_local const std::string tid_str;
+
+template <typename T>
+static inline std::string StreamStr(const T& item) {
+    std::ostringstream ss;
+    ss << item;
+    return std::move(ss.str());
+}
 
 
 }
