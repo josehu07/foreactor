@@ -2,7 +2,7 @@ CC=g++
 CXXFLAGS=-Wall -Werror -std=c++20 -D_GNU_SOURCE
 
 FA_SRCS:=$(wildcard core/*.cpp)
-FA_SRCS:=$(wildcard syscalls/*.cpp)
+FA_SRCS+=$(wildcard syscalls/*.cpp)
 FA_SRCS+=$(wildcard utils/*.cpp)
 FA_OBJS:=$(patsubst %.cpp,%.o,$(FA_SRCS))
 FA_INCL:=-I./core -I./syscalls -I./utils -I./include

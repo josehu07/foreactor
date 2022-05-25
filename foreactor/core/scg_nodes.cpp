@@ -31,7 +31,7 @@ std::ostream& operator<<(std::ostream& s, const SyscallStage& t) {
     switch (t) {
     case STAGE_NOTREADY: s << "NOTREADY"; break;
     case STAGE_UNISSUED: s << "UNISSUED"; break;
-    case STAGE_PROGRESS: s << "PROGRESS"; break;
+    case STAGE_ONTHEFLY: s << "PROGRESS"; break;
     case STAGE_FINISHED: s << "FINISHED"; break;
     default:             s << "UNKNOWN";  break;
     }
@@ -131,7 +131,7 @@ void SyscallNode::CmplAsync(const EpochList& epoch) {
         // fetch the node ptr and epoch of this request
         EntryId entry_id = scgraph->ring->GetCqeEntryId(cqe);
         auto [sqe_node, sqe_epoch_sum] = IOUring::DecodeEntryId(entry_id);
-        assert(sqe_node->stage.Get(sqe_epoch_sum) == STAGE_PROGRESS);
+        assert(sqe_node->stage.Get(sqe_epoch_sum) == STAGE_ONTHEFLY);
         
         // reflect rc and stage
         sqe_node->rc.Set(sqe_epoch_sum, cqe->res);
@@ -288,7 +288,7 @@ long SyscallNode::Issue(const EpochList& epoch, void *output_buf) {
         DEBUG("ring-cmpl %s<%p>@%s\n",
               StreamStr(this).c_str(), this, StreamStr(epoch).c_str());
         TIMER_START(scgraph->TimerNameStr("ring-cmpl"));
-        if (stage.Get(epoch) == STAGE_PROGRESS)
+        if (stage.Get(epoch) == STAGE_ONTHEFLY)
             CmplAsync(epoch);
         assert(stage.Get(epoch) == STAGE_FINISHED);
         TIMER_PAUSE(scgraph->TimerNameStr("ring-cmpl"));
