@@ -123,7 +123,8 @@ class SyscallNode : public SCGraphNode {
         void PrepAsync(const EpochList& epoch);
         void CmplAsync(const EpochList& epoch);
 
-        static bool IsForeactable(EdgeType edge, const SyscallNode *next);
+        static bool IsForeactable(EdgeType edge, const SyscallNode *next,
+                                  const EpochList& epoch);
 
     public:
         void PrintCommonInfo(std::ostream& s) const;

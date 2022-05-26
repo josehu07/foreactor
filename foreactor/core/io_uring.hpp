@@ -20,10 +20,10 @@ class SyscallNode;
 class IOUring {
     friend class SCGraph;
 
-    // uint64_t user_data field of each queue entry.
-    typedef uint64_t EntryId;
-
     public:
+        // uint64_t user_data field of each queue entry.
+        typedef uint64_t EntryId;
+
         // Encode/Decode the user_data field from/to (node, epoch_sum) tuple.
         static EntryId EncodeEntryId(SyscallNode* node, int epoch_sum);
         static std::tuple<SyscallNode *, int> DecodeEntryId(EntryId entry_id);
@@ -35,13 +35,13 @@ class IOUring {
         std::unordered_set<EntryId> prepared;
         std::unordered_set<EntryId> onthefly;
 
-        // Get pointer to struct io_uring.
-        struct io_uring *Ring() const;
-
     public:
         IOUring() = delete;
         IOUring(int sq_length);
         ~IOUring();
+
+        // Get pointer to struct io_uring.
+        struct io_uring *Ring();
 
         // Insert one request into the prepared set; requests in this set
         // are in PREPARED stage, but the io_uring_prep_xxx() is not done

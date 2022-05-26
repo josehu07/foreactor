@@ -12,6 +12,9 @@
 #include "foreactor.h"
 
 
+namespace foreactor {
+
+
 ///////////////////////////////////////////
 // Shared library constructor/destructor //
 ///////////////////////////////////////////
@@ -37,9 +40,6 @@ void __attribute__((destructor)) foreactor_dtor() {
 // Thread-local structures //
 /////////////////////////////
 
-namespace foreactor {
-
-
 // For each hijacked app function, there's one SCGraph instance per thread.
 thread_local std::unordered_map<unsigned, SCGraph> scgraphs;
 
@@ -47,14 +47,9 @@ thread_local std::unordered_map<unsigned, SCGraph> scgraphs;
 thread_local std::unordered_map<unsigned, IOUring> rings;
 
 
-}
-
-
 //////////////////////////
 // Interface to plugins //
 //////////////////////////
-
-namespace foreactor {
 
 extern "C" {
 
@@ -70,11 +65,16 @@ void foreactor_CreateSCGraph(unsigned graph_id, unsigned total_dims) {
              "graph_id %u already exists in rings\n", graph_id);
 
     // create new IOUring instance
-    rings.emplace(graph_id, EnvUringQueueLen(graph_id));
+    rings.emplace(std::piecewise_construct,
+                  std::forward_as_tuple(graph_id),
+                  std::forward_as_tuple(EnvUringQueueLen(graph_id)));
 
     // create new SCGraph instance, add to map
-    scgraphs.emplace(graph_id, graph_id, total_dims, &rings[graph_id],
-                     EnvPreIssueDepth(graph_id));
+    scgraphs.emplace(std::piecewise_construct,
+                     std::forward_as_tuple(graph_id),
+                     std::forward_as_tuple(graph_id, total_dims,
+                                           &rings.at(graph_id),
+                                           EnvPreIssueDepth(graph_id)));
 }
 
 
@@ -83,7 +83,7 @@ void foreactor_AddSyscallNode(unsigned graph_id, unsigned node_id,
                               size_t assoc_dims_len, SyscallType type,
                               bool is_start) {
     PANIC_IF(!scgraphs.contains(graph_id), "graph_id %u not found\n", graph_id);
-    SCGraph *scgraph = &scgraphs[graph_id];
+    SCGraph *scgraph = &scgraphs.at(graph_id);
 
     std::unordered_set<int> assoc_dims_set;
     assoc_dims_set.reserve(assoc_dims_len);
@@ -113,7 +113,7 @@ void foreactor_AddSyscallNode(unsigned graph_id, unsigned node_id,
 void foreactor_SyscallSetNext(unsigned graph_id, unsigned node_id,
                               unsigned next_id, bool weak_edge) {
     PANIC_IF(!scgraphs.contains(graph_id), "graph_id %u not found\n", graph_id);
-    SCGraph *scgraph = &scgraphs[graph_id];
+    SCGraph *scgraph = &scgraphs.at(graph_id);
 
     PANIC_IF(!scgraph->nodes.contains(node_id),
              "node_id %u not found in scgraph %u\n", node_id, graph_id);
@@ -136,7 +136,7 @@ void foreactor_AddBranchNode(unsigned graph_id, unsigned node_id,
                              size_t assoc_dims_len, size_t num_children,
                              bool is_start) {
     PANIC_IF(!scgraphs.contains(graph_id), "graph_id %u not found\n", graph_id);
-    SCGraph *scgraph = &scgraphs[graph_id];
+    SCGraph *scgraph = &scgraphs.at(graph_id);
 
     std::unordered_set<int> assoc_dims_set;
     assoc_dims_set.reserve(assoc_dims_len);
@@ -154,7 +154,7 @@ void foreactor_AddBranchNode(unsigned graph_id, unsigned node_id,
 void foreactor_BranchAppendChild(unsigned graph_id, unsigned node_id,
                                  unsigned child_id, int epoch_dim) {
     PANIC_IF(!scgraphs.contains(graph_id), "graph_id %u not found\n", graph_id);
-    SCGraph *scgraph = &scgraphs[graph_id];
+    SCGraph *scgraph = &scgraphs.at(graph_id);
 
     PANIC_IF(!scgraph->nodes.contains(node_id),
              "node_id %u not found in scgraph %u\n", node_id, graph_id);
@@ -177,7 +177,7 @@ void foreactor_EnterSCGraph(unsigned graph_id) {
     if (UseForeactor) {
         PANIC_IF(!scgraphs.contains(graph_id),
                  "graph_id %u not found\n", graph_id);
-        SCGraph *scgraph = &scgraphs[graph_id];
+        SCGraph *scgraph = &scgraphs.at(graph_id);
 
         assert(scgraph->IsBuilt());
         SCGraph::RegisterSCGraph(scgraph);
@@ -189,7 +189,7 @@ void foreactor_LeaveSCGraph(unsigned graph_id) {
     if (UseForeactor) {
         PANIC_IF(!scgraphs.contains(graph_id),
                  "graph_id %u not found\n", graph_id);
-        SCGraph *scgraph = &scgraphs[graph_id];
+        SCGraph *scgraph = &scgraphs.at(graph_id);
         assert(scgraph->IsBuilt());
 
         // at every exit, unregister this SCGraph
@@ -206,5 +206,6 @@ void foreactor_LeaveSCGraph(unsigned graph_id) {
 
 
 }
+
 
 }

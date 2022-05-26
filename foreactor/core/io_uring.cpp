@@ -47,18 +47,18 @@ IOUring::~IOUring() {
 }
 
 
-struct io_uring *IOUring::Ring() const {
+struct io_uring *IOUring::Ring() {
     return &ring;
 }
 
 
-EntryId IOUring::EncodeEntryId(SyscallNode *node, int epoch_sum) {
+IOUring::EntryId IOUring::EncodeEntryId(SyscallNode *node, int epoch_sum) {
     // relies on the fact that Linux on x86_64 only uses 48-bit virtual
     // addresses currently. We encode the top 48 bits of the uint64_t
     // user_data as the node pointer, and the lower 16 bits as the epoch_sum
     // number.
     assert(epoch_sum >= 0 && epoch_sum < (1 << 16));
-    uint64_t node_bits = static_cast<uint64_t>(node);
+    uint64_t node_bits = reinterpret_cast<uint64_t>(node);
     uint64_t epoch_bits = static_cast<uint64_t>(epoch_sum);
     uint64_t entry_id = (node_bits << 16) | (epoch_bits & ((1 << 16) - 1));
     return entry_id;
@@ -85,7 +85,7 @@ void IOUring::SubmitAll() {
 
         struct io_uring_sqe *sqe = io_uring_get_sqe(Ring());
         assert(sqe != nullptr);
-        io_uring_sqe_set_data(sqe, entry_id);
+        io_uring_sqe_set_data(sqe, reinterpret_cast<void *>(entry_id));
 
         // do syscall-specific io_uring_prep_xxx() here
         node->PrepUringSqe(epoch_sum, sqe);
@@ -95,7 +95,7 @@ void IOUring::SubmitAll() {
         sqe->flags |= IOSQE_ASYNC;
 
         onthefly.insert(entry_id);
-        node->stage.Set(epoch_sum, STAGE_PROGRESS);
+        node->stage.Set(epoch_sum, STAGE_ONTHEFLY);
     }
 
     prepared.clear();
@@ -123,8 +123,8 @@ void IOUring::SeenOneCqe(struct io_uring_cqe *cqe) {
     io_uring_cqe_seen(Ring(), cqe);
 }
 
-EntryId IOUring::GetCqeEntryId(struct io_uring_cqe *cqe) {
-    return io_uring_cqe_get_data(cqe);
+IOUring::EntryId IOUring::GetCqeEntryId(struct io_uring_cqe *cqe) {
+    return reinterpret_cast<EntryId>(io_uring_cqe_get_data(cqe));
 }
 
 
@@ -134,9 +134,9 @@ void IOUring::CleanUp() {
 
     // call CmplAsync() on all requests in the onthefly set
     while (onthefly.size() > 0) {
-        EntryId entry_id = onthefly.front();
+        EntryId entry_id = *(onthefly.begin());
         auto [node, epoch_sum] = DecodeEntryId(entry_id);
-        assert(node->stage.Get(epoch_sum) == STAGE_PROGRESS);
+        assert(node->stage.Get(epoch_sum) == STAGE_ONTHEFLY);
         node->CmplAsync(epoch_sum);     // entry_id will be removed here
     }
 }

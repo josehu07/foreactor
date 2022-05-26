@@ -31,6 +31,8 @@ class SCGraph {
         const unsigned graph_id;
         const unsigned total_dims;
 
+        std::unordered_map<unsigned, SCGraphNode *> nodes;
+
         // Register this SCGraph as active on my thread. The SCGraph must have
         // been initialized and associated with the given IOUring queue pair.
         static void RegisterSCGraph(SCGraph *scgraph);
@@ -40,9 +42,7 @@ class SCGraph {
 
     private:
         bool graph_built = false;
-        bool ring_associated = false;
         IOUring *ring = nullptr;
-        std::unordered_map<unsigned, SCGraphNode *> nodes;
 
         // How many syscalls we try to issue ahead of time.
         // Must be no larger than the length of SQ of uring.
@@ -56,6 +56,7 @@ class SCGraph {
         // Current frontier node during execution. The frontier_epoch
         // field stores the EpochList of where the actual execution timeline
         // has reached.
+        SCGraphNode *initial_frontier = nullptr;
         SCGraphNode *frontier = nullptr;
         EpochList frontier_epoch;
 
@@ -69,11 +70,11 @@ class SCGraph {
         int peekhead_distance = -1;
         bool peekhead_hit_end = false;
 
-        std::string TimerNameStr(std::string& timer) const;
-        void StartTimer(std::string& timer) const;
-        void PauseTimer(std::string& timer) const;
+        std::string TimerNameStr(std::string timer) const;
+        void StartTimer(std::string timer) const;
+        void PauseTimer(std::string timer) const;
 
-        [[maybe_unused]] void DumpDotImg(std::string& filestem) const;
+        [[maybe_unused]] void DumpDotImg(std::string filestem) const;
 
     public:
         SCGraph() = delete;

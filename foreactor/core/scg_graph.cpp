@@ -43,12 +43,15 @@ void SCGraph::UnregisterSCGraph() {
 
 SCGraph::SCGraph(unsigned graph_id, unsigned total_dims, IOUring *ring,
                  int pre_issue_depth)
-        : graph_id(graph_id), total_dims(total_dims), graph_built(false),
-          ring(ring), pre_issue_depth(pre_issue_depth), nodes{},
-          num_prepared(0), prepared_distance(-1), frontier(nullptr),
+        : graph_id(graph_id), total_dims(total_dims), nodes{},
+          graph_built(false), ring(ring),
+          pre_issue_depth(pre_issue_depth),
+          num_prepared(0), prepared_distance(-1),
+          initial_frontier(nullptr), frontier(nullptr),
+          frontier_epoch(total_dims),
           peekhead(nullptr), peekhead_edge(EDGE_BASE),
-          peekhead_distance(-1), peekhead_hit_end(false),
-          frontier_epoch(total_dims), peekhead_epoch(total_dims) {
+          peekhead_epoch(total_dims), peekhead_distance(-1),
+          peekhead_hit_end(false) {
     assert(ring != nullptr);
     assert(pre_issue_depth >= 0);
 }
@@ -60,15 +63,15 @@ SCGraph::~SCGraph() {
 }
 
 
-std::string SCGraph::TimerNameStr(std::string& timer) const {
+std::string SCGraph::TimerNameStr(std::string timer) const {
     return "g" + std::to_string(graph_id) + "-" + timer;
 }
 
-void SCGraph::StartTimer(std::string& timer) const {
+void SCGraph::StartTimer(std::string timer) const {
     TIMER_START(TimerNameStr(timer));
 }
 
-void SCGraph::PauseTimer(std::string& timer) const {
+void SCGraph::PauseTimer(std::string timer) const {
     TIMER_PAUSE(TimerNameStr(timer));
 }
 
@@ -109,11 +112,11 @@ void SCGraph::ResetToStart() {
     prepared_distance = -1;
 
     frontier = initial_frontier;
-    frontier_epoch->Reset();
+    frontier_epoch.Reset();
     
     peekhead = nullptr;
     peekhead_edge = EDGE_BASE;
-    peekhead_epoch->Reset();
+    peekhead_epoch.Reset();
     peekhead_distance = -1;
     peekhead_hit_end = false;
 
@@ -132,6 +135,7 @@ void SCGraph::AddNode(SCGraphNode *node, bool is_start) {
 
     if (is_start) {
         assert(frontier == nullptr);
+        assert(initial_frontier == nullptr);
         frontier = node;
         initial_frontier = node;
         DEBUG("inited frontier -> %p\n", frontier);
@@ -188,7 +192,7 @@ void SCGraph::DumpDotImg(std::string filestem) const {
 
         for (size_t i = 0; i < node->children.size(); ++i) {
             SCGraphNode *child = node->children[i];
-            int dim_idx = node->epoch_dim_idx[i];
+            int dim_idx = node->epoch_dims[i];
 
             fdot << "  " << NodeName(node);
             if (dim_idx >= 0)

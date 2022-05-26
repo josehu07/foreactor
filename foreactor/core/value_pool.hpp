@@ -1,4 +1,5 @@
 #include <iostream>
+#include <vector>
 #include <unordered_set>
 #include <unordered_map>
 #include <type_traits>
@@ -32,10 +33,15 @@ class EpochList {
                                         const EpochList& e);
 
         void Increment(int dim);
+        void CopyFrom(const EpochList& other);
+
+        [[nodiscard]] size_t Size() const;
 
         [[nodiscard]] int At(int dim) const;
-
         [[nodiscard]] int Sum(const std::unordered_set<int>& assoc_dims) const;
+
+        [[nodiscard]] bool SameAs(const EpochList& other) const;
+        [[nodiscard]] bool AheadOf(const EpochList& other) const;
 
         void Reset();
 };

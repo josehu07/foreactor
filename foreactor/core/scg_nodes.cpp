@@ -30,7 +30,7 @@ std::ostream& operator<<(std::ostream& s, const EdgeType& t) {
 std::ostream& operator<<(std::ostream& s, const SyscallStage& t) {
     switch (t) {
     case STAGE_NOTREADY: s << "NOTREADY"; break;
-    case STAGE_UNISSUED: s << "UNISSUED"; break;
+    case STAGE_ARGREADY: s << "UNISSUED"; break;
     case STAGE_ONTHEFLY: s << "PROGRESS"; break;
     case STAGE_FINISHED: s << "FINISHED"; break;
     default:             s << "UNKNOWN";  break;
@@ -43,24 +43,32 @@ std::ostream& operator<<(std::ostream& s, const SyscallStage& t) {
 // SCGraphNode implementation //
 ////////////////////////////////
 
-SCGraphNode(unsigned node_id, std::string name, NodeType node_type,
-            SCGraph *scgraph, const std::unordered_set<int>& assoc_dims)
+SCGraphNode::SCGraphNode(unsigned node_id, std::string name,
+                         NodeType node_type, SCGraph *scgraph,
+                         const std::unordered_set<int>& assoc_dims)
         : node_id(node_id), name(name), node_type(node_type),
           scgraph(scgraph), assoc_dims(assoc_dims) {
     assert(node_type != NODE_BASE);
     assert(scgraph != nullptr);
     assert(assoc_dims.size() >= 0 && assoc_dims.size() <= scgraph->total_dims);
-    for (int assoc_dim : assoc_dims)
-        assert(assoc_dim >= 0 && assoc_dim < scgraph->total_dims);
+    for ([[maybe_unused]] int assoc_dim : assoc_dims) {
+        assert(assoc_dim >= 0 &&
+               assoc_dim < static_cast<int>(scgraph->total_dims));
+    }
 }
 
 
 std::ostream& operator<<(std::ostream& s, const SCGraphNode& n) {
     switch (n.node_type) {
     case NODE_SC_PURE: [[fallthrough]];
-    case NODE_SC_SEFF: s << StreamStr<SyscallNode>(n); break;
-    case NODE_BRANCH:  s << StreamStr<BranchNode>(n);  break;
-    default:           s << "SCGraphNode{" << node_id << "}";
+    case NODE_SC_SEFF:
+        s << StreamStr(static_cast<const SyscallNode&>(n));
+        break;
+    case NODE_BRANCH:
+        s << StreamStr(static_cast<const BranchNode&>(n));
+        break;
+    default:
+        s << "SCGraphNode{" << n.node_id << "}";
     }
     return s;
 }
@@ -93,9 +101,13 @@ void SyscallNode::PrintCommonInfo(std::ostream& s) const {
 
 std::ostream& operator<<(std::ostream& s, const SyscallNode& n) {
     switch (n.sc_type) {
-    case SC_OPEN:  s << StreamStr<SyscallOpen>(n);  break;
-    case SC_PREAD: s << StreamStr<SyscallPread>(n); break;
-    default:       s << "SyscallNode{" << node_id << "}";
+    case SC_OPEN:
+        s << StreamStr(static_cast<const SyscallOpen&>(n));
+        break;
+    case SC_PREAD:
+        s << StreamStr(static_cast<const SyscallPread&>(n));
+        break;
+    default:       s << "SyscallNode{" << n.node_id << "}";
     }
     return s;
 }
@@ -108,11 +120,11 @@ void SyscallNode::ResetCommonPools() {
 
 
 void SyscallNode::PrepAsync(const EpochList& epoch) {
-    assert(stage.Get(epoch) == STAGE_UNISSUED);
+    assert(stage.Get(epoch) == STAGE_ARGREADY);
     assert(scgraph != nullptr);
 
     // encode node ptr and epoch_sum number into a uint64_t user_data
-    EntryId entry_id = IOUring::EncodeEntryId(this, EpochSum(epoch));
+    IOUring::EntryId entry_id = IOUring::EncodeEntryId(this, EpochSum(epoch));
 
     // put this node to prepared state
     scgraph->ring->Prepare(entry_id);
@@ -129,7 +141,7 @@ void SyscallNode::CmplAsync(const EpochList& epoch) {
         assert(cqe != nullptr);
 
         // fetch the node ptr and epoch of this request
-        EntryId entry_id = scgraph->ring->GetCqeEntryId(cqe);
+        IOUring::EntryId entry_id = scgraph->ring->GetCqeEntryId(cqe);
         auto [sqe_node, sqe_epoch_sum] = IOUring::DecodeEntryId(entry_id);
         assert(sqe_node->stage.Get(sqe_epoch_sum) == STAGE_ONTHEFLY);
         
@@ -167,6 +179,7 @@ long SyscallNode::Issue(const EpochList& epoch, void *output_buf) {
     // can only call issue on frontier node
     assert(scgraph != nullptr);
     assert(this == scgraph->frontier);
+    assert(epoch.SameAs(scgraph->frontier_epoch));
     DEBUG("issue %s<%p>@%s\n",
           StreamStr(this).c_str(), this, StreamStr(epoch).c_str());
 
@@ -178,10 +191,10 @@ long SyscallNode::Issue(const EpochList& epoch, void *output_buf) {
         // the current frontier might proceed ahead of the stored peekhead;
         // in this case, update peekhead to be current frontier
         if (scgraph->peekhead_distance < 0) {
-            assert(epoch->AheadOf(scgraph->peekhead_epoch));
+            assert(epoch.AheadOf(scgraph->peekhead_epoch));
             scgraph->peekhead = next_node;
             scgraph->peekhead_edge = edge_type;
-            scgraph->peekhead_epoch->CopyFrom(epoch);
+            scgraph->peekhead_epoch.CopyFrom(epoch);
             scgraph->peekhead_distance = 0;
             DEBUG("peekhead catch up with frontier\n");
         }
@@ -224,7 +237,7 @@ long SyscallNode::Issue(const EpochList& epoch, void *output_buf) {
                 // prepare the IOUring submission entry, set node stage to be
                 // in-progress
                 // FIXME: calculate arg from gen func
-                assert(syscall_node->stage.Get(peek_epoch) == STAGE_UNISSUED);
+                assert(syscall_node->stage.Get(peek_epoch) == STAGE_ARGREADY);
                 syscall_node->PrepAsync(peek_epoch);
                 DEBUG("prepared %d %s<%p>@%s\n",
                       scgraph->num_prepared, StreamStr(syscall_node).c_str(),
@@ -271,7 +284,7 @@ long SyscallNode::Issue(const EpochList& epoch, void *output_buf) {
 
     // handle myself
     assert(stage.Get(epoch) != STAGE_NOTREADY);
-    if (stage.Get(epoch) == STAGE_UNISSUED) {
+    if (stage.Get(epoch) == STAGE_ARGREADY) {
         // if not pre-issued, invoke syscall synchronously
         DEBUG("sync-call %s<%p>@%s\n",
               StreamStr(this).c_str(), this, StreamStr(epoch).c_str());
@@ -322,7 +335,9 @@ BranchNode::BranchNode(unsigned node_id, std::string name, size_t num_children,
 
 
 std::ostream& operator<<(std::ostream& s, const BranchNode& n) {
-    s << "BranchNode{" << node_id << ",decision=" << decision << ",children=[";
+    s << "BranchNode{" << n.node_id
+      << ",decision=" << n.decision
+      << ",children=[";
     for (size_t i = 0; i < n.num_children; ++i) {
         s << n.children[i];
         if (i < n.num_children - 1)
@@ -340,7 +355,7 @@ void BranchNode::Reset() {
 
 SCGraphNode *BranchNode::PickBranch(EpochList& epoch) {
     int d = decision.Get(epoch);
-    assert(d >= 0 && d < num_children);
+    assert(d >= 0 && d < static_cast<int>(num_children));
     SCGraphNode *child = children[d];
 
     // if is a back-pointing edge, increment corresponding epoch dimension
@@ -356,7 +371,7 @@ void BranchNode::AppendChild(SCGraphNode *child_node, int epoch_dim) {
     children.push_back(child_node);
 
     if (epoch_dim >= 0) {
-        assert(epoch_dim < scgraph->total_dims);
+        assert(epoch_dim < static_cast<int>(scgraph->total_dims));
         epoch_dims.push_back(epoch_dim);
     } else
         epoch_dims.push_back(-1);
