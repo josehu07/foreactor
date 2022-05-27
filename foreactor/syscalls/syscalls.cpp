@@ -27,7 +27,9 @@ SyscallOpen::SyscallOpen(unsigned node_id, std::string name,
                          SCGraph *scgraph,
                          const std::unordered_set<int>& assoc_dims,
                          std::function<bool(const int *,
-                             const char **, int *, mode_t *)> arggen_func)
+                                            const char **,
+                                            int *,
+                                            mode_t *)> arggen_func)
         : SyscallNode(node_id, name, SC_OPEN, /*pure_sc*/ false,
                       scgraph, assoc_dims),
           pathname(assoc_dims), flags(assoc_dims), mode(assoc_dims),
@@ -71,7 +73,8 @@ bool SyscallOpen::GenerateArgs(const EpochList& epoch) {
 }
 
 
-long SyscallOpen::SyscallSync(const EpochList& epoch, void *output_buf) {
+long SyscallOpen::SyscallSync(const EpochList& epoch,
+                              [[maybe_unused]] void *output_buf) {
     return posix::open(pathname.Get(epoch).c_str(),
                        flags.Get(epoch),
                        mode.Get(epoch));
@@ -85,11 +88,18 @@ void SyscallOpen::PrepUringSqe(const EpochList& epoch,
                          mode.Get(epoch));
 }
 
-void SyscallOpen::ReflectResult(const EpochList& epoch, void *output_buf) {
-    // nothing to do
+void SyscallOpen::ReflectResult([[maybe_unused]] const EpochList& epoch,
+                                [[maybe_unused]] void *output_buf) {
     return;
 }
 
+
+void SyscallOpen::RemoveOneEpoch(const EpochList& epoch) {
+    RemoveOneFromCommonPools(epoch);
+    pathname.Remove(epoch);
+    flags.Remove(epoch);
+    mode.Remove(epoch);
+}
 
 void SyscallOpen::ResetValuePools() {
     ResetCommonPools();
@@ -117,6 +127,81 @@ void SyscallOpen::CheckArgs(const EpochList& epoch,
 
 
 ///////////
+// close //
+///////////
+
+SyscallClose::SyscallClose(unsigned node_id, std::string name,
+                           SCGraph *scgraph,
+                           const std::unordered_set<int>& assoc_dims,
+                           std::function<bool(const int *, int *)> arggen_func)
+        : SyscallNode(node_id, name, SC_CLOSE, /*pure_sc*/ false,
+                      scgraph, assoc_dims),
+          fd(assoc_dims), arggen_func(arggen_func) {
+}
+
+
+std::ostream& operator<<(std::ostream& s, const SyscallClose& n) {
+    s << "SyscallClose{"
+      << "fd=" << StreamStr(n.fd) << ",";
+    n.PrintCommonInfo(s);
+    s << "}";
+    return s;
+}
+
+
+bool SyscallClose::GenerateArgs(const EpochList& epoch) {
+    assert(!stage.Has(epoch) || stage.Get(epoch) == STAGE_NOTREADY);
+
+    int fd_;
+    if (!arggen_func(epoch.RawArray(), &fd_))
+        return false;
+
+    if (!fd.Has(epoch))
+        fd.Set(epoch, fd_);
+    assert(fd_ == fd.Get(epoch));
+
+    stage.Set(epoch, STAGE_ARGREADY);
+    return true;
+}
+
+
+long SyscallClose::SyscallSync(const EpochList& epoch,
+                               [[maybe_unused]] void *output_buf) {
+    return posix::close(fd.Get(epoch));
+}
+
+void SyscallClose::PrepUringSqe(const EpochList& epoch,
+                                struct io_uring_sqe *sqe) {
+    io_uring_prep_close(sqe, fd.Get(epoch));
+}
+
+void SyscallClose::ReflectResult([[maybe_unused]] const EpochList& epoch,
+                                 [[maybe_unused]] void *output_buf) {
+    return;
+}
+
+
+void SyscallClose::RemoveOneEpoch(const EpochList& epoch) {
+    RemoveOneFromCommonPools(epoch);
+    fd.Remove(epoch);
+}
+
+void SyscallClose::ResetValuePools() {
+    ResetCommonPools();
+    fd.Reset();
+}
+
+
+void SyscallClose::CheckArgs(const EpochList& epoch, int fd_) {
+    if (stage.Get(epoch) == STAGE_NOTREADY) {
+        if (!fd.Has(epoch))
+            fd.Set(epoch, fd_);
+    }
+    assert(fd_ == fd.Get(epoch));
+}
+
+
+///////////
 // pread //
 ///////////
 
@@ -124,7 +209,9 @@ SyscallPread::SyscallPread(unsigned node_id, std::string name,
                            SCGraph *scgraph,
                            const std::unordered_set<int>& assoc_dims,
                            std::function<bool(const int *,
-                               int *, size_t *, off_t *)> arggen_func)
+                                              int *,
+                                              size_t *,
+                                              off_t *)> arggen_func)
         : SyscallNode(node_id, name, SC_PREAD, /*pure_sc*/ true,
                       scgraph, assoc_dims),
           fd(assoc_dims), count(assoc_dims), offset(assoc_dims),
@@ -170,7 +257,7 @@ bool SyscallPread::GenerateArgs(const EpochList& epoch) {
 long SyscallPread::SyscallSync(const EpochList& epoch, void *output_buf) {
     assert(output_buf != nullptr);
     return posix::pread(fd.Get(epoch),
-                        reinterpret_cast<char *>(output_buf),
+                        output_buf,
                         count.Get(epoch),
                         offset.Get(epoch));
 }
@@ -188,8 +275,16 @@ void SyscallPread::PrepUringSqe(const EpochList& epoch,
 
 void SyscallPread::ReflectResult(const EpochList& epoch, void *output_buf) {
     assert(output_buf != nullptr);
-    memcpy(reinterpret_cast<char *>(output_buf), internal_buf.Get(epoch),
-           count.Get(epoch));
+    memcpy(output_buf, internal_buf.Get(epoch), count.Get(epoch));
+}
+
+
+void SyscallPread::RemoveOneEpoch(const EpochList& epoch) {
+    RemoveOneFromCommonPools(epoch);
+    fd.Remove(epoch);
+    count.Remove(epoch);
+    offset.Remove(epoch);
+    internal_buf.Remove(epoch, /*do_delete*/ true);
 }
 
 void SyscallPread::ResetValuePools() {
@@ -212,6 +307,127 @@ void SyscallPread::CheckArgs(const EpochList& epoch,
             offset.Set(epoch, offset_);
     }
     assert(fd_ == fd.Get(epoch));
+    assert(count_ == count.Get(epoch));
+    assert(offset_ == offset.Get(epoch));
+}
+
+
+////////////
+// pwrite //
+////////////
+
+SyscallPwrite::SyscallPwrite(unsigned node_id, std::string name,
+                             SCGraph *scgraph,
+                             const std::unordered_set<int>& assoc_dims,
+                             std::function<bool(const int *,
+                                                int *,
+                                                const char **,
+                                                size_t *,
+                                                off_t *)> arggen_func)
+        : SyscallNode(node_id, name, SC_PWRITE, /*pure_sc*/ false,
+                      scgraph, assoc_dims),
+          fd(assoc_dims), buf(assoc_dims), count(assoc_dims),
+          offset(assoc_dims), arggen_func(arggen_func) {
+}
+
+
+std::ostream& operator<<(std::ostream& s, const SyscallPwrite& n) {
+    s << "SyscallPwrite{"
+      << "fd=" << StreamStr(n.fd) << ","
+      << "buf=" << StreamStr(n.buf) << ","
+      << "count=" << StreamStr(n.count) << ","
+      << "offset=" << StreamStr(n.offset) << ",";
+    n.PrintCommonInfo(s);
+    s << "}";
+    return s;
+}
+
+
+bool SyscallPwrite::GenerateArgs(const EpochList& epoch) {
+    assert(!stage.Has(epoch) || stage.Get(epoch) == STAGE_NOTREADY);
+
+    int fd_;
+    const char *buf_;
+    size_t count_;
+    off_t offset_;
+    if (!arggen_func(epoch.RawArray(), &fd_, &buf_, &count_, &offset_))
+        return false;
+
+    if (!fd.Has(epoch))
+        fd.Set(epoch, fd_);
+    if (!buf.Has(epoch))
+        buf.Set(epoch, buf_);
+    if (!count.Has(epoch))
+        count.Set(epoch, count_);
+    if (!offset.Has(epoch))
+        offset.Set(epoch, offset_);
+    assert(fd_ == fd.Get(epoch));
+    assert(buf_ == buf.Get(epoch));
+    assert(count_ == count.Get(epoch));
+    assert(offset_ == offset.Get(epoch));
+
+    stage.Set(epoch, STAGE_ARGREADY);
+    return true;
+}
+
+
+long SyscallPwrite::SyscallSync(const EpochList& epoch,
+                                [[maybe_unused]] void *output_buf) {
+    return posix::pwrite(fd.Get(epoch),
+                         buf.Get(epoch),
+                         count.Get(epoch),
+                         offset.Get(epoch));
+}
+
+void SyscallPwrite::PrepUringSqe(const EpochList& epoch,
+                                 struct io_uring_sqe *sqe) {
+    io_uring_prep_write(sqe,
+                        fd.Get(epoch),
+                        buf.Get(epoch),
+                        count.Get(epoch),
+                        offset.Get(epoch));
+}
+
+void SyscallPwrite::ReflectResult([[maybe_unused]] const EpochList& epoch,
+                                  [[maybe_unused]] void *output_buf) {
+    return;
+}
+
+
+void SyscallPwrite::RemoveOneEpoch(const EpochList& epoch) {
+    RemoveOneFromCommonPools(epoch);
+    fd.Remove(epoch);
+    buf.Remove(epoch);
+    count.Remove(epoch);
+    offset.Remove(epoch);
+}
+
+void SyscallPwrite::ResetValuePools() {
+    ResetCommonPools();
+    fd.Reset();
+    buf.Reset();
+    count.Reset();
+    offset.Reset();
+}
+
+
+void SyscallPwrite::CheckArgs(const EpochList& epoch,
+                              int fd_,
+                              const void *buf_,
+                              size_t count_,
+                              off_t offset_) {
+    if (stage.Get(epoch) == STAGE_NOTREADY) {
+        if (!fd.Has(epoch))
+            fd.Set(epoch, fd_);
+        if (!buf.Has(epoch))
+            buf.Set(epoch, reinterpret_cast<const char *>(buf_));
+        if (!count.Has(epoch))
+            count.Set(epoch, count_);
+        if (!offset.Has(epoch))
+            offset.Set(epoch, offset_);
+    }
+    assert(fd_ == fd.Get(epoch));
+    assert(buf_ == buf.Get(epoch));
     assert(count_ == count.Get(epoch));
     assert(offset_ == offset.Get(epoch));
 }

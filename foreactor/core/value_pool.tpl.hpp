@@ -71,6 +71,35 @@ T ValuePool<T>::Get(int epoch_sum) const {
 
 template <typename T>
 template <typename U>
+std::enable_if_t<!std::is_pointer<U>::value, void>
+ValuePool<T>::Remove(const EpochList& epoch) {
+    assert(Has(epoch));
+    data.erase(epoch.Sum(assoc_dims));
+}
+
+template <typename T>
+template <typename U>
+std::enable_if_t<std::is_pointer<U>::value, void>
+ValuePool<T>::Remove(const EpochList& epoch, bool do_delete) {
+    assert(Has(epoch));
+    auto&& ptr = data.extract(epoch.Sum(assoc_dims)).mapped();
+    if (do_delete) {
+        if (ptr != nullptr)
+            delete[] ptr;
+    }
+}
+
+
+template <typename T>
+template <typename U>
+std::enable_if_t<!std::is_pointer<U>::value, void>
+ValuePool<T>::Reset() {
+    // non-pointer type
+    data.clear();
+}
+
+template <typename T>
+template <typename U>
 std::enable_if_t<std::is_pointer<U>::value, void>
 ValuePool<T>::Reset(bool do_delete) {
     // pointer type specialization
@@ -80,14 +109,6 @@ ValuePool<T>::Reset(bool do_delete) {
                 delete[] ptr;
         }
     }
-    data.clear();
-}
-
-template <typename T>
-template <typename U>
-std::enable_if_t<!std::is_pointer<U>::value, void>
-ValuePool<T>::Reset([[maybe_unused]] bool do_delete) {
-    // non-pointer type
     data.clear();
 }
 

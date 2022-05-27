@@ -54,16 +54,41 @@ void foreactor_AddSyscallOpen(unsigned graph_id,
                               const int *assoc_dims,
                               size_t assoc_dims_len,
                               bool (*arggen_func)(const int *,
-                                  const char **, int *, mode_t *),
+                                                  const char **,
+                                                  int *,
+                                                  mode_t *),
                               bool is_start);
+
+void foreactor_AddSyscallClose(unsigned graph_id,
+                               unsigned node_id,
+                               const char *name,
+                               const int *assoc_dims,
+                               size_t assoc_dims_len,
+                               bool (*arggen_func)(const int *, int *),
+                               bool is_start);
+
 void foreactor_AddSyscallPread(unsigned graph_id,
                                unsigned node_id,
                                const char *name,
                                const int *assoc_dims,
                                size_t assoc_dims_len,
                                bool (*arggen_func)(const int *,
-                                   int *, size_t *, off_t *),
+                                                   int *,
+                                                   size_t *,
+                                                   off_t *),
                                bool is_start);
+
+void foreactor_AddSyscallPwrite(unsigned graph_id,
+                                unsigned node_id,
+                                const char *name,
+                                const int *assoc_dims,
+                                size_t assoc_dims_len,
+                                bool (*arggen_func)(const int *,
+                                                    int *,
+                                                    const char **,
+                                                    size_t *,
+                                                    off_t *),
+                                bool is_start);
 
 // Set outgoing edge of a SyscallNode.
 void foreactor_SyscallSetNext(unsigned graph_id, unsigned node_id,
@@ -97,6 +122,7 @@ void foreactor_LeaveSCGraph(unsigned graph_id);
 int open(const char *pathname, int flags, ...);
 int close(int fd);
 ssize_t pread(int fd, void *buf, size_t count, off_t offset);
+ssize_t pwrite(int fd, const void *buf, size_t count, off_t offset);
 
 
 #ifdef __cplusplus

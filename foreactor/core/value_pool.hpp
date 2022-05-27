@@ -79,11 +79,16 @@ class ValuePool {
         [[nodiscard]] T Get(int epoch_sum) const;
 
         template <typename U = T>
-        std::enable_if_t<std::is_pointer<U>::value, void> Reset(
-            bool do_delete = false);
+        std::enable_if_t<!std::is_pointer<U>::value, void> Remove(
+            const EpochList& epoch);
+        template <typename U = T>
+        std::enable_if_t<std::is_pointer<U>::value, void> Remove(
+            const EpochList& epoch, bool do_delete = false);
 
         template <typename U = T>
-        std::enable_if_t<!std::is_pointer<U>::value, void> Reset(
+        std::enable_if_t<!std::is_pointer<U>::value, void> Reset();
+        template <typename U = T>
+        std::enable_if_t<std::is_pointer<U>::value, void> Reset(
             bool do_delete = false);
 };
 

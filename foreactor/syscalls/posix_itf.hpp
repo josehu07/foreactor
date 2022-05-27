@@ -20,6 +20,7 @@ namespace foreactor::posix {
 DECL_POSIX_FN(open);
 DECL_POSIX_FN(close);
 DECL_POSIX_FN(pread);
+DECL_POSIX_FN(pwrite);
 
 #undef DECL_POSIX_FN
 

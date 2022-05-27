@@ -29,13 +29,16 @@ class SyscallOpen final : public SyscallNode {
         // arguments for that epoch ends up being ready; returns false
         // otherwise.
         std::function<bool(const int *,
-            const char **, int *, mode_t *)> arggen_func;
+                           const char **,
+                           int *,
+                           mode_t *)> arggen_func;
         bool GenerateArgs(const EpochList& epoch);
 
         long SyscallSync(const EpochList& epoch, void *output_buf);
         void PrepUringSqe(const EpochList& epoch, struct io_uring_sqe *sqe);
         void ReflectResult(const EpochList& epoch, void *output_buf);
 
+        void RemoveOneEpoch(const EpochList& epoch);
         void ResetValuePools();
 
     public:
@@ -46,7 +49,9 @@ class SyscallOpen final : public SyscallNode {
         SyscallOpen(unsigned node_id, std::string name, SCGraph *scgraph,
                     const std::unordered_set<int>& assoc_dims,
                     std::function<bool(const int *,
-                        const char **, int *, mode_t *)> arggen_func);
+                                       const char **,
+                                       int *,
+                                       mode_t *)> arggen_func);
         ~SyscallOpen() {}
 
         friend std::ostream& operator<<(std::ostream& s,
@@ -62,6 +67,35 @@ class SyscallOpen final : public SyscallNode {
 };
 
 
+// close
+class SyscallClose final : public SyscallNode {
+    private:
+        ValuePool<int> fd;
+
+        std::function<bool(const int *, int *)> arggen_func;
+        bool GenerateArgs(const EpochList& epoch);
+
+        long SyscallSync(const EpochList& epoch, void *output_buf);
+        void PrepUringSqe(const EpochList& epoch, struct io_uring_sqe *sqe);
+        void ReflectResult(const EpochList& epoch, void *output_buf);
+
+        void RemoveOneEpoch(const EpochList& epoch);
+        void ResetValuePools();
+
+    public:
+        SyscallClose() = delete;
+        SyscallClose(unsigned node_id, std::string name, SCGraph *scgraph,
+                     const std::unordered_set<int>& assoc_dims,
+                     std::function<bool(const int *, int *)> arggen_func);
+        ~SyscallClose() {}
+
+        friend std::ostream& operator<<(std::ostream& s,
+                                        const SyscallClose& n);
+
+        void CheckArgs(const EpochList& epoch, int fd_);
+};
+
+
 // pread
 class SyscallPread final : public SyscallNode {
     private:
@@ -73,13 +107,16 @@ class SyscallPread final : public SyscallNode {
         ValuePool<char *> internal_buf;
 
         std::function<bool(const int *,
-            int *, size_t *, off_t *)> arggen_func;
+                           int *,
+                           size_t *,
+                           off_t *)> arggen_func;
         bool GenerateArgs(const EpochList& epoch);
 
         long SyscallSync(const EpochList& epoch, void *output_buf);
         void PrepUringSqe(const EpochList& epoch, struct io_uring_sqe *sqe);
         void ReflectResult(const EpochList& epoch, void *output_buf);
 
+        void RemoveOneEpoch(const EpochList& epoch);
         void ResetValuePools();
 
     public:
@@ -87,7 +124,9 @@ class SyscallPread final : public SyscallNode {
         SyscallPread(unsigned node_id, std::string name, SCGraph *scgraph,
                      const std::unordered_set<int>& assoc_dims,
                      std::function<bool(const int *,
-                         int *, size_t *, off_t *)> arggen_func);
+                                        int *,
+                                        size_t *,
+                                        off_t *)> arggen_func);
         ~SyscallPread() {}
 
         friend std::ostream& operator<<(std::ostream& s,
@@ -95,6 +134,50 @@ class SyscallPread final : public SyscallNode {
 
         void CheckArgs(const EpochList& epoch,
                        int fd_, size_t count_, off_t offset_);
+};
+
+
+// pwrite
+class SyscallPwrite final : public SyscallNode {
+    private:
+        ValuePool<int> fd;
+        ValuePool<const char *> buf;
+        ValuePool<size_t> count;
+        ValuePool<off_t> offset;
+
+        std::function<bool(const int *,
+                           int *,
+                           const char **,
+                           size_t *,
+                           off_t *)> arggen_func;
+        bool GenerateArgs(const EpochList& epoch);
+
+        long SyscallSync(const EpochList& epoch, void *output_buf);
+        void PrepUringSqe(const EpochList& epoch, struct io_uring_sqe *sqe);
+        void ReflectResult(const EpochList& epoch, void *output_buf);
+
+        void RemoveOneEpoch(const EpochList& epoch);
+        void ResetValuePools();
+
+    public:
+        SyscallPwrite() = delete;
+        SyscallPwrite(unsigned node_id, std::string name, SCGraph *scgraph,
+                      const std::unordered_set<int>& assoc_dims,
+                      std::function<bool(const int *,
+                                         int *,
+                                         const char **,
+                                         size_t *,
+                                         off_t *)> arggen_func);
+        ~SyscallPwrite() {}
+
+        friend std::ostream& operator<<(std::ostream& s,
+                                        const SyscallPwrite& n);
+
+        void CheckArgs(const EpochList& epoch,
+                       int fd_,
+                       const void *buf_,
+                       size_t count_,
+                       off_t offset_);
 };
 
 

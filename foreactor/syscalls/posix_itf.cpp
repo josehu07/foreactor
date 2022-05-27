@@ -31,6 +31,7 @@ namespace foreactor::posix {
 FIND_POSIX_FN(open);
 FIND_POSIX_FN(close);
 FIND_POSIX_FN(pread);
+FIND_POSIX_FN(pwrite);
 
 #undef FIND_POSIX_FN
 
@@ -72,9 +73,19 @@ int open(const char *pathname, int flags, ...) {
 }
 
 int close(int fd) {
-    // FIXME: complete this
-    DEBUG("posix::close(%d)\n", fd);
-    return posix::close(fd);
+    if (active_scgraph == nullptr) {
+        DEBUG("posix::close(%d)\n", fd);
+        return posix::close(fd);
+    } else {
+        DEBUG("foreactor::close(%d)\n", fd);
+        auto [node, epoch] = active_scgraph->GetFrontier<SyscallClose>();
+        assert(node != nullptr);
+        assert(node->sc_type == SC_CLOSE);
+        node->CheckArgs(epoch, fd);
+        DEBUG("close<%p>->Issue(%s)\n",
+              node, StreamStr(epoch).c_str());
+        return static_cast<int>(node->Issue(epoch));
+    }
 }
 
 ssize_t pread(int fd, void *buf, size_t count, off_t offset) {
@@ -90,6 +101,22 @@ ssize_t pread(int fd, void *buf, size_t count, off_t offset) {
         DEBUG("pread<%p>->Issue(%s, %p)\n",
               node, StreamStr(epoch).c_str(), buf);
         return static_cast<ssize_t>(node->Issue(epoch, buf));
+    }
+}
+
+ssize_t pwrite(int fd, const void *buf, size_t count, off_t offset) {
+    if (active_scgraph == nullptr) {
+        DEBUG("posix::pwrite(%d, %p, %lu, %ld)\n", fd, buf, count, offset);
+        return posix::pwrite(fd, buf, count, offset);
+    } else {
+        DEBUG("foreactor::pwrite(%d, %p, %lu, %ld)\n", fd, buf, count, offset);
+        auto [node, epoch] = active_scgraph->GetFrontier<SyscallPwrite>();
+        assert(node != nullptr);
+        assert(node->sc_type == SC_PWRITE);
+        node->CheckArgs(epoch, fd, buf, count, offset);
+        DEBUG("pwrite<%p>->Issue(%s)\n",
+              node, StreamStr(epoch).c_str());
+        return static_cast<ssize_t>(node->Issue(epoch));
     }
 }
 

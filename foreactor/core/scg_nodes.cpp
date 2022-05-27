@@ -147,9 +147,17 @@ void SyscallNode::CmplAsync(const EpochList& epoch) {
         scgraph->ring->RemoveOne(entry_id);
         
         // if desired completion found, break
-        if ((sqe_node == this) && sqe_epoch_sum == epoch_sum)
+        if (sqe_node == this && sqe_epoch_sum == epoch_sum) {
+
             break;
+        }
     }
+}
+
+
+void SyscallNode::RemoveOneFromCommonPools(const EpochList& epoch) {
+    stage.Remove(epoch);
+    rc.Remove(epoch);
 }
 
 void SyscallNode::ResetCommonPools() {
@@ -330,7 +338,9 @@ long SyscallNode::Issue(const EpochList& epoch, void *output_buf) {
     scgraph->prepared_distance--;
     DEBUG("pushed frontier -> %p\n", scgraph->frontier);
 
-    return rc.Get(epoch);
+    long rc_this_epoch = rc.Get(epoch);
+
+    return rc_this_epoch;
 }
 
 
@@ -377,10 +387,14 @@ bool BranchNode::GenerateDecision(const EpochList& epoch) {
 }
 
 
-SCGraphNode *BranchNode::PickBranch(EpochList& epoch) {
+SCGraphNode *BranchNode::PickBranch(EpochList& epoch, bool do_remove) {
     int d = decision.Get(epoch);
     assert(d >= 0 && d < static_cast<int>(num_children));
     SCGraphNode *child = children[d];
+
+    // if removing decision value for this passing epoch
+    if (do_remove)
+        RemoveOneEpoch(epoch);
 
     // if is a back-pointing edge, increment corresponding epoch dimension
     if (epoch_dims[d] >= 0)
@@ -389,6 +403,10 @@ SCGraphNode *BranchNode::PickBranch(EpochList& epoch) {
     return child;
 }
 
+
+void BranchNode::RemoveOneEpoch(const EpochList& epoch) {
+    decision.Remove(epoch);
+}
 
 void BranchNode::ResetValuePools() {
     decision.Reset();

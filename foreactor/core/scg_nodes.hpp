@@ -75,7 +75,9 @@ class SCGraphNode {
 typedef enum SyscallType {
     SC_BASE,
     SC_OPEN,    // open
-    SC_PREAD    // pread
+    SC_CLOSE,   // open
+    SC_PREAD,   // pread
+    SC_PWRITE   // pread
 } SyscallType;
 
 // Stages of a SyscallNode.
@@ -125,10 +127,12 @@ class SyscallNode : public SCGraphNode {
                                   struct io_uring_sqe *sqe) = 0;
         virtual void ReflectResult(const EpochList& epoch,
                                    void *output_buf) = 0;
+        virtual void RemoveOneEpoch(const EpochList&) = 0;
         virtual void ResetValuePools() = 0;
 
         void PrepAsync(const EpochList& epoch);
         void CmplAsync(const EpochList& epoch);
+        void RemoveOneFromCommonPools(const EpochList& epoch);
         void ResetCommonPools();
 
         static bool IsForeactable(EdgeType edge, const SyscallNode *next);
@@ -173,8 +177,9 @@ class BranchNode final : public SCGraphNode {
         // Pick a child node based on decision value. Returns nullptr if
         // decision cannot be made yet. If traverses through a back-pointing
         // edge, will increment the corresponding epoch dimension.
-        SCGraphNode *PickBranch(EpochList& epoch);
+        SCGraphNode *PickBranch(EpochList& epoch, bool do_remove = false);
 
+        void RemoveOneEpoch(const EpochList& epoch);
         void ResetValuePools();
 
     public:
