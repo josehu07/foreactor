@@ -54,6 +54,35 @@ thread_local std::unordered_map<unsigned, IOUring> rings;
 extern "C" {
 
 
+static SCGraph *GetSCGraphFromId(unsigned graph_id) {
+    PANIC_IF(!scgraphs.contains(graph_id),
+             "graph_id %u not found\n", graph_id);
+    return &scgraphs.at(graph_id);
+}
+
+static std::unordered_set<int> MakeAssocDimsSet(const int *assoc_dims,
+                                                size_t assoc_dims_len) {
+    std::unordered_set<int> assoc_dims_set;
+    assoc_dims_set.reserve(assoc_dims_len);
+    for (size_t i = 0; i < assoc_dims_len; ++i)
+        assoc_dims_set.insert(assoc_dims[i]);
+    return assoc_dims_set;
+}
+
+static void PanicIfNodeExists(SCGraph *scgraph, unsigned graph_id,
+                              unsigned node_id) {
+    PANIC_IF(scgraph->nodes.contains(node_id),
+             "node_id %u already exists in scgraph %u\n", node_id, graph_id);
+}
+
+static SCGraphNode *GetNodeFromId(SCGraph *scgraph, unsigned graph_id,
+                          unsigned node_id) {
+    PANIC_IF(!scgraph->nodes.contains(node_id),
+             "node_id %u not found in scgraph %u\n", node_id, graph_id);
+    return scgraph->nodes[node_id];
+}
+
+
 void foreactor_CreateSCGraph(unsigned graph_id, unsigned total_dims) {
     // upon first call into library, parse environment config variables
     if (!EnvParsed)
@@ -77,108 +106,102 @@ void foreactor_CreateSCGraph(unsigned graph_id, unsigned total_dims) {
                                            EnvPreIssueDepth(graph_id)));
 }
 
+void foreactor_SetSCGraphBuilt(unsigned graph_id) {
+    SCGraph *scgraph = GetSCGraphFromId(graph_id);
+    PANIC_IF(scgraph->IsBuilt(),
+             "scgraph %u has already been set to built\n", graph_id);
+    scgraph->SetBuilt();
+    assert(scgraph->IsBuilt());
+}
 
-void foreactor_AddSyscallNode(unsigned graph_id, unsigned node_id,
-                              const char *name, const int *assoc_dims,
-                              size_t assoc_dims_len, SyscallType type,
+
+void foreactor_AddSyscallOpen(unsigned graph_id,
+                              unsigned node_id,
+                              const char *name,
+                              const int *assoc_dims,
+                              size_t assoc_dims_len,
+                              bool (*arggen_func)(const int *,
+                                  const char **, int *, mode_t *),
                               bool is_start) {
-    PANIC_IF(!scgraphs.contains(graph_id), "graph_id %u not found\n", graph_id);
-    SCGraph *scgraph = &scgraphs.at(graph_id);
+    SCGraph *scgraph = GetSCGraphFromId(graph_id);
+    std::unordered_set<int> assoc_dims_set =
+        MakeAssocDimsSet(assoc_dims, assoc_dims_len);
 
-    std::unordered_set<int> assoc_dims_set;
-    assoc_dims_set.reserve(assoc_dims_len);
-    for (size_t i = 0; i < assoc_dims_len; ++i)
-        assoc_dims_set.insert(assoc_dims[i]);
+    PanicIfNodeExists(scgraph, graph_id, node_id);
+    SyscallOpen *node = new SyscallOpen(node_id, std::string(name), scgraph,
+                                        assoc_dims_set, arggen_func);
+    scgraph->AddNode(node, is_start);
+}
 
-    PANIC_IF(scgraph->nodes.contains(node_id),
-             "node_id %u already exists in scgraph %u\n", node_id, graph_id);
-    SyscallNode *node = nullptr;
+void foreactor_AddSyscallPread(unsigned graph_id,
+                              unsigned node_id,
+                              const char *name,
+                              const int *assoc_dims,
+                              size_t assoc_dims_len,
+                              bool (*arggen_func)(const int *,
+                                  int *, size_t *, off_t *),
+                              bool is_start) {
+    SCGraph *scgraph = GetSCGraphFromId(graph_id);
+    std::unordered_set<int> assoc_dims_set =
+        MakeAssocDimsSet(assoc_dims, assoc_dims_len);
 
-    switch (type) {
-    case SC_OPEN:
-        node = new SyscallOpen(node_id, std::string(name), scgraph,
-                               assoc_dims_set);
-        break;
-    case SC_PREAD:
-        node = new SyscallPread(node_id, std::string(name), scgraph,
-                                assoc_dims_set);
-        break;
-    default: break;
-    }
-    PANIC_IF(node == nullptr, "unknown SyscallType %u\n", type);
-
+    PanicIfNodeExists(scgraph, graph_id, node_id);
+    SyscallPread *node = new SyscallPread(node_id, std::string(name), scgraph,
+                                          assoc_dims_set, arggen_func);
     scgraph->AddNode(node, is_start);
 }
 
 void foreactor_SyscallSetNext(unsigned graph_id, unsigned node_id,
                               unsigned next_id, bool weak_edge) {
-    PANIC_IF(!scgraphs.contains(graph_id), "graph_id %u not found\n", graph_id);
-    SCGraph *scgraph = &scgraphs.at(graph_id);
+    SCGraph *scgraph = GetSCGraphFromId(graph_id);
 
-    PANIC_IF(!scgraph->nodes.contains(node_id),
-             "node_id %u not found in scgraph %u\n", node_id, graph_id);
-    SCGraphNode *node = scgraph->nodes[node_id];
+    SCGraphNode *node = GetNodeFromId(scgraph, graph_id, node_id);
     PANIC_IF(node->node_type != NODE_SC_PURE &&
              node->node_type != NODE_SC_SEFF,
              "node_id %u is not a SyscallNode\n", node_id);
     SyscallNode *sc_node = static_cast<SyscallNode *>(node);
-
-    PANIC_IF(!scgraph->nodes.contains(next_id),
-             "next_id %u not found in scgraph %u\n", next_id, graph_id);
-    SCGraphNode *next_node = scgraph->nodes[next_id];
-
+    
+    SCGraphNode *next_node = GetNodeFromId(scgraph, graph_id, next_id);
     sc_node->SetNext(next_node, weak_edge);
 }
 
 
-void foreactor_AddBranchNode(unsigned graph_id, unsigned node_id,
-                             const char *name, const int *assoc_dims,
-                             size_t assoc_dims_len, size_t num_children,
+void foreactor_AddBranchNode(unsigned graph_id,
+                             unsigned node_id,
+                             const char *name,
+                             const int *assoc_dims,
+                             size_t assoc_dims_len,
+                             bool (*arggen_func)(const int *, int *),
+                             size_t num_children,
                              bool is_start) {
-    PANIC_IF(!scgraphs.contains(graph_id), "graph_id %u not found\n", graph_id);
-    SCGraph *scgraph = &scgraphs.at(graph_id);
+    SCGraph *scgraph = GetSCGraphFromId(graph_id);
+    std::unordered_set<int> assoc_dims_set =
+        MakeAssocDimsSet(assoc_dims, assoc_dims_len);
 
-    std::unordered_set<int> assoc_dims_set;
-    assoc_dims_set.reserve(assoc_dims_len);
-    for (size_t i = 0; i < assoc_dims_len; ++i)
-        assoc_dims_set.insert(assoc_dims[i]);
-
-    PANIC_IF(scgraph->nodes.contains(node_id),
-             "node_id %u already exists in scgraph %u\n", node_id, graph_id);
+    PanicIfNodeExists(scgraph, graph_id, node_id);
     BranchNode *node = new BranchNode(node_id, std::string(name), num_children,
-                                      scgraph, assoc_dims_set);
-
+                                      scgraph, assoc_dims_set, arggen_func);
     scgraph->AddNode(node, is_start);
 }
 
 void foreactor_BranchAppendChild(unsigned graph_id, unsigned node_id,
                                  unsigned child_id, int epoch_dim) {
-    PANIC_IF(!scgraphs.contains(graph_id), "graph_id %u not found\n", graph_id);
-    SCGraph *scgraph = &scgraphs.at(graph_id);
+    SCGraph *scgraph = GetSCGraphFromId(graph_id);
 
-    PANIC_IF(!scgraph->nodes.contains(node_id),
-             "node_id %u not found in scgraph %u\n", node_id, graph_id);
-    SCGraphNode *node = scgraph->nodes[node_id];
-    PANIC_IF(node->node_type != NODE_SC_PURE &&
-             node->node_type != NODE_SC_SEFF,
+    SCGraphNode *node = GetNodeFromId(scgraph, graph_id, node_id);
+    PANIC_IF(node->node_type != NODE_BRANCH,
              "node_id %u is not a BranchNode\n", node_id);
     BranchNode *branch_node = static_cast<BranchNode *>(node);
 
-    PANIC_IF(!scgraph->nodes.contains(child_id),
-             "child_id %u not found in scgraph %u\n", child_id, graph_id);
-    SCGraphNode *child_node = scgraph->nodes[child_id];
-
+    SCGraphNode *child_node = GetNodeFromId(scgraph, graph_id, child_id);
     branch_node->AppendChild(child_node, epoch_dim);
 }
 
 
 void foreactor_EnterSCGraph(unsigned graph_id) {
-    // register this SCGraph as active
     if (UseForeactor) {
-        PANIC_IF(!scgraphs.contains(graph_id),
-                 "graph_id %u not found\n", graph_id);
-        SCGraph *scgraph = &scgraphs.at(graph_id);
-
+        // register this SCGraph as active
+        SCGraph *scgraph = GetSCGraphFromId(graph_id);
         assert(scgraph->IsBuilt());
         SCGraph::RegisterSCGraph(scgraph);
     }
@@ -187,19 +210,12 @@ void foreactor_EnterSCGraph(unsigned graph_id) {
 
 void foreactor_LeaveSCGraph(unsigned graph_id) {
     if (UseForeactor) {
-        PANIC_IF(!scgraphs.contains(graph_id),
-                 "graph_id %u not found\n", graph_id);
-        SCGraph *scgraph = &scgraphs.at(graph_id);
-        assert(scgraph->IsBuilt());
-
-        // at every exit, unregister this SCGraph
+        // unregister this SCGraph
         SCGraph::UnregisterSCGraph();
-
-        // TODO: do background garbage collection of unharvested completions,
-        // instead of always waiting for all of them at every exit
+        // clear everything prepared/on-the-fly, reset all epoch numbers to 0
+        SCGraph *scgraph = GetSCGraphFromId(graph_id);
+        assert(scgraph->IsBuilt());
         scgraph->ClearAllReqs();
-
-        // remember to reset all epoch numbers to 0
         scgraph->ResetToStart();
     }
 }

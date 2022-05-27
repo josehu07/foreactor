@@ -1,6 +1,7 @@
 #include <iostream>
 #include <string>
 #include <vector>
+#include <functional>
 #include <fcntl.h>
 #include <unistd.h>
 #include <assert.h>
@@ -24,10 +25,18 @@ class SyscallOpen final : public SyscallNode {
         ValuePool<int> flags;
         ValuePool<mode_t> mode;
 
+        // User-provided argument generator function. Returns true if all
+        // arguments for that epoch ends up being ready; returns false
+        // otherwise.
+        std::function<bool(const int *,
+            const char **, int *, mode_t *)> arggen_func;
+        bool GenerateArgs(const EpochList& epoch);
+
         long SyscallSync(const EpochList& epoch, void *output_buf);
         void PrepUringSqe(const EpochList& epoch, struct io_uring_sqe *sqe);
         void ReflectResult(const EpochList& epoch, void *output_buf);
-        void Reset();
+
+        void ResetValuePools();
 
     public:
         SyscallOpen() = delete;
@@ -35,7 +44,9 @@ class SyscallOpen final : public SyscallNode {
         // SCGraph, in which case those they must be set before calling
         // Issue on this syscall node.
         SyscallOpen(unsigned node_id, std::string name, SCGraph *scgraph,
-                    const std::unordered_set<int>& assoc_dims);
+                    const std::unordered_set<int>& assoc_dims,
+                    std::function<bool(const int *,
+                        const char **, int *, mode_t *)> arggen_func);
         ~SyscallOpen() {}
 
         friend std::ostream& operator<<(std::ostream& s,
@@ -61,15 +72,22 @@ class SyscallPread final : public SyscallNode {
         // Used when issued async.
         ValuePool<char *> internal_buf;
 
+        std::function<bool(const int *,
+            int *, size_t *, off_t *)> arggen_func;
+        bool GenerateArgs(const EpochList& epoch);
+
         long SyscallSync(const EpochList& epoch, void *output_buf);
         void PrepUringSqe(const EpochList& epoch, struct io_uring_sqe *sqe);
         void ReflectResult(const EpochList& epoch, void *output_buf);
-        void Reset();
+
+        void ResetValuePools();
 
     public:
         SyscallPread() = delete;
         SyscallPread(unsigned node_id, std::string name, SCGraph *scgraph,
-                     const std::unordered_set<int>& assoc_dims);
+                     const std::unordered_set<int>& assoc_dims,
+                     std::function<bool(const int *,
+                         int *, size_t *, off_t *)> arggen_func);
         ~SyscallPread() {}
 
         friend std::ostream& operator<<(std::ostream& s,

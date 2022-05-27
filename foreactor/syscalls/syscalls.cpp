@@ -2,6 +2,7 @@
 #include <string>
 #include <vector>
 #include <algorithm>
+#include <functional>
 #include <string.h>
 #include <fcntl.h>
 #include <unistd.h>
@@ -24,10 +25,13 @@ namespace foreactor {
 
 SyscallOpen::SyscallOpen(unsigned node_id, std::string name,
                          SCGraph *scgraph,
-                         const std::unordered_set<int>& assoc_dims)
+                         const std::unordered_set<int>& assoc_dims,
+                         std::function<bool(const int *,
+                             const char **, int *, mode_t *)> arggen_func)
         : SyscallNode(node_id, name, SC_OPEN, /*pure_sc*/ false,
                       scgraph, assoc_dims),
-          pathname(assoc_dims), flags(assoc_dims), mode(assoc_dims) {
+          pathname(assoc_dims), flags(assoc_dims), mode(assoc_dims),
+          arggen_func(arggen_func) {
 }
 
 
@@ -39,6 +43,31 @@ std::ostream& operator<<(std::ostream& s, const SyscallOpen& n) {
     n.PrintCommonInfo(s);
     s << "}";
     return s;
+}
+
+
+bool SyscallOpen::GenerateArgs(const EpochList& epoch) {
+    assert(!stage.Has(epoch) || stage.Get(epoch) == STAGE_NOTREADY);
+
+    const char *pathname_;
+    int flags_;
+    mode_t mode_;
+    if (!arggen_func(epoch.RawArray(), &pathname_, &flags_, &mode_))
+        return false;
+
+    assert(pathname_ != nullptr);
+    if (!pathname.Has(epoch))
+        pathname.Set(epoch, std::string(pathname_));
+    if (!flags.Has(epoch))
+        flags.Set(epoch, flags_);
+    if (!mode.Has(epoch))
+        mode.Set(epoch, mode_);
+    assert(strcmp(pathname_, pathname.Get(epoch).c_str()) == 0);
+    assert(flags_ == flags.Get(epoch));
+    assert(mode_ == mode.Get(epoch));
+
+    stage.Set(epoch, STAGE_ARGREADY);
+    return true;
 }
 
 
@@ -61,7 +90,8 @@ void SyscallOpen::ReflectResult(const EpochList& epoch, void *output_buf) {
     return;
 }
 
-void SyscallOpen::Reset() {
+
+void SyscallOpen::ResetValuePools() {
     ResetCommonPools();
     pathname.Reset();
     flags.Reset();
@@ -92,11 +122,13 @@ void SyscallOpen::CheckArgs(const EpochList& epoch,
 
 SyscallPread::SyscallPread(unsigned node_id, std::string name,
                            SCGraph *scgraph,
-                           const std::unordered_set<int>& assoc_dims)
+                           const std::unordered_set<int>& assoc_dims,
+                           std::function<bool(const int *,
+                               int *, size_t *, off_t *)> arggen_func)
         : SyscallNode(node_id, name, SC_PREAD, /*pure_sc*/ true,
                       scgraph, assoc_dims),
           fd(assoc_dims), count(assoc_dims), offset(assoc_dims),
-          internal_buf(assoc_dims) {
+          internal_buf(assoc_dims), arggen_func(arggen_func) {
 }
 
 
@@ -108,6 +140,30 @@ std::ostream& operator<<(std::ostream& s, const SyscallPread& n) {
     n.PrintCommonInfo(s);
     s << "}";
     return s;
+}
+
+
+bool SyscallPread::GenerateArgs(const EpochList& epoch) {
+    assert(!stage.Has(epoch) || stage.Get(epoch) == STAGE_NOTREADY);
+
+    int fd_;
+    size_t count_;
+    off_t offset_;
+    if (!arggen_func(epoch.RawArray(), &fd_, &count_, &offset_))
+        return false;
+
+    if (!fd.Has(epoch))
+        fd.Set(epoch, fd_);
+    if (!count.Has(epoch))
+        count.Set(epoch, count_);
+    if (!offset.Has(epoch))
+        offset.Set(epoch, offset_);
+    assert(fd_ == fd.Get(epoch));
+    assert(count_ == count.Get(epoch));
+    assert(offset_ == offset.Get(epoch));
+
+    stage.Set(epoch, STAGE_ARGREADY);
+    return true;
 }
 
 
@@ -136,7 +192,7 @@ void SyscallPread::ReflectResult(const EpochList& epoch, void *output_buf) {
            count.Get(epoch));
 }
 
-void SyscallPread::Reset() {
+void SyscallPread::ResetValuePools() {
     ResetCommonPools();
     fd.Reset();
     count.Reset();

@@ -2,6 +2,7 @@
 #include <string>
 #include <vector>
 #include <unordered_set>
+#include <functional>
 #include <assert.h>
 #include <liburing.h>
 
@@ -63,12 +64,19 @@ class SCGraphNode {
         [[nodiscard]] int EpochSum(const EpochList& epoch);
 
         // Reset all ValuePools of this node.
-        virtual void Reset() = 0;
+        virtual void ResetValuePools() = 0;
 
     public:
         friend std::ostream& operator<<(std::ostream& s, const SCGraphNode& n);
 };
 
+
+// Concrete syscall types of SyscallNode.
+typedef enum SyscallType {
+    SC_BASE,
+    SC_OPEN,    // open
+    SC_PREAD    // pread
+} SyscallType;
 
 // Stages of a SyscallNode.
 typedef enum SyscallStage {
@@ -109,22 +117,21 @@ class SyscallNode : public SCGraphNode {
                     const std::unordered_set<int>& assoc_dims);
         virtual ~SyscallNode() {}
 
-        void ResetCommonPools();
-
         // Every child class must implement these methods.
+        virtual bool GenerateArgs(const EpochList&) = 0;
         virtual long SyscallSync(const EpochList& epoch,
                                  void *output_buf) = 0;
         virtual void PrepUringSqe(const EpochList& epoch,
                                   struct io_uring_sqe *sqe) = 0;
         virtual void ReflectResult(const EpochList& epoch,
                                    void *output_buf) = 0;
-        virtual void Reset() = 0;
+        virtual void ResetValuePools() = 0;
 
         void PrepAsync(const EpochList& epoch);
         void CmplAsync(const EpochList& epoch);
+        void ResetCommonPools();
 
-        static bool IsForeactable(EdgeType edge, const SyscallNode *next,
-                                  const EpochList& epoch);
+        static bool IsForeactable(EdgeType edge, const SyscallNode *next);
 
     public:
         void PrintCommonInfo(std::ostream& s) const;
@@ -158,18 +165,24 @@ class BranchNode final : public SCGraphNode {
         // Fields that progress across loops.
         ValuePool<int> decision;
 
+        // User-provided decision generator function. Returns true if decision
+        // for that epoch ends up being ready; returns false otherwise.
+        std::function<bool(const int *, int *)> arggen_func;
+        bool GenerateDecision(const EpochList&);
+
         // Pick a child node based on decision value. Returns nullptr if
         // decision cannot be made yet. If traverses through a back-pointing
         // edge, will increment the corresponding epoch dimension.
         SCGraphNode *PickBranch(EpochList& epoch);
 
-        void Reset();
+        void ResetValuePools();
 
     public:
         BranchNode() = delete;
         BranchNode(unsigned node_id, std::string name, size_t num_children,
                    SCGraph *scgraph,
-                   const std::unordered_set<int>& assoc_dims);
+                   const std::unordered_set<int>& assoc_dims,
+                   std::function<bool(const int *, int *)> arggen_func);
         ~BranchNode() {}
 
         friend std::ostream& operator<<(std::ostream& s, const BranchNode& n);

@@ -2,6 +2,7 @@
 #include <string>
 #include <vector>
 #include <unordered_set>
+#include <functional>
 #include <assert.h>
 #include <liburing.h>
 
@@ -113,12 +114,6 @@ std::ostream& operator<<(std::ostream& s, const SyscallNode& n) {
 }
 
 
-void SyscallNode::ResetCommonPools() {
-    stage.Reset();
-    rc.Reset();
-}
-
-
 void SyscallNode::PrepAsync(const EpochList& epoch) {
     assert(stage.Get(epoch) == STAGE_ARGREADY);
     assert(scgraph != nullptr);
@@ -157,6 +152,11 @@ void SyscallNode::CmplAsync(const EpochList& epoch) {
     }
 }
 
+void SyscallNode::ResetCommonPools() {
+    stage.Reset();
+    rc.Reset();
+}
+
 
 void SyscallNode::SetNext(SCGraphNode *node, bool weak_edge) {
     assert(node != nullptr);
@@ -166,10 +166,7 @@ void SyscallNode::SetNext(SCGraphNode *node, bool weak_edge) {
 
 
 // The condition function that decides if an edge can be pre-issued across.
-bool SyscallNode::IsForeactable(EdgeType edge, const SyscallNode *next,
-                                const EpochList& epoch) {
-    if (next->stage.Get(epoch) == STAGE_NOTREADY)
-        return false;
+bool SyscallNode::IsForeactable(EdgeType edge, const SyscallNode *next) {
     return !(edge == EDGE_WEAK && next->node_type == NODE_SC_SEFF);
 }
 
@@ -213,31 +210,48 @@ long SyscallNode::Issue(const EpochList& epoch, void *output_buf) {
         while (depth-- > 0 && next != nullptr) {
             // while next node is a branching node, pick up the correct
             // branch if the branching has been decided
+            bool decision_barrier = false;
             while (next != nullptr && next->node_type == NODE_BRANCH) {
                 BranchNode *branch_node = static_cast<BranchNode *>(next);
                 DEBUG("branch %s<%p>@%s\n",
                       StreamStr(branch_node).c_str(), branch_node,
                       StreamStr(epoch).c_str());
-                // FIXME: calculate arg from gen func
+                // if decision not ready, see if it can be generated now
+                if (!branch_node->decision.Has(peek_epoch)) {
+                    if (!branch_node->GenerateDecision(peek_epoch)) {
+                        decision_barrier = true;
+                        break;
+                    }
+                }
                 next = branch_node->PickBranch(peek_epoch);
                 DEBUG("picked branch %p\n", next);
             }
-            if (next == nullptr) {
+            if (next == nullptr && !decision_barrier) {
                 // hit end of graph, no need of peeking for future Issue()s
                 scgraph->peekhead_hit_end = true;
                 DEBUG("peeking hit end of SCGraph\n");
                 break;
+            } else if (decision_barrier) {
+                DEBUG("peeking hit a decision barrier\n");
+                break;
             } else
                 scgraph->peekhead = next;
 
+            // calculate arguments for this node from generator func if they
+            // haven't been ready yet
+            SyscallNode *syscall_node = static_cast<SyscallNode *>(next);
+            if (!syscall_node->stage.Has(peek_epoch) ||
+                syscall_node->stage.Get(peek_epoch) != STAGE_ARGREADY) {
+                if (!syscall_node->GenerateArgs(peek_epoch))
+                    break;
+            }
+            assert(syscall_node->stage.Get(peek_epoch) == STAGE_ARGREADY);
+
             // decide if the next node is pre-issuable, and if so, prepare
             // for submission to uring
-            SyscallNode *syscall_node = static_cast<SyscallNode *>(next);
-            if (IsForeactable(edge, syscall_node, peek_epoch)) {
+            if (IsForeactable(edge, syscall_node)) {
                 // prepare the IOUring submission entry, set node stage to be
                 // in-progress
-                // FIXME: calculate arg from gen func
-                assert(syscall_node->stage.Get(peek_epoch) == STAGE_ARGREADY);
                 syscall_node->PrepAsync(peek_epoch);
                 DEBUG("prepared %d %s<%p>@%s\n",
                       scgraph->num_prepared, StreamStr(syscall_node).c_str(),
@@ -283,7 +297,7 @@ long SyscallNode::Issue(const EpochList& epoch, void *output_buf) {
     }
 
     // handle myself
-    assert(stage.Get(epoch) != STAGE_NOTREADY);
+    assert(stage.Get(epoch) != STAGE_NOTREADY);  // must have done CheckArgs
     if (stage.Get(epoch) == STAGE_ARGREADY) {
         // if not pre-issued, invoke syscall synchronously
         DEBUG("sync-call %s<%p>@%s\n",
@@ -326,10 +340,12 @@ long SyscallNode::Issue(const EpochList& epoch, void *output_buf) {
 
 BranchNode::BranchNode(unsigned node_id, std::string name, size_t num_children,
                        SCGraph *scgraph,
-                       const std::unordered_set<int>& assoc_dims)
+                       const std::unordered_set<int>& assoc_dims,
+                       std::function<bool(const int *, int *)> arggen_func)
         : SCGraphNode(node_id, name, NODE_BRANCH, scgraph, assoc_dims),
           num_children(num_children), children(num_children),
-          epoch_dims(num_children, -1), decision(assoc_dims) {
+          epoch_dims(num_children, -1), decision(assoc_dims),
+          arggen_func(arggen_func) {
     assert(num_children > 1);
 }
 
@@ -348,8 +364,16 @@ std::ostream& operator<<(std::ostream& s, const BranchNode& n) {
 }
 
 
-void BranchNode::Reset() {
-    decision.Reset();
+bool BranchNode::GenerateDecision(const EpochList& epoch) {
+    assert(!decision.Has(epoch));
+
+    int d;
+    if (!arggen_func(epoch.RawArray(), &d))
+        return false;
+    
+    assert(d >= 0 && d < static_cast<int>(num_children));
+    decision.Set(epoch, d);
+    return true;
 }
 
 
@@ -363,6 +387,11 @@ SCGraphNode *BranchNode::PickBranch(EpochList& epoch) {
         epoch.Increment(epoch_dims[d]);
 
     return child;
+}
+
+
+void BranchNode::ResetValuePools() {
+    decision.Reset();
 }
 
 

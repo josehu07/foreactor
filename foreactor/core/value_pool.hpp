@@ -43,6 +43,8 @@ class EpochList {
         [[nodiscard]] bool SameAs(const EpochList& other) const;
         [[nodiscard]] bool AheadOf(const EpochList& other) const;
 
+        [[nodiscard]] const int *RawArray() const;
+
         void Reset();
 };
 

@@ -121,7 +121,7 @@ void SCGraph::ResetToStart() {
     peekhead_hit_end = false;
 
     for (auto&& [_, node] : nodes)
-        node->Reset();
+        node->ResetValuePools();
 }
 
 

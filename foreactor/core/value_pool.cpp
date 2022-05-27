@@ -90,6 +90,11 @@ bool EpochList::AheadOf(const EpochList& other) const {
 }
 
 
+const int *EpochList::RawArray() const {
+    return epochs.data();
+}
+
+
 void EpochList::Reset() {
     for (size_t i = 0; i < total_dims; ++i)
         epochs[i] = 0;

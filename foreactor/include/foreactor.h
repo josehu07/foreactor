@@ -43,21 +43,27 @@ extern "C" {
 
 // Create a new SCGraph representing a hijacked app function.
 void foreactor_CreateSCGraph(unsigned grpah_id, unsigned total_dims);
+void foreactor_SetSCGraphBuilt(unsigned graph_id);
 
-
-// Concrete syscall types of SyscallNode.
-typedef enum SyscallType {
-    SC_BASE,
-    SC_OPEN,    // open
-    SC_PREAD    // pread
-} SyscallType;
 
 // Add a SyscallNode of certain type to the SCGraph. Exactly one node in
 // graph (SyscallNode or BranchNode) sets is_start = true.
-void foreactor_AddSyscallNode(unsigned graph_id, unsigned node_id,
-                              const char *name, const int *assoc_dims,
-                              size_t assoc_dims_len, SyscallType type,
+void foreactor_AddSyscallOpen(unsigned graph_id,
+                              unsigned node_id,
+                              const char *name,
+                              const int *assoc_dims,
+                              size_t assoc_dims_len,
+                              bool (*arggen_func)(const int *,
+                                  const char **, int *, mode_t *),
                               bool is_start);
+void foreactor_AddSyscallPread(unsigned graph_id,
+                               unsigned node_id,
+                               const char *name,
+                               const int *assoc_dims,
+                               size_t assoc_dims_len,
+                               bool (*arggen_func)(const int *,
+                                   int *, size_t *, off_t *),
+                               bool is_start);
 
 // Set outgoing edge of a SyscallNode.
 void foreactor_SyscallSetNext(unsigned graph_id, unsigned node_id,
@@ -65,9 +71,13 @@ void foreactor_SyscallSetNext(unsigned graph_id, unsigned node_id,
 
 
 // Add a BranchNode to the SCGraph.
-void foreactor_AddBranchNode(unsigned graph_id, unsigned node_id,
-                             const char *name, const int *assoc_dims,
-                             size_t assoc_dims_len, size_t num_children,
+void foreactor_AddBranchNode(unsigned graph_id,
+                             unsigned node_id,
+                             const char *name,
+                             const int *assoc_dims,
+                             size_t assoc_dims_len,
+                             bool (*arggen_func)(const int *, int *),
+                             size_t num_children,
                              bool is_start);
 
 // Append a outgoing edge to a BranchNode (could be a back-pointing edge).
