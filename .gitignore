@@ -1,7 +1,18 @@
+*.sw*
+.vscode
+.DS_Store
+
 *.o
 *.so
 
 ubuntu-mainline-kernel.sh
 liburing/
 
-demoapp/demo_dbdir/
+microbench/microbench
+
+demoapps/demo-cpp/demo_dbdir/
+demoapps/demo-cpp/demo
+
+leveldb/leveldb-src/build/
+leveldb/leveldb-src/out/
+leveldb/ycsbcli
