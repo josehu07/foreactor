@@ -5,11 +5,12 @@ if [[ $# -ne 1 ]]; then
     echo "Usage: $0 DBDIR_PATH"
     exit 1
 fi
-DBDIR_PATH=$1
+DBDIR_PATH=$(realpath $1)
 
+SCRIPT_PATH=$(dirname $(realpath $0))
+cd ${SCRIPT_PATH}
 
-ROOT_PATH=$(dirname $(dirname $(realpath $0)))
-cd ${ROOT_PATH}/demoapp/
+LIBFOREACTOR=$(SCRIPT_PATH)/../../libforeactor
 
 
 echo
