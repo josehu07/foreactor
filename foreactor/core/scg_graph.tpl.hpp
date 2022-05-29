@@ -5,7 +5,7 @@ namespace foreactor {
 
 
 template <typename NodeT>
-std::tuple<NodeT *, const EpochList&> SCGraph::GetFrontier() {
+std::tuple<NodeT *, const EpochList *> SCGraph::GetFrontier() {
     static_assert(std::is_base_of<SyscallNode, NodeT>::value,
                   "NodeT must be derived from SyscallNode");
     static_assert(!std::is_same<SyscallNode, NodeT>::value,
@@ -32,7 +32,7 @@ std::tuple<NodeT *, const EpochList&> SCGraph::GetFrontier() {
     assert(frontier != nullptr);
     assert(frontier->node_type == NODE_SC_PURE ||
            frontier->node_type == NODE_SC_SEFF);
-    return std::make_tuple(static_cast<NodeT *>(frontier), frontier_epoch);
+    return std::make_tuple(static_cast<NodeT *>(frontier), &frontier_epoch);
 }
 
 

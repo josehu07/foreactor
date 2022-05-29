@@ -29,8 +29,6 @@ void ParseEnvValues() {
         UseForeactor = true;
     } else {
         UseForeactor = false;
-        EnvParsed = true;
-        return;
     }
 
     size_t i = 0;
@@ -62,16 +60,18 @@ void ParseEnvValues() {
 
     PANIC_IF(uring_queue_lens.size() != pre_issue_depths.size(),
              "not the same number of QUEUE_ and DEPTH_ env variables\n");
-    DEBUG("foreactor env config:  graph_id  uring_queue_len  pre_issue_depth\n");
+    DEBUG("foreactor env config: using foreactor %s\n",
+          UseForeactor ? "YES" : "NO");
+    DEBUG("foreactor env config: graph queue depth\n");
     for (auto& [graph_id, depth] : pre_issue_depths) {
         PANIC_IF(!uring_queue_lens.contains(graph_id),
                  "graph_id %u not found in QUEUE_ envs\n", graph_id);
         int uring_queue_len = uring_queue_lens[graph_id];
         PANIC_IF(uring_queue_len < depth,
-                 "graph_id %u has DEPTH_ %d > QUEUE_ %d\n", graph_id,
-                 depth, uring_queue_len);
-        DEBUG("                       %8u  %15d  %15d\n", graph_id,
-              uring_queue_len, depth);
+                 "graph_id %u has DEPTH_ %d > QUEUE_ %d\n",
+                 graph_id, depth, uring_queue_len);
+        DEBUG("                      %5u %5d %5d\n",
+              graph_id, uring_queue_len, depth);
     }
 
     EnvParsed = true;

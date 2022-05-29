@@ -27,7 +27,7 @@ IOUring::IOUring(int sq_length)
             DEBUG("initilize IOUring failed %d\n", ret);
             return;
         }
-        DEBUG("initialized IOUring @ %p sq_length %d\n", &ring, sq_length);
+        DEBUG("inited IOUring @ %p sq_length %d\n", &ring, sq_length);
     }
     TIMER_PAUSE("uring-init");
 }
@@ -43,7 +43,7 @@ IOUring::~IOUring() {
     TIMER_RESET("uring-init");
     TIMER_RESET("uring-exit");
     
-    TIMER_PRINT_ALL(TIME_MICRO);
+    // TIMER_PRINT_ALL(TIME_MICRO);
 }
 
 

@@ -131,7 +131,7 @@ void SCGraph::AddNode(SCGraphNode *node, bool is_start) {
     assert(node->scgraph == this);
 
     nodes[node->node_id] = node;
-    DEBUG("added node %s<%p>\n", StreamStr(node).c_str(), node);
+    DEBUG("added node %s<%p>\n", StreamStr(*node).c_str(), node);
 
     if (is_start) {
         assert(frontier == nullptr);

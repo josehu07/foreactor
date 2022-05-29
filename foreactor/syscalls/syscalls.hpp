@@ -21,7 +21,7 @@ namespace foreactor {
 // open
 class SyscallOpen final : public SyscallNode {
     private:
-        ValuePool<std::string> pathname;
+        ValuePool<const char *> pathname;
         ValuePool<int> flags;
         ValuePool<mode_t> mode;
 
@@ -32,12 +32,15 @@ class SyscallOpen final : public SyscallNode {
                            const char **,
                            int *,
                            mode_t *)> arggen_func;
-        bool GenerateArgs(const EpochList& epoch);
+
+        // User-defined return code saver function.
+        std::function<void(const int *, int)> rcsave_func;        
 
         long SyscallSync(const EpochList& epoch, void *output_buf);
         void PrepUringSqe(const EpochList& epoch, struct io_uring_sqe *sqe);
         void ReflectResult(const EpochList& epoch, void *output_buf);
 
+        bool GenerateArgs(const EpochList& epoch);
         void RemoveOneEpoch(const EpochList& epoch);
         void ResetValuePools();
 
@@ -51,7 +54,8 @@ class SyscallOpen final : public SyscallNode {
                     std::function<bool(const int *,
                                        const char **,
                                        int *,
-                                       mode_t *)> arggen_func);
+                                       mode_t *)> arggen_func,
+                    std::function<void(const int *, int)> rcsave_func);
         ~SyscallOpen() {}
 
         friend std::ostream& operator<<(std::ostream& s,
@@ -73,12 +77,13 @@ class SyscallClose final : public SyscallNode {
         ValuePool<int> fd;
 
         std::function<bool(const int *, int *)> arggen_func;
-        bool GenerateArgs(const EpochList& epoch);
+        std::function<void(const int *, int)> rcsave_func;
 
         long SyscallSync(const EpochList& epoch, void *output_buf);
         void PrepUringSqe(const EpochList& epoch, struct io_uring_sqe *sqe);
         void ReflectResult(const EpochList& epoch, void *output_buf);
 
+        bool GenerateArgs(const EpochList& epoch);
         void RemoveOneEpoch(const EpochList& epoch);
         void ResetValuePools();
 
@@ -86,7 +91,8 @@ class SyscallClose final : public SyscallNode {
         SyscallClose() = delete;
         SyscallClose(unsigned node_id, std::string name, SCGraph *scgraph,
                      const std::unordered_set<int>& assoc_dims,
-                     std::function<bool(const int *, int *)> arggen_func);
+                     std::function<bool(const int *, int *)> arggen_func,
+                     std::function<void(const int *, int)> rcsave_func);
         ~SyscallClose() {}
 
         friend std::ostream& operator<<(std::ostream& s,
@@ -110,12 +116,13 @@ class SyscallPread final : public SyscallNode {
                            int *,
                            size_t *,
                            off_t *)> arggen_func;
-        bool GenerateArgs(const EpochList& epoch);
+        std::function<void(const int *, ssize_t)> rcsave_func;
 
         long SyscallSync(const EpochList& epoch, void *output_buf);
         void PrepUringSqe(const EpochList& epoch, struct io_uring_sqe *sqe);
         void ReflectResult(const EpochList& epoch, void *output_buf);
 
+        bool GenerateArgs(const EpochList& epoch);
         void RemoveOneEpoch(const EpochList& epoch);
         void ResetValuePools();
 
@@ -126,7 +133,8 @@ class SyscallPread final : public SyscallNode {
                      std::function<bool(const int *,
                                         int *,
                                         size_t *,
-                                        off_t *)> arggen_func);
+                                        off_t *)> arggen_func,
+                     std::function<void(const int *, ssize_t)> rcsave_func);
         ~SyscallPread() {}
 
         friend std::ostream& operator<<(std::ostream& s,
@@ -150,12 +158,13 @@ class SyscallPwrite final : public SyscallNode {
                            const char **,
                            size_t *,
                            off_t *)> arggen_func;
-        bool GenerateArgs(const EpochList& epoch);
+        std::function<void(const int *, ssize_t)> rcsave_func;
 
         long SyscallSync(const EpochList& epoch, void *output_buf);
         void PrepUringSqe(const EpochList& epoch, struct io_uring_sqe *sqe);
         void ReflectResult(const EpochList& epoch, void *output_buf);
 
+        bool GenerateArgs(const EpochList& epoch);
         void RemoveOneEpoch(const EpochList& epoch);
         void ResetValuePools();
 
@@ -167,7 +176,8 @@ class SyscallPwrite final : public SyscallNode {
                                          int *,
                                          const char **,
                                          size_t *,
-                                         off_t *)> arggen_func);
+                                         off_t *)> arggen_func,
+                      std::function<void(const int *, ssize_t)> rcsave_func);
         ~SyscallPwrite() {}
 
         friend std::ostream& operator<<(std::ostream& s,

@@ -28,7 +28,7 @@
     do {                                             \
         const char *tmp = strrchr(__FILE__, '/');    \
         const char *file = tmp ? tmp + 1 : __FILE__; \
-        fprintf(stderr, "[%15s:%-4d@t:%-6d]  " msg,  \
+        fprintf(stderr, "[%18s:%-4d@t:%-6d]  " msg,  \
                 file, __LINE__, tid, ##__VA_ARGS__); \
     } while (0)
 
@@ -49,7 +49,7 @@
         if (cond) {                                      \
             const char *tmp = strrchr(__FILE__, '/');    \
             const char *file = tmp ? tmp + 1 : __FILE__; \
-            fprintf(stderr, "[%15s:%-4d@t:%-6d]  " msg,  \
+            fprintf(stderr, "[%18s:%-4d@t:%-6d]  " msg,  \
                     file, __LINE__, tid, ##__VA_ARGS__); \
             exit(-1);                                    \
         }                                                \

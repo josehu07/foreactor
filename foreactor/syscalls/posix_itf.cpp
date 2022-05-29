@@ -65,10 +65,10 @@ int open(const char *pathname, int flags, ...) {
         auto [node, epoch] = active_scgraph->GetFrontier<SyscallOpen>();
         assert(node != nullptr);
         assert(node->sc_type == SC_OPEN);
-        node->CheckArgs(epoch, pathname, flags, mode);
+        node->CheckArgs(*epoch, pathname, flags, mode);
         DEBUG("open<%p>->Issue(%s)\n",
-              node, StreamStr(epoch).c_str());
-        return static_cast<int>(node->Issue(epoch));
+              node, StreamStr(*epoch).c_str());
+        return static_cast<int>(node->Issue(*epoch));
     }
 }
 
@@ -81,10 +81,10 @@ int close(int fd) {
         auto [node, epoch] = active_scgraph->GetFrontier<SyscallClose>();
         assert(node != nullptr);
         assert(node->sc_type == SC_CLOSE);
-        node->CheckArgs(epoch, fd);
+        node->CheckArgs(*epoch, fd);
         DEBUG("close<%p>->Issue(%s)\n",
-              node, StreamStr(epoch).c_str());
-        return static_cast<int>(node->Issue(epoch));
+              node, StreamStr(*epoch).c_str());
+        return static_cast<int>(node->Issue(*epoch));
     }
 }
 
@@ -97,10 +97,10 @@ ssize_t pread(int fd, void *buf, size_t count, off_t offset) {
         auto [node, epoch] = active_scgraph->GetFrontier<SyscallPread>();
         assert(node != nullptr);
         assert(node->sc_type == SC_PREAD);
-        node->CheckArgs(epoch, fd, count, offset);
+        node->CheckArgs(*epoch, fd, count, offset);
         DEBUG("pread<%p>->Issue(%s, %p)\n",
-              node, StreamStr(epoch).c_str(), buf);
-        return static_cast<ssize_t>(node->Issue(epoch, buf));
+              node, StreamStr(*epoch).c_str(), buf);
+        return static_cast<ssize_t>(node->Issue(*epoch, buf));
     }
 }
 
@@ -113,10 +113,10 @@ ssize_t pwrite(int fd, const void *buf, size_t count, off_t offset) {
         auto [node, epoch] = active_scgraph->GetFrontier<SyscallPwrite>();
         assert(node != nullptr);
         assert(node->sc_type == SC_PWRITE);
-        node->CheckArgs(epoch, fd, buf, count, offset);
+        node->CheckArgs(*epoch, fd, buf, count, offset);
         DEBUG("pwrite<%p>->Issue(%s)\n",
-              node, StreamStr(epoch).c_str());
-        return static_cast<ssize_t>(node->Issue(epoch));
+              node, StreamStr(*epoch).c_str());
+        return static_cast<ssize_t>(node->Issue(*epoch));
     }
 }
 

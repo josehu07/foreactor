@@ -17,16 +17,16 @@ namespace foreactor {
 //////////////////////////////
 
 EpochList::EpochList(unsigned total_dims)
-        : total_dims(total_dims), epochs(total_dims) {
+        : total_dims(total_dims), epochs(total_dims, 0) {
     Reset();
 }
 
 
 std::ostream& operator<<(std::ostream& s, const EpochList& e) {
     s << "EpochList{" << e.total_dims << ":";
-    for (auto it = e.epochs.begin(); it != e.epochs.end(); ++it) {
+    for (auto it = e.epochs.cbegin(); it != e.epochs.cend(); ++it) {
         s << *it;
-        if (it != e.epochs.end() - 1)
+        if (it != std::prev(e.epochs.cend()))
             s << ",";
     }
     s << "}";
@@ -57,10 +57,8 @@ int EpochList::At(int dim) const {
 }
 
 int EpochList::Sum(const std::unordered_set<int>& assoc_dims) const {
-    // used key -1 as the special sum for singular pools, meaning not indexed
-    // by anything, just a single value
     if (assoc_dims.size() == 0)
-        return -1;
+        return 0;
 
     int epoch_sum = 0;
     for (int dim : assoc_dims) {

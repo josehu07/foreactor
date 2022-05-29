@@ -44,6 +44,7 @@ extern "C" {
 // Create a new SCGraph representing a hijacked app function.
 void foreactor_CreateSCGraph(unsigned grpah_id, unsigned total_dims);
 void foreactor_SetSCGraphBuilt(unsigned graph_id);
+bool foreactor_HasSCGraph(unsigned graph_id);
 
 
 // Add a SyscallNode of certain type to the SCGraph. Exactly one node in
@@ -57,6 +58,7 @@ void foreactor_AddSyscallOpen(unsigned graph_id,
                                                   const char **,
                                                   int *,
                                                   mode_t *),
+                              void (*rcsave_func)(const int *, int),
                               bool is_start);
 
 void foreactor_AddSyscallClose(unsigned graph_id,
@@ -65,6 +67,7 @@ void foreactor_AddSyscallClose(unsigned graph_id,
                                const int *assoc_dims,
                                size_t assoc_dims_len,
                                bool (*arggen_func)(const int *, int *),
+                               void (*rcsave_func)(const int *, int),
                                bool is_start);
 
 void foreactor_AddSyscallPread(unsigned graph_id,
@@ -76,6 +79,7 @@ void foreactor_AddSyscallPread(unsigned graph_id,
                                                    int *,
                                                    size_t *,
                                                    off_t *),
+                               void (*rcsave_func)(const int *, ssize_t),
                                bool is_start);
 
 void foreactor_AddSyscallPwrite(unsigned graph_id,
@@ -88,6 +92,7 @@ void foreactor_AddSyscallPwrite(unsigned graph_id,
                                                     const char **,
                                                     size_t *,
                                                     off_t *),
+                                void (*rcsave_func)(const int *, ssize_t),
                                 bool is_start);
 
 // Set outgoing edge of a SyscallNode.

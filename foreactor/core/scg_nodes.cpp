@@ -31,8 +31,8 @@ std::ostream& operator<<(std::ostream& s, const EdgeType& t) {
 std::ostream& operator<<(std::ostream& s, const SyscallStage& t) {
     switch (t) {
     case STAGE_NOTREADY: s << "NOTREADY"; break;
-    case STAGE_ARGREADY: s << "UNISSUED"; break;
-    case STAGE_ONTHEFLY: s << "PROGRESS"; break;
+    case STAGE_ARGREADY: s << "ARGREADY"; break;
+    case STAGE_ONTHEFLY: s << "ONTHEFLY"; break;
     case STAGE_FINISHED: s << "FINISHED"; break;
     default:             s << "UNKNOWN";  break;
     }
@@ -105,8 +105,14 @@ std::ostream& operator<<(std::ostream& s, const SyscallNode& n) {
     case SC_OPEN:
         s << StreamStr(static_cast<const SyscallOpen&>(n));
         break;
+    case SC_CLOSE:
+        s << StreamStr(static_cast<const SyscallClose&>(n));
+        break;
     case SC_PREAD:
         s << StreamStr(static_cast<const SyscallPread&>(n));
+        break;
+    case SC_PWRITE:
+        s << StreamStr(static_cast<const SyscallPwrite&>(n));
         break;
     default:       s << "SyscallNode{" << n.node_id << "}";
     }
@@ -186,7 +192,7 @@ long SyscallNode::Issue(const EpochList& epoch, void *output_buf) {
     assert(this == scgraph->frontier);
     assert(epoch.SameAs(scgraph->frontier_epoch));
     DEBUG("issue %s<%p>@%s\n",
-          StreamStr(this).c_str(), this, StreamStr(epoch).c_str());
+          StreamStr(*this).c_str(), this, StreamStr(epoch).c_str());
 
     // if pre_issue_depth > 0, and previous pre-issuing procedure has not hit
     // the end of SCGraph, try to peek and pre-issue
@@ -212,9 +218,14 @@ long SyscallNode::Issue(const EpochList& epoch, void *output_buf) {
         assert(scgraph->peekhead_distance <= scgraph->pre_issue_depth);
         int depth = scgraph->pre_issue_depth - scgraph->peekhead_distance;
         EpochList& peek_epoch = scgraph->peekhead_epoch;
-        DEBUG("peeking %d starts %s<%p>@%s\n",
-              depth, StreamStr(next).c_str(), next,
-              StreamStr(peek_epoch).c_str());
+        if (next != nullptr) {
+            DEBUG("peeking %d starts %s<%p>@%s\n",
+                  depth, StreamStr(*next).c_str(), next,
+                  StreamStr(peek_epoch).c_str());
+        } else {
+            scgraph->peekhead_hit_end = true;
+            DEBUG("peeking hit end of SCGraph\n");
+        }
         while (depth-- > 0 && next != nullptr) {
             // while next node is a branching node, pick up the correct
             // branch if the branching has been decided
@@ -222,7 +233,7 @@ long SyscallNode::Issue(const EpochList& epoch, void *output_buf) {
             while (next != nullptr && next->node_type == NODE_BRANCH) {
                 BranchNode *branch_node = static_cast<BranchNode *>(next);
                 DEBUG("branch %s<%p>@%s\n",
-                      StreamStr(branch_node).c_str(), branch_node,
+                      StreamStr(*branch_node).c_str(), branch_node,
                       StreamStr(epoch).c_str());
                 // if decision not ready, see if it can be generated now
                 if (!branch_node->decision.Has(peek_epoch)) {
@@ -250,8 +261,16 @@ long SyscallNode::Issue(const EpochList& epoch, void *output_buf) {
             SyscallNode *syscall_node = static_cast<SyscallNode *>(next);
             if (!syscall_node->stage.Has(peek_epoch) ||
                 syscall_node->stage.Get(peek_epoch) != STAGE_ARGREADY) {
-                if (!syscall_node->GenerateArgs(peek_epoch))
+                if (!syscall_node->GenerateArgs(peek_epoch)) {
+                    DEBUG("arggen %s<%p>@%s not ready\n",
+                          StreamStr(*syscall_node).c_str(), syscall_node,
+                          StreamStr(peek_epoch).c_str());
                     break;
+                } else {
+                    DEBUG("arggen %s<%p>@%s successful\n",
+                          StreamStr(*syscall_node).c_str(), syscall_node,
+                          StreamStr(peek_epoch).c_str());
+                }
             }
             assert(syscall_node->stage.Get(peek_epoch) == STAGE_ARGREADY);
 
@@ -262,7 +281,7 @@ long SyscallNode::Issue(const EpochList& epoch, void *output_buf) {
                 // in-progress
                 syscall_node->PrepAsync(peek_epoch);
                 DEBUG("prepared %d %s<%p>@%s\n",
-                      scgraph->num_prepared, StreamStr(syscall_node).c_str(),
+                      scgraph->num_prepared, StreamStr(*syscall_node).c_str(),
                       syscall_node, StreamStr(peek_epoch).c_str());
                 // distance of peekhead from frontier increments by 1
                 next = syscall_node->next_node;
@@ -309,7 +328,7 @@ long SyscallNode::Issue(const EpochList& epoch, void *output_buf) {
     if (stage.Get(epoch) == STAGE_ARGREADY) {
         // if not pre-issued, invoke syscall synchronously
         DEBUG("sync-call %s<%p>@%s\n",
-              StreamStr(this).c_str(), this, StreamStr(epoch).c_str());
+              StreamStr(*this).c_str(), this, StreamStr(epoch).c_str());
         TIMER_START(scgraph->TimerNameStr("sync-call"));
         long syscall_rc = SyscallSync(epoch, output_buf);
         rc.Set(epoch, syscall_rc);
@@ -321,7 +340,7 @@ long SyscallNode::Issue(const EpochList& epoch, void *output_buf) {
         // completion is seen
         assert(stage.Get(epoch) != STAGE_PREPARED);
         DEBUG("ring-cmpl %s<%p>@%s\n",
-              StreamStr(this).c_str(), this, StreamStr(epoch).c_str());
+              StreamStr(*this).c_str(), this, StreamStr(epoch).c_str());
         TIMER_START(scgraph->TimerNameStr("ring-cmpl"));
         if (stage.Get(epoch) == STAGE_ONTHEFLY)
             CmplAsync(epoch);
@@ -338,8 +357,9 @@ long SyscallNode::Issue(const EpochList& epoch, void *output_buf) {
     scgraph->prepared_distance--;
     DEBUG("pushed frontier -> %p\n", scgraph->frontier);
 
+    assert(rc.Has(epoch));
     long rc_this_epoch = rc.Get(epoch);
-
+    RemoveOneEpoch(epoch);
     return rc_this_epoch;
 }
 

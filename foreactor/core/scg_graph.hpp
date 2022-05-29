@@ -96,7 +96,7 @@ class SCGraph {
         // Get current frontier node and frontier epoch.
         // NodeT must be one of those listed in syscalls.hpp.
         template <typename NodeT>
-        std::tuple<NodeT *, const EpochList&> GetFrontier();
+        std::tuple<NodeT *, const EpochList *> GetFrontier();
 };
 
 

@@ -39,12 +39,14 @@ void Timer::Start() {
     assert(!started);
     [[maybe_unused]] int ret = clock_gettime(CLOCK_REALTIME, &start_ts);
     assert(ret == 0);
+    started = true;
 }
 
 void Timer::Pause() {
     assert(started);
     [[maybe_unused]] int ret = clock_gettime(CLOCK_REALTIME, &pause_ts);
     assert(ret == 0);
+    started = false;
 
     uint64_t nsecs = (pause_ts.tv_sec - start_ts.tv_sec) * 1e9
                      + (pause_ts.tv_nsec - start_ts.tv_nsec);

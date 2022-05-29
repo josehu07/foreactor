@@ -75,9 +75,9 @@ class SCGraphNode {
 typedef enum SyscallType {
     SC_BASE,
     SC_OPEN,    // open
-    SC_CLOSE,   // open
+    SC_CLOSE,   // close
     SC_PREAD,   // pread
-    SC_PWRITE   // pread
+    SC_PWRITE   // pwrite
 } SyscallType;
 
 // Stages of a SyscallNode.
@@ -120,13 +120,13 @@ class SyscallNode : public SCGraphNode {
         virtual ~SyscallNode() {}
 
         // Every child class must implement these methods.
-        virtual bool GenerateArgs(const EpochList&) = 0;
         virtual long SyscallSync(const EpochList& epoch,
                                  void *output_buf) = 0;
         virtual void PrepUringSqe(const EpochList& epoch,
                                   struct io_uring_sqe *sqe) = 0;
         virtual void ReflectResult(const EpochList& epoch,
                                    void *output_buf) = 0;
+        virtual bool GenerateArgs(const EpochList&) = 0;
         virtual void RemoveOneEpoch(const EpochList&) = 0;
         virtual void ResetValuePools() = 0;
 

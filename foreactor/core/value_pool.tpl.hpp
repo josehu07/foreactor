@@ -13,15 +13,15 @@ ValuePool<T>::ValuePool(const std::unordered_set<int>& assoc_dims)
 template <typename T>
 std::ostream& operator<<(std::ostream& s, const ValuePool<T>& p) {
     s << "ValuePool{";
-    for (auto it = p.assoc_dims.begin(); it != p.assoc_dims.end(); ++it) {
+    for (auto it = p.assoc_dims.cbegin(); it != p.assoc_dims.cend(); ++it) {
         s << *it;
-        if (it != std::prev(p.assoc_dims.end()))
+        if (std::next(it) != p.assoc_dims.cend())
             s << ",";
     }
     s << "|";
-    for (auto it = p.data.begin(); it != p.data.end(); ++it) {
-        s << it->first << "-" << it->second << ",";
-        if (it != std::prev(p.data.end()))
+    for (auto it = p.data.cbegin(); it != p.data.cend(); ++it) {
+        s << it->first;
+        if (std::next(it) != p.data.cend())
             s << ",";
     }
     s << "}";
@@ -37,7 +37,7 @@ void ValuePool<T>::Set(const EpochList& epoch, T value) {
 template <typename T>
 void ValuePool<T>::Set(int epoch_sum, T value) {
     // variant used in IOUring class where epoch_sum has already been calculated
-    assert(epoch_sum >= -1);
+    assert(epoch_sum >= 0);
     data[epoch_sum] = value;
 }
 
@@ -49,7 +49,7 @@ bool ValuePool<T>::Has(const EpochList& epoch) const {
 
 template <typename T>
 bool ValuePool<T>::Has(int epoch_sum) const {
-    assert(epoch_sum >= -1);
+    assert(epoch_sum >= 0);
     return data.contains(epoch_sum);
 }
 
@@ -63,7 +63,7 @@ T ValuePool<T>::Get(const EpochList& epoch) const {
 
 template <typename T>
 T ValuePool<T>::Get(int epoch_sum) const {
-    assert(epoch_sum >= -1);
+    assert(epoch_sum >= 0);
     assert(data.contains(epoch_sum));
     return data.at(epoch_sum);
 }

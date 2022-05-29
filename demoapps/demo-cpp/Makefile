@@ -1,21 +1,30 @@
 CC=g++
-CXXFLAGS=-Wall -Werror -std=c++20 -O3 -DNDEBUG
+CXXFLAGS=-Wall -Werror -std=c++20
 
-APP_SRCS:=$(wildcard ./demoapp-src/*.cpp)
+APP_SRCS:=$(wildcard ./demo-cpp-src/*.cpp)
 APP_OBJS:=$(patsubst %.cpp,%.o,$(APP_SRCS))
-APP_INCL:=-I./demoapp-src
+APP_INCL:=-I./demo-cpp-src
 
-PLG_SRCS:=$(wildcard ./demoapp-plugin/*.cpp)
+PLG_SRCS:=$(wildcard ./demo-cpp-plg/*.cpp)
 PLG_OBJS:=$(patsubst %.cpp,%.o,$(PLG_SRCS))
 
-FA_INCL:=-I../foreactor/include
-FA_DLIB:=-L../foreactor -lforeactor -Wl,-rpath=../foreactor
+FA_INCL:=-I../../foreactor/include
+FA_DLIB:=-L../../foreactor -lforeactor -Wl,-rpath=../../foreactor
 
-WRAPS:=-Wl,--wrap=_Z7ldb_getB5cxx11RSt6vectorIS_IiSaIiEESaIS1_EE
+WRAPS:=-Wl,--wrap=_Z12exper_simplePv
 
 
 .PHONY: all
-all: demoapp
+all: release
+
+
+.PHONY: release
+release: CXXFLAGS+=-O3 -DNDEBUG
+release: demo
+
+.PHONY: debug
+debug: CXXFLAGS+=-Og -g -ggdb
+debug: demo
 
 
 $(APP_OBJS): %.o: %.cpp
@@ -24,10 +33,10 @@ $(APP_OBJS): %.o: %.cpp
 $(PLG_OBJS): %.o: %.cpp
 	$(CC) $(CXXFLAGS) -c $(APP_INCL) $(FA_INCL) $< -o $@ $(FA_DLIB)
 
-demoapp: $(APP_OBJS) $(PLG_OBJS)
+demo: $(APP_OBJS) $(PLG_OBJS)
 	$(CC) $(CXXFLAGS) $^ -o $@ $(WRAPS) $(FA_DLIB)
 
 
 .PHONY: clean
 clean:
-	rm -f $(APP_OBJS) $(PLG_OBJS) demoapp
+	rm -f $(APP_OBJS) $(PLG_OBJS) demo
