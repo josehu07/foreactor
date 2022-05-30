@@ -122,7 +122,7 @@ class SyscallNode : public SCGraphNode {
         // Every child class must implement these methods.
         virtual long SyscallSync(const EpochList& epoch,
                                  void *output_buf) = 0;
-        virtual void PrepUringSqe(const EpochList& epoch,
+        virtual void PrepUringSqe(int epoch_sum,
                                   struct io_uring_sqe *sqe) = 0;
         virtual void ReflectResult(const EpochList& epoch,
                                    void *output_buf) = 0;

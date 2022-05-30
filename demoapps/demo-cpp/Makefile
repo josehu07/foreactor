@@ -8,10 +8,11 @@ APP_INCL:=-I./demo-cpp-src
 PLG_SRCS:=$(wildcard ./demo-cpp-plg/*.cpp)
 PLG_OBJS:=$(patsubst %.cpp,%.o,$(PLG_SRCS))
 
-FA_INCL:=-I../../foreactor/include
-FA_DLIB:=-L../../foreactor -lforeactor -Wl,-rpath=../../foreactor
+FA_PATH:=../../libforeactor
+FA_INCL:=-I$(FA_PATH)/include
+FA_DLIB:=-L$(FA_PATH) -lforeactor -Wl,-rpath=$(FA_PATH)
 
-WRAPS:=-Wl,--wrap=_Z12exper_simplePv
+WRAPS:=-Wl,--wrap=_Z12exper_simplePv -Wl,--wrap=_Z15exper_branchingPv -Wl,--wrap=_Z13exper_loopingPv
 
 
 .PHONY: all

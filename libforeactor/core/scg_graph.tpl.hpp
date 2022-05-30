@@ -16,6 +16,9 @@ std::tuple<NodeT *, const EpochList *> SCGraph::GetFrontier() {
     while (frontier != nullptr &&
            frontier->node_type == NODE_BRANCH) {
         BranchNode *branch_node = static_cast<BranchNode *>(frontier);
+        DEBUG("branch %s<%p>@%s in frontier\n",
+              StreamStr(*branch_node).c_str(), branch_node,
+              StreamStr(frontier_epoch).c_str());
         // may need to call .GenerateDecision() since BranchNodes do
         // not have hijacked control points like SyscallNodes, so the
         // decision values are not in our ValuePool yet -- but the
@@ -27,6 +30,7 @@ std::tuple<NodeT *, const EpochList *> SCGraph::GetFrontier() {
         }
         // pick a branch and progress frontier_epoch
         frontier = branch_node->PickBranch(frontier_epoch, /*do_remove*/ true);
+        DEBUG("picked branch %p in frontier\n", frontier);
     }
 
     assert(frontier != nullptr);

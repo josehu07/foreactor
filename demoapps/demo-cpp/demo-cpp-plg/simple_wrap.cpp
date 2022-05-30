@@ -16,18 +16,18 @@ static bool curr_pwrite_done = false;
 static bool curr_pread0_done = false;
 static bool curr_pread1_done = false;
 
-bool open_arggen(const int *epoch, const char **pathname, int *flags, mode_t *mode) {
+static bool open_arggen(const int *epoch, const char **pathname, int *flags, mode_t *mode) {
     *pathname = curr_args->filename.c_str();
     *flags = O_CREAT | O_RDWR;
     *mode = S_IRUSR | S_IWUSR;
     return true;
 }
 
-void open_rcsave(const int *epoch, int fd) {
+static void open_rcsave(const int *epoch, int fd) {
     curr_fd = fd;
 }
 
-bool pwrite_arggen(const int *epoch, int *fd, const char **buf, size_t *count, off_t *offset) {
+static bool pwrite_arggen(const int *epoch, int *fd, const char **buf, size_t *count, off_t *offset) {
     if (curr_fd < 0)
         return false;
     *fd = curr_fd;
@@ -37,11 +37,11 @@ bool pwrite_arggen(const int *epoch, int *fd, const char **buf, size_t *count, o
     return true;
 }
 
-void pwrite_rcsave(const int *epoch, ssize_t res) {
+static void pwrite_rcsave(const int *epoch, ssize_t res) {
     curr_pwrite_done = true;
 }
 
-bool pread0_arggen(const int *epoch, int *fd, size_t *count, off_t *offset) {
+static bool pread0_arggen(const int *epoch, int *fd, size_t *count, off_t *offset) {
     if (!curr_pwrite_done)
         return false;
     *fd = curr_fd;
@@ -50,11 +50,11 @@ bool pread0_arggen(const int *epoch, int *fd, size_t *count, off_t *offset) {
     return true;
 }
 
-void pread0_rcsave(const int *epoch, ssize_t res) {
+static void pread0_rcsave(const int *epoch, ssize_t res) {
     curr_pread0_done = true;
 }
 
-bool pread1_arggen(const int *epoch, int *fd, size_t *count, off_t *offset) {
+static bool pread1_arggen(const int *epoch, int *fd, size_t *count, off_t *offset) {
     if (!curr_pwrite_done)
         return false;
     *fd = curr_fd;
@@ -63,11 +63,11 @@ bool pread1_arggen(const int *epoch, int *fd, size_t *count, off_t *offset) {
     return true;
 }
 
-void pread1_rcsave(const int *epoch, ssize_t res) {
+static void pread1_rcsave(const int *epoch, ssize_t res) {
     curr_pread1_done = true;
 }
 
-bool close_arggen(const int *epoch, int *fd) {
+static bool close_arggen(const int *epoch, int *fd) {
     if (!curr_pread0_done || !curr_pread1_done)
         return false;
     *fd = curr_fd;
@@ -75,14 +75,14 @@ bool close_arggen(const int *epoch, int *fd) {
 }
 
 
-void BuildSCGraph() {
+static void BuildSCGraph() {
     foreactor_CreateSCGraph(graph_id, 0);
 
-    foreactor_AddSyscallOpen(  graph_id, 0, "open",   nullptr, 0, open_arggen,   open_rcsave,   /*is_start*/ true);
+    foreactor_AddSyscallOpen(graph_id, 0, "open", nullptr, 0, open_arggen, open_rcsave, /*is_start*/ true);
     foreactor_AddSyscallPwrite(graph_id, 1, "pwrite", nullptr, 0, pwrite_arggen, pwrite_rcsave, false);
-    foreactor_AddSyscallPread( graph_id, 2, "pread0", nullptr, 0, pread0_arggen, pread0_rcsave, false);
-    foreactor_AddSyscallPread( graph_id, 3, "pread1", nullptr, 0, pread1_arggen, pread1_rcsave, false);
-    foreactor_AddSyscallClose( graph_id, 4, "close",  nullptr, 0, close_arggen,  nullptr,       false);
+    foreactor_AddSyscallPread(graph_id, 2, "pread0", nullptr, 0, pread0_arggen, pread0_rcsave, false);
+    foreactor_AddSyscallPread(graph_id, 3, "pread1", nullptr, 0, pread1_arggen, pread1_rcsave, false);
+    foreactor_AddSyscallClose(graph_id, 4, "close", nullptr, 0, close_arggen, nullptr, false);
 
     foreactor_SyscallSetNext(graph_id, 0, 1, /*weak_edge*/ false);
     foreactor_SyscallSetNext(graph_id, 1, 2, false);

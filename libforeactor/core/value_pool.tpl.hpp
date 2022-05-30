@@ -12,7 +12,7 @@ ValuePool<T>::ValuePool(const std::unordered_set<int>& assoc_dims)
 
 template <typename T>
 std::ostream& operator<<(std::ostream& s, const ValuePool<T>& p) {
-    s << "ValuePool{";
+    s << "VP{";
     for (auto it = p.assoc_dims.cbegin(); it != p.assoc_dims.cend(); ++it) {
         s << *it;
         if (std::next(it) != p.assoc_dims.cend())

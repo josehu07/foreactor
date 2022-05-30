@@ -232,7 +232,7 @@ long SyscallNode::Issue(const EpochList& epoch, void *output_buf) {
             bool decision_barrier = false;
             while (next != nullptr && next->node_type == NODE_BRANCH) {
                 BranchNode *branch_node = static_cast<BranchNode *>(next);
-                DEBUG("branch %s<%p>@%s\n",
+                DEBUG("branch %s<%p>@%s in peeking\n",
                       StreamStr(*branch_node).c_str(), branch_node,
                       StreamStr(epoch).c_str());
                 // if decision not ready, see if it can be generated now
@@ -243,7 +243,7 @@ long SyscallNode::Issue(const EpochList& epoch, void *output_buf) {
                     }
                 }
                 next = branch_node->PickBranch(peek_epoch);
-                DEBUG("picked branch %p\n", next);
+                DEBUG("picked branch %p in peeking\n", next);
             }
             if (next == nullptr && !decision_barrier) {
                 // hit end of graph, no need of peeking for future Issue()s
@@ -373,9 +373,8 @@ BranchNode::BranchNode(unsigned node_id, std::string name, size_t num_children,
                        const std::unordered_set<int>& assoc_dims,
                        std::function<bool(const int *, int *)> arggen_func)
         : SCGraphNode(node_id, name, NODE_BRANCH, scgraph, assoc_dims),
-          num_children(num_children), children(num_children),
-          epoch_dims(num_children, -1), decision(assoc_dims),
-          arggen_func(arggen_func) {
+          num_children(num_children), children{}, epoch_dims{},
+          decision(assoc_dims), arggen_func(arggen_func) {
     assert(num_children > 1);
 }
 
@@ -384,9 +383,9 @@ std::ostream& operator<<(std::ostream& s, const BranchNode& n) {
     s << "BranchNode{" << n.node_id
       << ",decision=" << n.decision
       << ",children=[";
-    for (size_t i = 0; i < n.num_children; ++i) {
-        s << n.children[i];
-        if (i < n.num_children - 1)
+    for (size_t i = 0; i < n.children.size(); ++i) {
+        s << n.children[i] << "(" << n.epoch_dims[i] << ")";
+        if (i < n.children.size() - 1)
             s << ",";
     }
     s << "]}";

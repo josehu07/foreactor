@@ -37,7 +37,7 @@ class SyscallOpen final : public SyscallNode {
         std::function<void(const int *, int)> rcsave_func;        
 
         long SyscallSync(const EpochList& epoch, void *output_buf);
-        void PrepUringSqe(const EpochList& epoch, struct io_uring_sqe *sqe);
+        void PrepUringSqe(int epoch_sum, struct io_uring_sqe *sqe);
         void ReflectResult(const EpochList& epoch, void *output_buf);
 
         bool GenerateArgs(const EpochList& epoch);
@@ -80,7 +80,7 @@ class SyscallClose final : public SyscallNode {
         std::function<void(const int *, int)> rcsave_func;
 
         long SyscallSync(const EpochList& epoch, void *output_buf);
-        void PrepUringSqe(const EpochList& epoch, struct io_uring_sqe *sqe);
+        void PrepUringSqe(int epoch_sum, struct io_uring_sqe *sqe);
         void ReflectResult(const EpochList& epoch, void *output_buf);
 
         bool GenerateArgs(const EpochList& epoch);
@@ -119,7 +119,7 @@ class SyscallPread final : public SyscallNode {
         std::function<void(const int *, ssize_t)> rcsave_func;
 
         long SyscallSync(const EpochList& epoch, void *output_buf);
-        void PrepUringSqe(const EpochList& epoch, struct io_uring_sqe *sqe);
+        void PrepUringSqe(int epoch_sum, struct io_uring_sqe *sqe);
         void ReflectResult(const EpochList& epoch, void *output_buf);
 
         bool GenerateArgs(const EpochList& epoch);
@@ -161,7 +161,7 @@ class SyscallPwrite final : public SyscallNode {
         std::function<void(const int *, ssize_t)> rcsave_func;
 
         long SyscallSync(const EpochList& epoch, void *output_buf);
-        void PrepUringSqe(const EpochList& epoch, struct io_uring_sqe *sqe);
+        void PrepUringSqe(int epoch_sum, struct io_uring_sqe *sqe);
         void ReflectResult(const EpochList& epoch, void *output_buf);
 
         bool GenerateArgs(const EpochList& epoch);

@@ -44,7 +44,7 @@ std::ostream& operator<<(std::ostream& s, const SyscallOpen& n) {
     n.PrintCommonInfo(s);
     s << ",pathname=" << StreamStr(n.pathname) << ","
       << "flags=" << StreamStr(n.flags) << ","
-      << "mode" << StreamStr(n.mode) << "}";
+      << "mode=" << StreamStr(n.mode) << "}";
     return s;
 }
 
@@ -56,12 +56,12 @@ long SyscallOpen::SyscallSync(const EpochList& epoch,
                        mode.Get(epoch));
 }
 
-void SyscallOpen::PrepUringSqe(const EpochList& epoch,
+void SyscallOpen::PrepUringSqe(int epoch_sum,
                                struct io_uring_sqe *sqe) {
     io_uring_prep_openat(sqe, AT_FDCWD,
-                         pathname.Get(epoch),
-                         flags.Get(epoch),
-                         mode.Get(epoch));
+                         pathname.Get(epoch_sum),
+                         flags.Get(epoch_sum),
+                         mode.Get(epoch_sum));
 }
 
 void SyscallOpen::ReflectResult([[maybe_unused]] const EpochList& epoch,
@@ -159,9 +159,9 @@ long SyscallClose::SyscallSync(const EpochList& epoch,
     return posix::close(fd.Get(epoch));
 }
 
-void SyscallClose::PrepUringSqe(const EpochList& epoch,
+void SyscallClose::PrepUringSqe(int epoch_sum,
                                 struct io_uring_sqe *sqe) {
-    io_uring_prep_close(sqe, fd.Get(epoch));
+    io_uring_prep_close(sqe, fd.Get(epoch_sum));
 }
 
 void SyscallClose::ReflectResult([[maybe_unused]] const EpochList& epoch,
@@ -248,15 +248,17 @@ long SyscallPread::SyscallSync(const EpochList& epoch, void *output_buf) {
                         offset.Get(epoch));
 }
 
-void SyscallPread::PrepUringSqe(const EpochList& epoch,
+void SyscallPread::PrepUringSqe(int epoch_sum,
                                 struct io_uring_sqe *sqe) {
-    if ((!internal_buf.Has(epoch)) || internal_buf.Get(epoch) == nullptr)
-        internal_buf.Set(epoch, new char[count.Get(epoch)]);
+    if ((!internal_buf.Has(epoch_sum)) ||
+        internal_buf.Get(epoch_sum) == nullptr) {
+        internal_buf.Set(epoch_sum, new char[count.Get(epoch_sum)]);
+    }
     io_uring_prep_read(sqe,
-                       fd.Get(epoch),
-                       internal_buf.Get(epoch),
-                       count.Get(epoch),
-                       offset.Get(epoch));
+                       fd.Get(epoch_sum),
+                       internal_buf.Get(epoch_sum),
+                       count.Get(epoch_sum),
+                       offset.Get(epoch_sum));
 }
 
 void SyscallPread::ReflectResult(const EpochList& epoch, void *output_buf) {
@@ -367,13 +369,13 @@ long SyscallPwrite::SyscallSync(const EpochList& epoch,
                          offset.Get(epoch));
 }
 
-void SyscallPwrite::PrepUringSqe(const EpochList& epoch,
+void SyscallPwrite::PrepUringSqe(int epoch_sum,
                                  struct io_uring_sqe *sqe) {
     io_uring_prep_write(sqe,
-                        fd.Get(epoch),
-                        buf.Get(epoch),
-                        count.Get(epoch),
-                        offset.Get(epoch));
+                        fd.Get(epoch_sum),
+                        buf.Get(epoch_sum),
+                        count.Get(epoch_sum),
+                        offset.Get(epoch_sum));
 }
 
 void SyscallPwrite::ReflectResult([[maybe_unused]] const EpochList& epoch,

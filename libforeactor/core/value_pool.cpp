@@ -23,7 +23,7 @@ EpochList::EpochList(unsigned total_dims)
 
 
 std::ostream& operator<<(std::ostream& s, const EpochList& e) {
-    s << "EpochList{" << e.total_dims << ":";
+    s << "EL{" << e.total_dims << ":";
     for (auto it = e.epochs.cbegin(); it != e.epochs.cend(); ++it) {
         s << *it;
         if (it != std::prev(e.epochs.cend()))
