@@ -68,8 +68,8 @@ def run_demo(name, dbdir, libforeactor, queue, depths, args=[]):
 
 
 def run_all(dbdir, libforeactor):
-    queue = 64
-    depths = [8, 8, 32]
+    queue = 256
+    depths = [8, 8, 32, 128, 128]
 
     print("Checking correctness ---")
     run_dump("simple", dbdir, libforeactor, queue, depths)
@@ -80,6 +80,8 @@ def run_all(dbdir, libforeactor):
     run_demo("simple", dbdir, libforeactor, queue, depths)
     run_demo("branching", dbdir, libforeactor, queue, depths)
     run_demo("looping", dbdir, libforeactor, queue, depths)
+    run_demo("read_seq", dbdir, libforeactor, queue, depths)
+    run_demo("write_seq", dbdir, libforeactor, queue, depths)
 
 
 if __name__ == "__main__":

@@ -113,6 +113,7 @@ void foreactor_AddBranchNode(unsigned graph_id,
 // Append a outgoing edge to a BranchNode (could be a back-pointing edge).
 void foreactor_BranchAppendChild(unsigned graph_id, unsigned node_id,
                                  unsigned child_id, int epoch_dim);
+void foreactor_BranchAppendEndNode(unsigned graph_id, unsigned node_id);
 
 
 // Called upon entering/leaving a hijacked app function.

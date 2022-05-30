@@ -247,6 +247,7 @@ void foreactor_AddBranchNode(unsigned graph_id,
     scgraph->AddNode(node, is_start);
 }
 
+
 void foreactor_BranchAppendChild(unsigned graph_id, unsigned node_id,
                                  unsigned child_id, int epoch_dim) {
     SCGraph *scgraph = GetSCGraphFromId(graph_id);
@@ -258,6 +259,17 @@ void foreactor_BranchAppendChild(unsigned graph_id, unsigned node_id,
 
     SCGraphNode *child_node = GetNodeFromId(scgraph, graph_id, child_id);
     branch_node->AppendChild(child_node, epoch_dim);
+}
+
+void foreactor_BranchAppendEndNode(unsigned graph_id, unsigned node_id) {
+    SCGraph *scgraph = GetSCGraphFromId(graph_id);
+
+    SCGraphNode *node = GetNodeFromId(scgraph, graph_id, node_id);
+    PANIC_IF(node->node_type != NODE_BRANCH,
+             "node_id %u is not a BranchNode\n", node_id);
+    BranchNode *branch_node = static_cast<BranchNode *>(node);
+
+    branch_node->AppendChild(nullptr, -1);      // nullptr for end
 }
 
 

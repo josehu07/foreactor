@@ -117,4 +117,19 @@ struct ExperReadSeqArgs : ExperArgs {
 void exper_read_seq(void *args);
 
 
+struct ExperWriteSeqArgs : ExperArgs {
+    const int fd;
+    const std::string wcontent;
+    const size_t wlen;
+    const unsigned nwrites;
+
+    ExperWriteSeqArgs(int fd, std::string wcontent, unsigned nwrites)
+        : fd(fd), wcontent(wcontent), wlen(wcontent.length()),
+          nwrites(nwrites) {}
+    ~ExperWriteSeqArgs() {}
+};
+
+void exper_write_seq(void *args);
+
+
 #endif

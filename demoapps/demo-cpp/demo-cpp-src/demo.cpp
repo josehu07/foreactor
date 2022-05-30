@@ -105,10 +105,22 @@ void run_exper(const char *self, std::string& dbdir, std::string& exper,
         unsigned nreads = 128;
         size_t rlen = (1 << 20);
         std::string wcontent = rand_string(rlen);
-        for (unsigned i = 0; i < nreads; ++i)
-            pwrite(fd, wcontent.c_str(), rlen, i * rlen);
+        for (unsigned i = 0; i < nreads; ++i) {
+            [[maybe_unused]] ssize_t ret =
+                pwrite(fd, wcontent.c_str(), rlen, i * rlen);
+        }
         
         ExperReadSeqArgs args(fd, rlen, nreads);
+        run_iters(func, &args, num_iters, drop_caches, !dump_result);
+
+    } else if (exper == "write_seq") {
+        ExperFunc func = exper_write_seq;
+
+        int fd = open("write_seq.dat", O_CREAT | O_RDWR, S_IRUSR | S_IWUSR);
+        unsigned nwrites = 128;
+        size_t wlen = (1 << 20);
+        
+        ExperWriteSeqArgs args(fd, rand_string(wlen), nwrites);
         run_iters(func, &args, num_iters, drop_caches, !dump_result);
 
     } else
