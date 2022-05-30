@@ -40,6 +40,8 @@ static void BuildSCGraph() {
     foreactor_BranchAppendEndNode(graph_id, 1);
 
     foreactor_SetSCGraphBuilt(graph_id);
+
+    // foreactor_DumpDotImg(graph_id, "write_seq");
 }
 
 

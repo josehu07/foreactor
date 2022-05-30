@@ -236,6 +236,8 @@ static void BuildSCGraph() {
     foreactor_SyscallSetNext(graph_id, 13, 14, false);
 
     foreactor_SetSCGraphBuilt(graph_id);
+
+    // foreactor_DumpDotImg(graph_id, "branching");
 }
 
 

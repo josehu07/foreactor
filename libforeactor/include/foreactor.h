@@ -121,6 +121,10 @@ void foreactor_EnterSCGraph(unsigned graph_id);
 void foreactor_LeaveSCGraph(unsigned graph_id);
 
 
+// Visualization helper.
+void foreactor_DumpDotImg(unsigned graph_id, const char *filestem);
+
+
 /////////////////////////////
 // POSIX library hijacking //
 /////////////////////////////

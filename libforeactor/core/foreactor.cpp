@@ -296,6 +296,12 @@ void foreactor_LeaveSCGraph(unsigned graph_id) {
 }
 
 
+void foreactor_DumpDotImg(unsigned graph_id, const char *filestem) {
+    SCGraph *scgraph = GetSCGraphFromId(graph_id);
+    scgraph->DumpDotImg(std::string(filestem));
+}
+
+
 }
 
 

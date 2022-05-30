@@ -90,6 +90,8 @@ static void BuildSCGraph() {
     foreactor_SyscallSetNext(graph_id, 3, 4, false);
 
     foreactor_SetSCGraphBuilt(graph_id);
+
+    // foreactor_DumpDotImg(graph_id, "simple");
 }
 
 

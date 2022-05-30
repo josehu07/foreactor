@@ -122,6 +122,8 @@ static void BuildSCGraph() {
     foreactor_BranchAppendChild(graph_id, 6, 1, 0);
 
     foreactor_SetSCGraphBuilt(graph_id);
+
+    // foreactor_DumpDotImg(graph_id, "looping");
 }
 
 

@@ -74,8 +74,6 @@ class SCGraph {
         void StartTimer(std::string timer) const;
         void PauseTimer(std::string timer) const;
 
-        [[maybe_unused]] void DumpDotImg(std::string filestem) const;
-
     public:
         SCGraph() = delete;
         SCGraph(unsigned graph_id, unsigned total_dims, IOUring *ring,
@@ -97,6 +95,9 @@ class SCGraph {
         // NodeT must be one of those listed in syscalls.hpp.
         template <typename NodeT>
         std::tuple<NodeT *, const EpochList *> GetFrontier();
+
+        // Visualization helper.
+        [[maybe_unused]] void DumpDotImg(std::string filestem) const;
 };
 
 

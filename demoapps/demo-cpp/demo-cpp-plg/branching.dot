@@ -1,0 +1,38 @@
+digraph SCGraph {
+  graph [fontname="helvetica"];
+  node  [fontname="helvetica"];
+  edge  [fontname="helvetica"];
+  start [shape=plaintext];
+  start -> branch0;
+  end [shape=plaintext];
+  branch0 [shape=diamond,label="branch0?"];
+  branch0 -> open [arrowhead=empty];
+  branch0 -> pwrite1 [arrowhead=empty];
+  pwrite1 [shape=box,style=bold];
+  pwrite1 -> pwrite2;
+  pwrite2 [shape=box,style=bold];
+  pwrite2 -> branch1;
+  branch1 [shape=diamond,label="branch1?"];
+  branch1 -> pread0 [arrowhead=empty];
+  branch1 -> branch2 [arrowhead=empty];
+  branch1 -> branch3 [arrowhead=empty];
+  branch3 [shape=diamond,label="branch3?"];
+  branch3 -> pwrite3 [arrowhead=empty];
+  branch3 -> close [arrowhead=empty];
+  close [shape=box,style=bold];
+  close -> end;
+  pwrite3 [shape=box,style=bold];
+  pwrite3 -> close;
+  branch2 [shape=diamond,label="branch2?"];
+  branch2 -> pread1 [arrowhead=empty];
+  branch2 -> pread3 [arrowhead=empty];
+  pread3 -> pread4;
+  pread4 -> branch3;
+  pread1 -> pread2;
+  pread2 -> branch3;
+  pread0 -> branch3;
+  open [shape=box,style=bold];
+  open -> pwrite0;
+  pwrite0 [shape=box,style=bold];
+  pwrite0 -> pwrite2;
+}

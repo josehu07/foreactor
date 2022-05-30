@@ -1,0 +1,16 @@
+digraph SCGraph {
+  graph [fontname="helvetica"];
+  node  [fontname="helvetica"];
+  edge  [fontname="helvetica"];
+  start [shape=plaintext];
+  start -> open;
+  end [shape=plaintext];
+  open [shape=box,style=bold];
+  open -> pwrite;
+  pwrite [shape=box,style=bold];
+  pwrite -> pread0;
+  pread0 -> pread1;
+  pread1 -> close;
+  close [shape=box,style=bold];
+  close -> end;
+}
