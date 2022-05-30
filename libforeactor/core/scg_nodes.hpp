@@ -135,7 +135,7 @@ class SyscallNode : public SCGraphNode {
         void RemoveOneFromCommonPools(const EpochList& epoch);
         void ResetCommonPools();
 
-        static bool IsForeactable(EdgeType edge, const SyscallNode *next);
+        static bool IsForeactable(bool weak_state, const SyscallNode *next);
 
     public:
         void PrintCommonInfo(std::ostream& s) const;

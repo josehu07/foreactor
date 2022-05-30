@@ -180,8 +180,8 @@ void SyscallNode::SetNext(SCGraphNode *node, bool weak_edge) {
 
 
 // The condition function that decides if an edge can be pre-issued across.
-bool SyscallNode::IsForeactable(EdgeType edge, const SyscallNode *next) {
-    return !(edge == EDGE_WEAK && next->node_type == NODE_SC_SEFF);
+bool SyscallNode::IsForeactable(bool weak_state, const SyscallNode *next) {
+    return !(weak_state && next->node_type == NODE_SC_SEFF);
 }
 
 // The Issue() method contains the core logic of foreactor's syscall
@@ -211,6 +211,7 @@ long SyscallNode::Issue(const EpochList& epoch, void *output_buf) {
         }
         SCGraphNode *next = scgraph->peekhead;
         EdgeType edge = scgraph->peekhead_edge;
+        bool weak_state = false;
 
         // peek and pre-issue the next few syscalls asynchronously; at most
         // peek as far as pre_issue_depth nodes beyond current frontier
@@ -276,7 +277,9 @@ long SyscallNode::Issue(const EpochList& epoch, void *output_buf) {
 
             // decide if the next node is pre-issuable, and if so, prepare
             // for submission to uring
-            if (IsForeactable(edge, syscall_node)) {
+            if (edge == EDGE_WEAK)
+                weak_state = true;
+            if (IsForeactable(weak_state, syscall_node)) {
                 // prepare the IOUring submission entry, set node stage to be
                 // in-progress
                 syscall_node->PrepAsync(peek_epoch);
