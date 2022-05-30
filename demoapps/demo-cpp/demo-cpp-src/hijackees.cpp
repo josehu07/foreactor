@@ -71,3 +71,11 @@ void exper_looping(void *args_) {
 
     close(fd);
 }
+
+
+void exper_read_seq(void *args_) {
+    ExperReadSeqArgs *args = reinterpret_cast<ExperReadSeqArgs *>(args_);
+
+    for (unsigned i = 0; i < args->nreads; ++i)
+        pread(fd, args->rbuf, args->rlen, i * args->rlen);
+}

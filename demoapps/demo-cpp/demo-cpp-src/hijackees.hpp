@@ -99,4 +99,22 @@ struct ExperLoopingArgs : ExperArgs {
 void exper_looping(void *args);
 
 
+struct ExperReadSeqArgs : ExperArgs {
+    const int fd;
+    char * const rbuf;
+    const size_t rlen;
+    const unsigned nreads;
+
+    ExperReadSeqArgs(int fd, size_t rlen, unsigned nreads)
+        : fd(fd), rbuf(new char[rlen]), rlen(rlen), nreads(nreads) {
+        assert(rbuf != nullptr);
+    }
+    ~ExperReadSeqArgs() {
+        delete[] rbuf;
+    }
+};
+
+void exper_read_seq(void *args);
+
+
 #endif

@@ -98,6 +98,19 @@ void run_exper(const char *self, std::string& dbdir, std::string& exper,
                 std::cout << std::string(buf, buf + args.rlen) << std::endl;
         }
 
+    } else if (exper == "read_seq") {
+        ExperFunc func = exper_read_seq;
+
+        int fd = open("read_seq.dat", O_CREAT | O_RDWR, S_IRUSR | S_IWUSR);
+        unsigned nreads = 128;
+        size_t rlen = (1 << 20);
+        std::string wcontent = rand_string(rlen);
+        for (unsigned i = 0; i < nreads; ++i)
+            pwrite(fd, wcontent.c_str(), rlen, i * rlen);
+        
+        ExperReadSeqArgs args(fd, rlen, nreads);
+        run_iters(func, &args, num_iters, drop_caches, !dump_result);
+
     } else
         print_usage_exit(self);
 }
