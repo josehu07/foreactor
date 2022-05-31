@@ -14,6 +14,7 @@
 #include "scg_graph.hpp"
 #include "scg_nodes.hpp"
 #include "syscalls.hpp"
+#include "thread_pool.hpp"
 #include "value_pool.hpp"
 
 
@@ -57,12 +58,18 @@ long SyscallOpen::SyscallSync(const EpochList& epoch,
                        mode.Get(epoch));
 }
 
-void SyscallOpen::PrepUringSqe(int epoch_sum,
-                               struct io_uring_sqe *sqe) {
+void SyscallOpen::PrepUringSqe(int epoch_sum, struct io_uring_sqe *sqe) {
     io_uring_prep_openat(sqe, AT_FDCWD,
                          pathname.Get(epoch_sum),
                          flags.Get(epoch_sum),
                          mode.Get(epoch_sum));
+}
+
+void SyscallOpen::PrepUpoolSqe(int epoch_sum, ThreadPoolSQEntry *sqe) {
+    sqe->sc_type = SC_OPEN;
+    sqe->buf = reinterpret_cast<uint64_t>(pathname.Get(epoch_sum));
+    sqe->open_flags = flags.Get(epoch_sum);
+    sqe->open_mode = mode.Get(epoch_sum);
 }
 
 void SyscallOpen::ReflectResult([[maybe_unused]] const EpochList& epoch,
@@ -160,9 +167,13 @@ long SyscallClose::SyscallSync(const EpochList& epoch,
     return posix::close(fd.Get(epoch));
 }
 
-void SyscallClose::PrepUringSqe(int epoch_sum,
-                                struct io_uring_sqe *sqe) {
+void SyscallClose::PrepUringSqe(int epoch_sum, struct io_uring_sqe *sqe) {
     io_uring_prep_close(sqe, fd.Get(epoch_sum));
+}
+
+void SyscallClose::PrepUpoolSqe(int epoch_sum, ThreadPoolSQEntry *sqe) {
+    sqe->sc_type = SC_CLOSE;
+    sqe->fd = fd.Get(epoch_sum);
 }
 
 void SyscallClose::ReflectResult([[maybe_unused]] const EpochList& epoch,
@@ -258,8 +269,7 @@ long SyscallPread::SyscallSync(const EpochList& epoch, void *output_buf) {
                         offset.Get(epoch));
 }
 
-void SyscallPread::PrepUringSqe(int epoch_sum,
-                                struct io_uring_sqe *sqe) {
+void SyscallPread::PrepUringSqe(int epoch_sum, struct io_uring_sqe *sqe) {
     if ((!internal_buf.Has(epoch_sum)) ||
         internal_buf.Get(epoch_sum) == nullptr) {
         assert(pre_alloced_bufs.size() > 0);
@@ -271,6 +281,20 @@ void SyscallPread::PrepUringSqe(int epoch_sum,
                        internal_buf.Get(epoch_sum),
                        count.Get(epoch_sum),
                        offset.Get(epoch_sum));
+}
+
+void SyscallPread::PrepUpoolSqe(int epoch_sum, ThreadPoolSQEntry *sqe) {
+    if ((!internal_buf.Has(epoch_sum)) ||
+        internal_buf.Get(epoch_sum) == nullptr) {
+        assert(pre_alloced_bufs.size() > 0);
+        internal_buf.Set(epoch_sum,
+            pre_alloced_bufs.extract(pre_alloced_bufs.cbegin()).value());
+    }
+    sqe->sc_type = SC_PREAD;
+    sqe->fd = fd.Get(epoch_sum);
+    sqe->buf = reinterpret_cast<uint64_t>(internal_buf.Get(epoch_sum));
+    sqe->rw_len = count.Get(epoch_sum);
+    sqe->offset = offset.Get(epoch_sum);
 }
 
 void SyscallPread::ReflectResult(const EpochList& epoch, void *output_buf) {
@@ -381,13 +405,20 @@ long SyscallPwrite::SyscallSync(const EpochList& epoch,
                          offset.Get(epoch));
 }
 
-void SyscallPwrite::PrepUringSqe(int epoch_sum,
-                                 struct io_uring_sqe *sqe) {
+void SyscallPwrite::PrepUringSqe(int epoch_sum, struct io_uring_sqe *sqe) {
     io_uring_prep_write(sqe,
                         fd.Get(epoch_sum),
                         buf.Get(epoch_sum),
                         count.Get(epoch_sum),
                         offset.Get(epoch_sum));
+}
+
+void SyscallPwrite::PrepUpoolSqe(int epoch_sum, ThreadPoolSQEntry *sqe) {
+    sqe->sc_type = SC_PWRITE;
+    sqe->fd = fd.Get(epoch_sum);
+    sqe->buf = reinterpret_cast<uint64_t>(buf.Get(epoch_sum));
+    sqe->rw_len = count.Get(epoch_sum);
+    sqe->offset = offset.Get(epoch_sum);
 }
 
 void SyscallPwrite::ReflectResult([[maybe_unused]] const EpochList& epoch,

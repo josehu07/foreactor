@@ -79,7 +79,7 @@ void exper_read_seq(void *args_) {
     [[maybe_unused]] ssize_t ret;
 
     for (unsigned i = 0; i < args->nreads; ++i)
-        ret = pread(args->fd, args->rbuf, args->rlen, i * args->rlen);
+        ret = pread(args->fd, args->rbufs[i], args->rlen, i * args->rlen);
 }
 
 
@@ -88,5 +88,5 @@ void exper_write_seq(void *args_) {
     [[maybe_unused]] ssize_t ret;
 
     for (unsigned i = 0; i < args->nwrites; ++i)
-        ret = pwrite(args->fd, args->wcontent.c_str(), args->wlen, i * args->wlen);
+        ret = pwrite(args->fd, args->wcontents[i].c_str(), args->wlen, i * args->wlen);
 }

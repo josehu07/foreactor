@@ -55,11 +55,19 @@ void run_iters(ExperFunc exper_func, ExperArgs *exper_args,
     }
 
     if (print_time) {
-        std::cerr << "  Time elapsed: [ ";
         double sum_us = 0.;
         int skip = 3, cnt = 0;
+        int show = elapsed_us.size() > 3 ? elapsed_us.size() - 3 : 0;
+
+        std::cerr << "  Time elapsed: [ ";
+        if (show > 0)
+            std::cerr << "... ";
+        
         for (double& us : elapsed_us) {
-            std::cerr << us << " ";
+            if (show <= 0)
+                std::cerr << us << " ";
+            else
+                show--;
             if (skip <= 0) {
                 sum_us += us;
                 cnt++;
@@ -67,6 +75,7 @@ void run_iters(ExperFunc exper_func, ExperArgs *exper_args,
                 skip--;
         }
         std::cerr << "] ";
+        
         if (cnt > 0)
             std::cerr << "avg " << sum_us / cnt;
         std::cerr << " us" << std::endl;
@@ -111,7 +120,6 @@ void run_exper(const char *self, std::string& dbdir, std::string& exper,
 
     } else if (exper == "read_seq") {
         ExperFunc func = exper_read_seq;
-
         int fd = open("read_seq.dat", O_CREAT | O_RDWR, S_IRUSR | S_IWUSR);
         unsigned nreads = 128;
         size_t rlen = (1 << 20);
@@ -120,17 +128,18 @@ void run_exper(const char *self, std::string& dbdir, std::string& exper,
             [[maybe_unused]] ssize_t ret =
                 pwrite(fd, wcontent.c_str(), rlen, i * rlen);
         }
-        
         ExperReadSeqArgs args(fd, rlen, nreads);
         run_iters(func, &args, num_iters, drop_caches, !dump_result);
+        if (dump_result) {
+            for (auto buf : args.rbufs)
+                std::cout << std::string(buf, buf + args.rlen) << std::endl;
+        }
 
     } else if (exper == "write_seq") {
         ExperFunc func = exper_write_seq;
-
         int fd = open("write_seq.dat", O_CREAT | O_RDWR, S_IRUSR | S_IWUSR);
         unsigned nwrites = 128;
         size_t wlen = (1 << 20);
-        
         ExperWriteSeqArgs args(fd, rand_string(wlen), nwrites);
         run_iters(func, &args, num_iters, drop_caches, !dump_result);
 

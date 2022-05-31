@@ -14,7 +14,7 @@ static ExperWriteSeqArgs *curr_args = nullptr;
 
 static bool pwrite_arggen(const int *epoch, int *fd, const char **buf, size_t *count, off_t *offset) {
     *fd = curr_args->fd;
-    *buf = curr_args->wcontent.c_str();
+    *buf = curr_args->wcontents[epoch[0]].c_str();
     *count = curr_args->wlen;
     *offset = epoch[0] * curr_args->wlen;
     return true;

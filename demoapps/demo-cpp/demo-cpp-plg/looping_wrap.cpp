@@ -85,7 +85,7 @@ static bool branch2_arggen(const int *epoch, int *decision) {
 }
 
 static bool close_arggen(const int *epoch, int *fd) {
-    if (curr_preads_done < static_cast<int>(curr_args->nreadsd2) * 2)
+    if (curr_preads_done < static_cast<int>(curr_args->nreadsd2 * curr_args->nrepeats * 2))
         return false;
     *fd = curr_fd;
     return true;

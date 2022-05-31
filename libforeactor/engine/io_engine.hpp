@@ -13,10 +13,11 @@ namespace foreactor {
 
 // General interface of the async syscall engine backend.
 class IOEngine {
-    protected:
+    public:
         // uint64_t identifier of each queue entry.
         typedef uint64_t EntryId;
 
+    protected:
         // Encode/Decode the identifier from/to (node, epoch_sum) tuple.
         static EntryId EncodeEntryId(SyscallNode* node, int epoch_sum);
         static std::tuple<SyscallNode *, int> DecodeEntryId(EntryId entry_id);

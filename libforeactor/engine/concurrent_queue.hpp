@@ -1,4 +1,4 @@
-// C++11 lock-free concurrent queue by https://github.com/cameron314/concurrentqueue.
+// C++11 concurrent queue by https://github.com/cameron314/concurrentqueue.
 
 // Provides a C++11 implementation of a multi-producer, multi-consumer lock-free queue.
 // An overview, including benchmark results, is provided here:
@@ -72,6 +72,8 @@
 #include <cstddef>              // for max_align_t
 #include <cstdint>
 #include <cstdlib>
+#include <cerrno>
+#include <ctime>
 #include <type_traits>
 #include <algorithm>
 #include <utility>
@@ -80,6 +82,12 @@
 #include <array>
 #include <thread>       // partly for __WINPTHREADS_VERSION if on MinGW-w64 w/ POSIX threading
 #include <mutex>        // used for thread exit synchronization
+#include <memory>
+#include <chrono>
+
+///////////////////////////////////
+// Non-blocking concurrent queue //
+///////////////////////////////////
 
 // Platform-specific definitions of a numeric thread ID type and an invalid value
 namespace moodycamel { namespace details {
@@ -342,7 +350,7 @@ struct ConcurrentQueueDefaultTraits
     // but many producers, a smaller block size should be favoured. For few producers
     // and/or many elements, a larger block size is preferred. A sane default
     // is provided. Must be a power of 2.
-    static const size_t BLOCK_SIZE = 32;
+    static const size_t CQ_BLOCK_SIZE = 32;
     
     // For explicit producers (i.e. when using a producer token), the block is
     // checked for being empty by iterating through a list of flags, one per element.
@@ -775,7 +783,7 @@ public:
     typedef typename Traits::index_t index_t;
     typedef typename Traits::size_t size_t;
     
-    static const size_t BLOCK_SIZE = static_cast<size_t>(Traits::BLOCK_SIZE);
+    static const size_t CQ_BLOCK_SIZE = static_cast<size_t>(Traits::CQ_BLOCK_SIZE);
     static const size_t EXPLICIT_BLOCK_EMPTY_COUNTER_THRESHOLD = static_cast<size_t>(Traits::EXPLICIT_BLOCK_EMPTY_COUNTER_THRESHOLD);
     static const size_t EXPLICIT_INITIAL_INDEX_SIZE = static_cast<size_t>(Traits::EXPLICIT_INITIAL_INDEX_SIZE);
     static const size_t IMPLICIT_INITIAL_INDEX_SIZE = static_cast<size_t>(Traits::IMPLICIT_INITIAL_INDEX_SIZE);
@@ -786,7 +794,7 @@ public:
 #pragma warning(disable: 4307)      // + integral constant overflow (that's what the ternary expression is for!)
 #pragma warning(disable: 4309)      // static_cast: Truncation of constant value
 #endif
-    static const size_t MAX_SUBQUEUE_SIZE = (details::const_numeric_max<size_t>::value - static_cast<size_t>(Traits::MAX_SUBQUEUE_SIZE) < BLOCK_SIZE) ? details::const_numeric_max<size_t>::value : ((static_cast<size_t>(Traits::MAX_SUBQUEUE_SIZE) + (BLOCK_SIZE - 1)) / BLOCK_SIZE * BLOCK_SIZE);
+    static const size_t MAX_SUBQUEUE_SIZE = (details::const_numeric_max<size_t>::value - static_cast<size_t>(Traits::MAX_SUBQUEUE_SIZE) < CQ_BLOCK_SIZE) ? details::const_numeric_max<size_t>::value : ((static_cast<size_t>(Traits::MAX_SUBQUEUE_SIZE) + (CQ_BLOCK_SIZE - 1)) / CQ_BLOCK_SIZE * CQ_BLOCK_SIZE);
 #ifdef _MSC_VER
 #pragma warning(pop)
 #endif
@@ -794,7 +802,7 @@ public:
     static_assert(!std::numeric_limits<size_t>::is_signed && std::is_integral<size_t>::value, "Traits::size_t must be an unsigned integral type");
     static_assert(!std::numeric_limits<index_t>::is_signed && std::is_integral<index_t>::value, "Traits::index_t must be an unsigned integral type");
     static_assert(sizeof(index_t) >= sizeof(size_t), "Traits::index_t must be at least as wide as Traits::size_t");
-    static_assert((BLOCK_SIZE > 1) && !(BLOCK_SIZE & (BLOCK_SIZE - 1)), "Traits::BLOCK_SIZE must be a power of 2 (and at least 2)");
+    static_assert((CQ_BLOCK_SIZE > 1) && !(CQ_BLOCK_SIZE & (CQ_BLOCK_SIZE - 1)), "Traits::CQ_BLOCK_SIZE must be a power of 2 (and at least 2)");
     static_assert((EXPLICIT_BLOCK_EMPTY_COUNTER_THRESHOLD > 1) && !(EXPLICIT_BLOCK_EMPTY_COUNTER_THRESHOLD & (EXPLICIT_BLOCK_EMPTY_COUNTER_THRESHOLD - 1)), "Traits::EXPLICIT_BLOCK_EMPTY_COUNTER_THRESHOLD must be a power of 2 (and greater than 1)");
     static_assert((EXPLICIT_INITIAL_INDEX_SIZE > 1) && !(EXPLICIT_INITIAL_INDEX_SIZE & (EXPLICIT_INITIAL_INDEX_SIZE - 1)), "Traits::EXPLICIT_INITIAL_INDEX_SIZE must be a power of 2 (and greater than 1)");
     static_assert((IMPLICIT_INITIAL_INDEX_SIZE > 1) && !(IMPLICIT_INITIAL_INDEX_SIZE & (IMPLICIT_INITIAL_INDEX_SIZE - 1)), "Traits::IMPLICIT_INITIAL_INDEX_SIZE must be a power of 2 (and greater than 1)");
@@ -812,7 +820,7 @@ public:
     // queue is fully constructed before it starts being used by other threads (this
     // includes making the memory effects of construction visible, possibly with a
     // memory barrier).
-    explicit ConcurrentQueue(size_t capacity = 32 * BLOCK_SIZE)
+    explicit ConcurrentQueue(size_t capacity = 32 * CQ_BLOCK_SIZE)
         : producerListTail(nullptr),
         producerCount(0),
         initialBlockPoolIndex(0),
@@ -821,7 +829,7 @@ public:
     {
         implicitProducerHashResizeInProgress.clear(std::memory_order_relaxed);
         populate_initial_implicit_producer_hash();
-        populate_initial_block_list(capacity / BLOCK_SIZE + ((capacity & (BLOCK_SIZE - 1)) == 0 ? 0 : 1));
+        populate_initial_block_list(capacity / CQ_BLOCK_SIZE + ((capacity & (CQ_BLOCK_SIZE - 1)) == 0 ? 0 : 1));
         
 #ifdef MOODYCAMEL_QUEUE_INTERNAL_DEBUG
         // Track all the producers using a fully-resolved typed list for
@@ -845,7 +853,7 @@ public:
     {
         implicitProducerHashResizeInProgress.clear(std::memory_order_relaxed);
         populate_initial_implicit_producer_hash();
-        size_t blocks = (((minCapacity + BLOCK_SIZE - 1) / BLOCK_SIZE) - 1) * (maxExplicitProducers + 1) + 2 * (maxExplicitProducers + maxImplicitProducers);
+        size_t blocks = (((minCapacity + CQ_BLOCK_SIZE - 1) / CQ_BLOCK_SIZE) - 1) * (maxExplicitProducers + 1) + 2 * (maxExplicitProducers + maxImplicitProducers);
         populate_initial_block_list(blocks);
         
 #ifdef MOODYCAMEL_QUEUE_INTERNAL_DEBUG
@@ -1571,9 +1579,9 @@ private:
         template<InnerQueueContext context>
         inline bool is_empty() const
         {
-            MOODYCAMEL_CONSTEXPR_IF (context == explicit_context && BLOCK_SIZE <= EXPLICIT_BLOCK_EMPTY_COUNTER_THRESHOLD) {
+            MOODYCAMEL_CONSTEXPR_IF (context == explicit_context && CQ_BLOCK_SIZE <= EXPLICIT_BLOCK_EMPTY_COUNTER_THRESHOLD) {
                 // Check flags
-                for (size_t i = 0; i < BLOCK_SIZE; ++i) {
+                for (size_t i = 0; i < CQ_BLOCK_SIZE; ++i) {
                     if (!emptyFlags[i].load(std::memory_order_relaxed)) {
                         return false;
                     }
@@ -1585,11 +1593,11 @@ private:
             }
             else {
                 // Check counter
-                if (elementsCompletelyDequeued.load(std::memory_order_relaxed) == BLOCK_SIZE) {
+                if (elementsCompletelyDequeued.load(std::memory_order_relaxed) == CQ_BLOCK_SIZE) {
                     std::atomic_thread_fence(std::memory_order_acquire);
                     return true;
                 }
-                assert(elementsCompletelyDequeued.load(std::memory_order_relaxed) <= BLOCK_SIZE);
+                assert(elementsCompletelyDequeued.load(std::memory_order_relaxed) <= CQ_BLOCK_SIZE);
                 return false;
             }
         }
@@ -1598,17 +1606,17 @@ private:
         template<InnerQueueContext context>
         inline bool set_empty(MOODYCAMEL_MAYBE_UNUSED index_t i)
         {
-            MOODYCAMEL_CONSTEXPR_IF (context == explicit_context && BLOCK_SIZE <= EXPLICIT_BLOCK_EMPTY_COUNTER_THRESHOLD) {
+            MOODYCAMEL_CONSTEXPR_IF (context == explicit_context && CQ_BLOCK_SIZE <= EXPLICIT_BLOCK_EMPTY_COUNTER_THRESHOLD) {
                 // Set flag
-                assert(!emptyFlags[BLOCK_SIZE - 1 - static_cast<size_t>(i & static_cast<index_t>(BLOCK_SIZE - 1))].load(std::memory_order_relaxed));
-                emptyFlags[BLOCK_SIZE - 1 - static_cast<size_t>(i & static_cast<index_t>(BLOCK_SIZE - 1))].store(true, std::memory_order_release);
+                assert(!emptyFlags[CQ_BLOCK_SIZE - 1 - static_cast<size_t>(i & static_cast<index_t>(CQ_BLOCK_SIZE - 1))].load(std::memory_order_relaxed));
+                emptyFlags[CQ_BLOCK_SIZE - 1 - static_cast<size_t>(i & static_cast<index_t>(CQ_BLOCK_SIZE - 1))].store(true, std::memory_order_release);
                 return false;
             }
             else {
                 // Increment counter
                 auto prevVal = elementsCompletelyDequeued.fetch_add(1, std::memory_order_release);
-                assert(prevVal < BLOCK_SIZE);
-                return prevVal == BLOCK_SIZE - 1;
+                assert(prevVal < CQ_BLOCK_SIZE);
+                return prevVal == CQ_BLOCK_SIZE - 1;
             }
         }
         
@@ -1617,10 +1625,10 @@ private:
         template<InnerQueueContext context>
         inline bool set_many_empty(MOODYCAMEL_MAYBE_UNUSED index_t i, size_t count)
         {
-            MOODYCAMEL_CONSTEXPR_IF (context == explicit_context && BLOCK_SIZE <= EXPLICIT_BLOCK_EMPTY_COUNTER_THRESHOLD) {
+            MOODYCAMEL_CONSTEXPR_IF (context == explicit_context && CQ_BLOCK_SIZE <= EXPLICIT_BLOCK_EMPTY_COUNTER_THRESHOLD) {
                 // Set flags
                 std::atomic_thread_fence(std::memory_order_release);
-                i = BLOCK_SIZE - 1 - static_cast<size_t>(i & static_cast<index_t>(BLOCK_SIZE - 1)) - count + 1;
+                i = CQ_BLOCK_SIZE - 1 - static_cast<size_t>(i & static_cast<index_t>(CQ_BLOCK_SIZE - 1)) - count + 1;
                 for (size_t j = 0; j != count; ++j) {
                     assert(!emptyFlags[i + j].load(std::memory_order_relaxed));
                     emptyFlags[i + j].store(true, std::memory_order_relaxed);
@@ -1630,32 +1638,32 @@ private:
             else {
                 // Increment counter
                 auto prevVal = elementsCompletelyDequeued.fetch_add(count, std::memory_order_release);
-                assert(prevVal + count <= BLOCK_SIZE);
-                return prevVal + count == BLOCK_SIZE;
+                assert(prevVal + count <= CQ_BLOCK_SIZE);
+                return prevVal + count == CQ_BLOCK_SIZE;
             }
         }
         
         template<InnerQueueContext context>
         inline void set_all_empty()
         {
-            MOODYCAMEL_CONSTEXPR_IF (context == explicit_context && BLOCK_SIZE <= EXPLICIT_BLOCK_EMPTY_COUNTER_THRESHOLD) {
+            MOODYCAMEL_CONSTEXPR_IF (context == explicit_context && CQ_BLOCK_SIZE <= EXPLICIT_BLOCK_EMPTY_COUNTER_THRESHOLD) {
                 // Set all flags
-                for (size_t i = 0; i != BLOCK_SIZE; ++i) {
+                for (size_t i = 0; i != CQ_BLOCK_SIZE; ++i) {
                     emptyFlags[i].store(true, std::memory_order_relaxed);
                 }
             }
             else {
                 // Reset counter
-                elementsCompletelyDequeued.store(BLOCK_SIZE, std::memory_order_relaxed);
+                elementsCompletelyDequeued.store(CQ_BLOCK_SIZE, std::memory_order_relaxed);
             }
         }
         
         template<InnerQueueContext context>
         inline void reset_empty()
         {
-            MOODYCAMEL_CONSTEXPR_IF (context == explicit_context && BLOCK_SIZE <= EXPLICIT_BLOCK_EMPTY_COUNTER_THRESHOLD) {
+            MOODYCAMEL_CONSTEXPR_IF (context == explicit_context && CQ_BLOCK_SIZE <= EXPLICIT_BLOCK_EMPTY_COUNTER_THRESHOLD) {
                 // Reset flags
-                for (size_t i = 0; i != BLOCK_SIZE; ++i) {
+                for (size_t i = 0; i != CQ_BLOCK_SIZE; ++i) {
                     emptyFlags[i].store(false, std::memory_order_relaxed);
                 }
             }
@@ -1665,16 +1673,16 @@ private:
             }
         }
         
-        inline T* operator[](index_t idx) MOODYCAMEL_NOEXCEPT { return static_cast<T*>(static_cast<void*>(elements)) + static_cast<size_t>(idx & static_cast<index_t>(BLOCK_SIZE - 1)); }
-        inline T const* operator[](index_t idx) const MOODYCAMEL_NOEXCEPT { return static_cast<T const*>(static_cast<void const*>(elements)) + static_cast<size_t>(idx & static_cast<index_t>(BLOCK_SIZE - 1)); }
+        inline T* operator[](index_t idx) MOODYCAMEL_NOEXCEPT { return static_cast<T*>(static_cast<void*>(elements)) + static_cast<size_t>(idx & static_cast<index_t>(CQ_BLOCK_SIZE - 1)); }
+        inline T const* operator[](index_t idx) const MOODYCAMEL_NOEXCEPT { return static_cast<T const*>(static_cast<void const*>(elements)) + static_cast<size_t>(idx & static_cast<index_t>(CQ_BLOCK_SIZE - 1)); }
         
     private:
         static_assert(std::alignment_of<T>::value <= sizeof(T), "The queue does not support types with an alignment greater than their size at this time");
-        MOODYCAMEL_ALIGNED_TYPE_LIKE(char[sizeof(T) * BLOCK_SIZE], T) elements;
+        MOODYCAMEL_ALIGNED_TYPE_LIKE(char[sizeof(T) * CQ_BLOCK_SIZE], T) elements;
     public:
         Block* next;
         std::atomic<size_t> elementsCompletelyDequeued;
-        std::atomic<bool> emptyFlags[BLOCK_SIZE <= EXPLICIT_BLOCK_EMPTY_COUNTER_THRESHOLD ? BLOCK_SIZE : 1];
+        std::atomic<bool> emptyFlags[CQ_BLOCK_SIZE <= EXPLICIT_BLOCK_EMPTY_COUNTER_THRESHOLD ? CQ_BLOCK_SIZE : 1];
     public:
         std::atomic<std::uint32_t> freeListRefs;
         std::atomic<Block*> freeListNext;
@@ -1795,11 +1803,11 @@ private:
             if (this->tailBlock != nullptr) {       // Note this means there must be a block index too
                 // First find the block that's partially dequeued, if any
                 Block* halfDequeuedBlock = nullptr;
-                if ((this->headIndex.load(std::memory_order_relaxed) & static_cast<index_t>(BLOCK_SIZE - 1)) != 0) {
+                if ((this->headIndex.load(std::memory_order_relaxed) & static_cast<index_t>(CQ_BLOCK_SIZE - 1)) != 0) {
                     // The head's not on a block boundary, meaning a block somewhere is partially dequeued
                     // (or the head block is the tail block and was fully dequeued, but the head/tail are still not on a boundary)
                     size_t i = (pr_blockIndexFront - pr_blockIndexSlotsUsed) & (pr_blockIndexSize - 1);
-                    while (details::circular_less_than<index_t>(pr_blockIndexEntries[i].base + BLOCK_SIZE, this->headIndex.load(std::memory_order_relaxed))) {
+                    while (details::circular_less_than<index_t>(pr_blockIndexEntries[i].base + CQ_BLOCK_SIZE, this->headIndex.load(std::memory_order_relaxed))) {
                         i = (i + 1) & (pr_blockIndexSize - 1);
                     }
                     assert(details::circular_less_than<index_t>(pr_blockIndexEntries[i].base, this->headIndex.load(std::memory_order_relaxed)));
@@ -1816,12 +1824,12 @@ private:
                     
                     size_t i = 0;   // Offset into block
                     if (block == halfDequeuedBlock) {
-                        i = static_cast<size_t>(this->headIndex.load(std::memory_order_relaxed) & static_cast<index_t>(BLOCK_SIZE - 1));
+                        i = static_cast<size_t>(this->headIndex.load(std::memory_order_relaxed) & static_cast<index_t>(CQ_BLOCK_SIZE - 1));
                     }
                     
                     // Walk through all the items in the block; if this is the tail block, we need to stop when we reach the tail index
-                    auto lastValidIndex = (this->tailIndex.load(std::memory_order_relaxed) & static_cast<index_t>(BLOCK_SIZE - 1)) == 0 ? BLOCK_SIZE : static_cast<size_t>(this->tailIndex.load(std::memory_order_relaxed) & static_cast<index_t>(BLOCK_SIZE - 1));
-                    while (i != BLOCK_SIZE && (block != this->tailBlock || i != lastValidIndex)) {
+                    auto lastValidIndex = (this->tailIndex.load(std::memory_order_relaxed) & static_cast<index_t>(CQ_BLOCK_SIZE - 1)) == 0 ? CQ_BLOCK_SIZE : static_cast<size_t>(this->tailIndex.load(std::memory_order_relaxed) & static_cast<index_t>(CQ_BLOCK_SIZE - 1));
+                    while (i != CQ_BLOCK_SIZE && (block != this->tailBlock || i != lastValidIndex)) {
                         (*block)[i++]->~T();
                     }
                 } while (block != this->tailBlock);
@@ -1852,7 +1860,7 @@ private:
         {
             index_t currentTailIndex = this->tailIndex.load(std::memory_order_relaxed);
             index_t newTailIndex = 1 + currentTailIndex;
-            if ((currentTailIndex & static_cast<index_t>(BLOCK_SIZE - 1)) == 0) {
+            if ((currentTailIndex & static_cast<index_t>(CQ_BLOCK_SIZE - 1)) == 0) {
                 // We reached the end of a block, start a new one
                 auto startBlock = this->tailBlock;
                 auto originalBlockIndexSlotsUsed = pr_blockIndexSlotsUsed;
@@ -1873,8 +1881,8 @@ private:
                     // <= to it.
                     auto head = this->headIndex.load(std::memory_order_relaxed);
                     assert(!details::circular_less_than<index_t>(currentTailIndex, head));
-                    if (!details::circular_less_than<index_t>(head, currentTailIndex + BLOCK_SIZE)
-                        || (MAX_SUBQUEUE_SIZE != details::const_numeric_max<size_t>::value && (MAX_SUBQUEUE_SIZE == 0 || MAX_SUBQUEUE_SIZE - BLOCK_SIZE < currentTailIndex - head))) {
+                    if (!details::circular_less_than<index_t>(head, currentTailIndex + CQ_BLOCK_SIZE)
+                        || (MAX_SUBQUEUE_SIZE != details::const_numeric_max<size_t>::value && (MAX_SUBQUEUE_SIZE == 0 || MAX_SUBQUEUE_SIZE - CQ_BLOCK_SIZE < currentTailIndex - head))) {
                         // We can't enqueue in another block because there's not enough leeway -- the
                         // tail could surpass the head by the time the block fills up! (Or we'll exceed
                         // the size limit, if the second part of the condition was true.)
@@ -2014,8 +2022,8 @@ private:
                     // When an index wraps, we need to preserve the sign of the offset when dividing it by the
                     // block size (in order to get a correct signed block count offset in all cases):
                     auto headBase = localBlockIndex->entries[localBlockIndexHead].base;
-                    auto blockBaseIndex = index & ~static_cast<index_t>(BLOCK_SIZE - 1);
-                    auto offset = static_cast<size_t>(static_cast<typename std::make_signed<index_t>::type>(blockBaseIndex - headBase) / static_cast<typename std::make_signed<index_t>::type>(BLOCK_SIZE));
+                    auto blockBaseIndex = index & ~static_cast<index_t>(CQ_BLOCK_SIZE - 1);
+                    auto offset = static_cast<size_t>(static_cast<typename std::make_signed<index_t>::type>(blockBaseIndex - headBase) / static_cast<typename std::make_signed<index_t>::type>(CQ_BLOCK_SIZE));
                     auto block = localBlockIndex->entries[(localBlockIndexHead + offset) & (localBlockIndex->size - 1)].block;
                     
                     // Dequeue
@@ -2067,13 +2075,13 @@ private:
             Block* firstAllocatedBlock = nullptr;
             
             // Figure out how many blocks we'll need to allocate, and do so
-            size_t blockBaseDiff = ((startTailIndex + count - 1) & ~static_cast<index_t>(BLOCK_SIZE - 1)) - ((startTailIndex - 1) & ~static_cast<index_t>(BLOCK_SIZE - 1));
-            index_t currentTailIndex = (startTailIndex - 1) & ~static_cast<index_t>(BLOCK_SIZE - 1);
+            size_t blockBaseDiff = ((startTailIndex + count - 1) & ~static_cast<index_t>(CQ_BLOCK_SIZE - 1)) - ((startTailIndex - 1) & ~static_cast<index_t>(CQ_BLOCK_SIZE - 1));
+            index_t currentTailIndex = (startTailIndex - 1) & ~static_cast<index_t>(CQ_BLOCK_SIZE - 1);
             if (blockBaseDiff > 0) {
                 // Allocate as many blocks as possible from ahead
                 while (blockBaseDiff > 0 && this->tailBlock != nullptr && this->tailBlock->next != firstAllocatedBlock && this->tailBlock->next->ConcurrentQueue::Block::template is_empty<explicit_context>()) {
-                    blockBaseDiff -= static_cast<index_t>(BLOCK_SIZE);
-                    currentTailIndex += static_cast<index_t>(BLOCK_SIZE);
+                    blockBaseDiff -= static_cast<index_t>(CQ_BLOCK_SIZE);
+                    currentTailIndex += static_cast<index_t>(CQ_BLOCK_SIZE);
                     
                     this->tailBlock = this->tailBlock->next;
                     firstAllocatedBlock = firstAllocatedBlock == nullptr ? this->tailBlock : firstAllocatedBlock;
@@ -2086,12 +2094,12 @@ private:
                 
                 // Now allocate as many blocks as necessary from the block pool
                 while (blockBaseDiff > 0) {
-                    blockBaseDiff -= static_cast<index_t>(BLOCK_SIZE);
-                    currentTailIndex += static_cast<index_t>(BLOCK_SIZE);
+                    blockBaseDiff -= static_cast<index_t>(CQ_BLOCK_SIZE);
+                    currentTailIndex += static_cast<index_t>(CQ_BLOCK_SIZE);
                     
                     auto head = this->headIndex.load(std::memory_order_relaxed);
                     assert(!details::circular_less_than<index_t>(currentTailIndex, head));
-                    bool full = !details::circular_less_than<index_t>(head, currentTailIndex + BLOCK_SIZE) || (MAX_SUBQUEUE_SIZE != details::const_numeric_max<size_t>::value && (MAX_SUBQUEUE_SIZE == 0 || MAX_SUBQUEUE_SIZE - BLOCK_SIZE < currentTailIndex - head));
+                    bool full = !details::circular_less_than<index_t>(head, currentTailIndex + CQ_BLOCK_SIZE) || (MAX_SUBQUEUE_SIZE != details::const_numeric_max<size_t>::value && (MAX_SUBQUEUE_SIZE == 0 || MAX_SUBQUEUE_SIZE - CQ_BLOCK_SIZE < currentTailIndex - head));
                     if (pr_blockIndexRaw == nullptr || pr_blockIndexSlotsUsed == pr_blockIndexSize || full) {
                         MOODYCAMEL_CONSTEXPR_IF (allocMode == CannotAlloc) {
                             // Failed to allocate, undo changes (but keep injected blocks)
@@ -2166,12 +2174,12 @@ private:
             currentTailIndex = startTailIndex;
             auto endBlock = this->tailBlock;
             this->tailBlock = startBlock;
-            assert((startTailIndex & static_cast<index_t>(BLOCK_SIZE - 1)) != 0 || firstAllocatedBlock != nullptr || count == 0);
-            if ((startTailIndex & static_cast<index_t>(BLOCK_SIZE - 1)) == 0 && firstAllocatedBlock != nullptr) {
+            assert((startTailIndex & static_cast<index_t>(CQ_BLOCK_SIZE - 1)) != 0 || firstAllocatedBlock != nullptr || count == 0);
+            if ((startTailIndex & static_cast<index_t>(CQ_BLOCK_SIZE - 1)) == 0 && firstAllocatedBlock != nullptr) {
                 this->tailBlock = firstAllocatedBlock;
             }
             while (true) {
-                index_t stopIndex = (currentTailIndex & ~static_cast<index_t>(BLOCK_SIZE - 1)) + static_cast<index_t>(BLOCK_SIZE);
+                index_t stopIndex = (currentTailIndex & ~static_cast<index_t>(CQ_BLOCK_SIZE - 1)) + static_cast<index_t>(CQ_BLOCK_SIZE);
                 if (details::circular_less_than<index_t>(newTailIndex, stopIndex)) {
                     stopIndex = newTailIndex;
                 }
@@ -2208,12 +2216,12 @@ private:
                         
                         if (!details::is_trivially_destructible<T>::value) {
                             auto block = startBlock;
-                            if ((startTailIndex & static_cast<index_t>(BLOCK_SIZE - 1)) == 0) {
+                            if ((startTailIndex & static_cast<index_t>(CQ_BLOCK_SIZE - 1)) == 0) {
                                 block = firstAllocatedBlock;
                             }
                             currentTailIndex = startTailIndex;
                             while (true) {
-                                stopIndex = (currentTailIndex & ~static_cast<index_t>(BLOCK_SIZE - 1)) + static_cast<index_t>(BLOCK_SIZE);
+                                stopIndex = (currentTailIndex & ~static_cast<index_t>(CQ_BLOCK_SIZE - 1)) + static_cast<index_t>(CQ_BLOCK_SIZE);
                                 if (details::circular_less_than<index_t>(constructedStopIndex, stopIndex)) {
                                     stopIndex = constructedStopIndex;
                                 }
@@ -2275,15 +2283,15 @@ private:
                     auto localBlockIndexHead = localBlockIndex->front.load(std::memory_order_acquire);
                     
                     auto headBase = localBlockIndex->entries[localBlockIndexHead].base;
-                    auto firstBlockBaseIndex = firstIndex & ~static_cast<index_t>(BLOCK_SIZE - 1);
-                    auto offset = static_cast<size_t>(static_cast<typename std::make_signed<index_t>::type>(firstBlockBaseIndex - headBase) / static_cast<typename std::make_signed<index_t>::type>(BLOCK_SIZE));
+                    auto firstBlockBaseIndex = firstIndex & ~static_cast<index_t>(CQ_BLOCK_SIZE - 1);
+                    auto offset = static_cast<size_t>(static_cast<typename std::make_signed<index_t>::type>(firstBlockBaseIndex - headBase) / static_cast<typename std::make_signed<index_t>::type>(CQ_BLOCK_SIZE));
                     auto indexIndex = (localBlockIndexHead + offset) & (localBlockIndex->size - 1);
                     
                     // Iterate the blocks and dequeue
                     auto index = firstIndex;
                     do {
                         auto firstIndexInBlock = index;
-                        index_t endIndex = (index & ~static_cast<index_t>(BLOCK_SIZE - 1)) + static_cast<index_t>(BLOCK_SIZE);
+                        index_t endIndex = (index & ~static_cast<index_t>(CQ_BLOCK_SIZE - 1)) + static_cast<index_t>(CQ_BLOCK_SIZE);
                         endIndex = details::circular_less_than<index_t>(firstIndex + static_cast<index_t>(actualCount), endIndex) ? firstIndex + static_cast<index_t>(actualCount) : endIndex;
                         auto block = localBlockIndex->entries[indexIndex].block;
                         if (MOODYCAMEL_NOEXCEPT_ASSIGN(T, T&&, details::deref_noexcept(itemFirst) = std::move((*(*block)[index])))) {
@@ -2317,7 +2325,7 @@ private:
                                     indexIndex = (indexIndex + 1) & (localBlockIndex->size - 1);
                                     
                                     firstIndexInBlock = index;
-                                    endIndex = (index & ~static_cast<index_t>(BLOCK_SIZE - 1)) + static_cast<index_t>(BLOCK_SIZE);
+                                    endIndex = (index & ~static_cast<index_t>(CQ_BLOCK_SIZE - 1)) + static_cast<index_t>(CQ_BLOCK_SIZE);
                                     endIndex = details::circular_less_than<index_t>(firstIndex + static_cast<index_t>(actualCount), endIndex) ? firstIndex + static_cast<index_t>(actualCount) : endIndex;
                                 } while (index != firstIndex + actualCount);
                                 
@@ -2451,7 +2459,7 @@ private:
             assert(index == tail || details::circular_less_than(index, tail));
             bool forceFreeLastBlock = index != tail;        // If we enter the loop, then the last (tail) block will not be freed
             while (index != tail) {
-                if ((index & static_cast<index_t>(BLOCK_SIZE - 1)) == 0 || block == nullptr) {
+                if ((index & static_cast<index_t>(CQ_BLOCK_SIZE - 1)) == 0 || block == nullptr) {
                     if (block != nullptr) {
                         // Free the old block
                         this->parent->add_block_to_free_list(block);
@@ -2466,7 +2474,7 @@ private:
             // Even if the queue is empty, there's still one block that's not on the free list
             // (unless the head index reached the end of it, in which case the tail will be poised
             // to create a new block).
-            if (this->tailBlock != nullptr && (forceFreeLastBlock || (tail & static_cast<index_t>(BLOCK_SIZE - 1)) != 0)) {
+            if (this->tailBlock != nullptr && (forceFreeLastBlock || (tail & static_cast<index_t>(CQ_BLOCK_SIZE - 1)) != 0)) {
                 this->parent->add_block_to_free_list(this->tailBlock);
             }
             
@@ -2490,11 +2498,11 @@ private:
         {
             index_t currentTailIndex = this->tailIndex.load(std::memory_order_relaxed);
             index_t newTailIndex = 1 + currentTailIndex;
-            if ((currentTailIndex & static_cast<index_t>(BLOCK_SIZE - 1)) == 0) {
+            if ((currentTailIndex & static_cast<index_t>(CQ_BLOCK_SIZE - 1)) == 0) {
                 // We reached the end of a block, start a new one
                 auto head = this->headIndex.load(std::memory_order_relaxed);
                 assert(!details::circular_less_than<index_t>(currentTailIndex, head));
-                if (!details::circular_less_than<index_t>(head, currentTailIndex + BLOCK_SIZE) || (MAX_SUBQUEUE_SIZE != details::const_numeric_max<size_t>::value && (MAX_SUBQUEUE_SIZE == 0 || MAX_SUBQUEUE_SIZE - BLOCK_SIZE < currentTailIndex - head))) {
+                if (!details::circular_less_than<index_t>(head, currentTailIndex + CQ_BLOCK_SIZE) || (MAX_SUBQUEUE_SIZE != details::const_numeric_max<size_t>::value && (MAX_SUBQUEUE_SIZE == 0 || MAX_SUBQUEUE_SIZE - CQ_BLOCK_SIZE < currentTailIndex - head))) {
                     return false;
                 }
 #ifdef MCDBGQ_NOLOCKFREE_IMPLICITPRODBLOCKINDEX
@@ -2642,15 +2650,15 @@ private:
             auto endBlock = this->tailBlock;
             
             // Figure out how many blocks we'll need to allocate, and do so
-            size_t blockBaseDiff = ((startTailIndex + count - 1) & ~static_cast<index_t>(BLOCK_SIZE - 1)) - ((startTailIndex - 1) & ~static_cast<index_t>(BLOCK_SIZE - 1));
-            index_t currentTailIndex = (startTailIndex - 1) & ~static_cast<index_t>(BLOCK_SIZE - 1);
+            size_t blockBaseDiff = ((startTailIndex + count - 1) & ~static_cast<index_t>(CQ_BLOCK_SIZE - 1)) - ((startTailIndex - 1) & ~static_cast<index_t>(CQ_BLOCK_SIZE - 1));
+            index_t currentTailIndex = (startTailIndex - 1) & ~static_cast<index_t>(CQ_BLOCK_SIZE - 1);
             if (blockBaseDiff > 0) {
 #ifdef MCDBGQ_NOLOCKFREE_IMPLICITPRODBLOCKINDEX
                 debug::DebugLock lock(mutex);
 #endif
                 do {
-                    blockBaseDiff -= static_cast<index_t>(BLOCK_SIZE);
-                    currentTailIndex += static_cast<index_t>(BLOCK_SIZE);
+                    blockBaseDiff -= static_cast<index_t>(CQ_BLOCK_SIZE);
+                    currentTailIndex += static_cast<index_t>(CQ_BLOCK_SIZE);
                     
                     // Find out where we'll be inserting this block in the block index
                     BlockIndexEntry* idxEntry = nullptr;  // initialization here unnecessary but compiler can't always tell
@@ -2658,7 +2666,7 @@ private:
                     bool indexInserted = false;
                     auto head = this->headIndex.load(std::memory_order_relaxed);
                     assert(!details::circular_less_than<index_t>(currentTailIndex, head));
-                    bool full = !details::circular_less_than<index_t>(head, currentTailIndex + BLOCK_SIZE) || (MAX_SUBQUEUE_SIZE != details::const_numeric_max<size_t>::value && (MAX_SUBQUEUE_SIZE == 0 || MAX_SUBQUEUE_SIZE - BLOCK_SIZE < currentTailIndex - head));
+                    bool full = !details::circular_less_than<index_t>(head, currentTailIndex + CQ_BLOCK_SIZE) || (MAX_SUBQUEUE_SIZE != details::const_numeric_max<size_t>::value && (MAX_SUBQUEUE_SIZE == 0 || MAX_SUBQUEUE_SIZE - CQ_BLOCK_SIZE < currentTailIndex - head));
 
                     if (full || !(indexInserted = insert_block_index_entry<allocMode>(idxEntry, currentTailIndex)) || (newBlock = this->parent->ConcurrentQueue::template requisition_block<allocMode>()) == nullptr) {
                         // Index allocation or block allocation failed; revert any other allocations
@@ -2667,9 +2675,9 @@ private:
                             rewind_block_index_tail();
                             idxEntry->value.store(nullptr, std::memory_order_relaxed);
                         }
-                        currentTailIndex = (startTailIndex - 1) & ~static_cast<index_t>(BLOCK_SIZE - 1);
+                        currentTailIndex = (startTailIndex - 1) & ~static_cast<index_t>(CQ_BLOCK_SIZE - 1);
                         for (auto block = firstAllocatedBlock; block != nullptr; block = block->next) {
-                            currentTailIndex += static_cast<index_t>(BLOCK_SIZE);
+                            currentTailIndex += static_cast<index_t>(CQ_BLOCK_SIZE);
                             idxEntry = get_block_index_entry_for_index(currentTailIndex);
                             idxEntry->value.store(nullptr, std::memory_order_relaxed);
                             rewind_block_index_tail();
@@ -2691,7 +2699,7 @@ private:
                     
                     // Store the chain of blocks so that we can undo if later allocations fail,
                     // and so that we can find the blocks when we do the actual enqueueing
-                    if ((startTailIndex & static_cast<index_t>(BLOCK_SIZE - 1)) != 0 || firstAllocatedBlock != nullptr) {
+                    if ((startTailIndex & static_cast<index_t>(CQ_BLOCK_SIZE - 1)) != 0 || firstAllocatedBlock != nullptr) {
                         assert(this->tailBlock != nullptr);
                         this->tailBlock->next = newBlock;
                     }
@@ -2705,12 +2713,12 @@ private:
             index_t newTailIndex = startTailIndex + static_cast<index_t>(count);
             currentTailIndex = startTailIndex;
             this->tailBlock = startBlock;
-            assert((startTailIndex & static_cast<index_t>(BLOCK_SIZE - 1)) != 0 || firstAllocatedBlock != nullptr || count == 0);
-            if ((startTailIndex & static_cast<index_t>(BLOCK_SIZE - 1)) == 0 && firstAllocatedBlock != nullptr) {
+            assert((startTailIndex & static_cast<index_t>(CQ_BLOCK_SIZE - 1)) != 0 || firstAllocatedBlock != nullptr || count == 0);
+            if ((startTailIndex & static_cast<index_t>(CQ_BLOCK_SIZE - 1)) == 0 && firstAllocatedBlock != nullptr) {
                 this->tailBlock = firstAllocatedBlock;
             }
             while (true) {
-                index_t stopIndex = (currentTailIndex & ~static_cast<index_t>(BLOCK_SIZE - 1)) + static_cast<index_t>(BLOCK_SIZE);
+                index_t stopIndex = (currentTailIndex & ~static_cast<index_t>(CQ_BLOCK_SIZE - 1)) + static_cast<index_t>(CQ_BLOCK_SIZE);
                 if (details::circular_less_than<index_t>(newTailIndex, stopIndex)) {
                     stopIndex = newTailIndex;
                 }
@@ -2733,12 +2741,12 @@ private:
                         
                         if (!details::is_trivially_destructible<T>::value) {
                             auto block = startBlock;
-                            if ((startTailIndex & static_cast<index_t>(BLOCK_SIZE - 1)) == 0) {
+                            if ((startTailIndex & static_cast<index_t>(CQ_BLOCK_SIZE - 1)) == 0) {
                                 block = firstAllocatedBlock;
                             }
                             currentTailIndex = startTailIndex;
                             while (true) {
-                                stopIndex = (currentTailIndex & ~static_cast<index_t>(BLOCK_SIZE - 1)) + static_cast<index_t>(BLOCK_SIZE);
+                                stopIndex = (currentTailIndex & ~static_cast<index_t>(CQ_BLOCK_SIZE - 1)) + static_cast<index_t>(CQ_BLOCK_SIZE);
                                 if (details::circular_less_than<index_t>(constructedStopIndex, stopIndex)) {
                                     stopIndex = constructedStopIndex;
                                 }
@@ -2752,9 +2760,9 @@ private:
                             }
                         }
                         
-                        currentTailIndex = (startTailIndex - 1) & ~static_cast<index_t>(BLOCK_SIZE - 1);
+                        currentTailIndex = (startTailIndex - 1) & ~static_cast<index_t>(CQ_BLOCK_SIZE - 1);
                         for (auto block = firstAllocatedBlock; block != nullptr; block = block->next) {
-                            currentTailIndex += static_cast<index_t>(BLOCK_SIZE);
+                            currentTailIndex += static_cast<index_t>(CQ_BLOCK_SIZE);
                             auto idxEntry = get_block_index_entry_for_index(currentTailIndex);
                             idxEntry->value.store(nullptr, std::memory_order_relaxed);
                             rewind_block_index_tail();
@@ -2808,7 +2816,7 @@ private:
                     auto indexIndex = get_block_index_index_for_index(index, localBlockIndex);
                     do {
                         auto blockStartIndex = index;
-                        index_t endIndex = (index & ~static_cast<index_t>(BLOCK_SIZE - 1)) + static_cast<index_t>(BLOCK_SIZE);
+                        index_t endIndex = (index & ~static_cast<index_t>(CQ_BLOCK_SIZE - 1)) + static_cast<index_t>(CQ_BLOCK_SIZE);
                         endIndex = details::circular_less_than<index_t>(firstIndex + static_cast<index_t>(actualCount), endIndex) ? firstIndex + static_cast<index_t>(actualCount) : endIndex;
                         
                         auto entry = localBlockIndex->index[indexIndex];
@@ -2849,7 +2857,7 @@ private:
                                     indexIndex = (indexIndex + 1) & (localBlockIndex->capacity - 1);
                                     
                                     blockStartIndex = index;
-                                    endIndex = (index & ~static_cast<index_t>(BLOCK_SIZE - 1)) + static_cast<index_t>(BLOCK_SIZE);
+                                    endIndex = (index & ~static_cast<index_t>(CQ_BLOCK_SIZE - 1)) + static_cast<index_t>(CQ_BLOCK_SIZE);
                                     endIndex = details::circular_less_than<index_t>(firstIndex + static_cast<index_t>(actualCount), endIndex) ? firstIndex + static_cast<index_t>(actualCount) : endIndex;
                                 } while (index != firstIndex + actualCount);
                                 
@@ -2952,14 +2960,14 @@ private:
 #ifdef MCDBGQ_NOLOCKFREE_IMPLICITPRODBLOCKINDEX
             debug::DebugLock lock(mutex);
 #endif
-            index &= ~static_cast<index_t>(BLOCK_SIZE - 1);
+            index &= ~static_cast<index_t>(CQ_BLOCK_SIZE - 1);
             localBlockIndex = blockIndex.load(std::memory_order_acquire);
             auto tail = localBlockIndex->tail.load(std::memory_order_acquire);
             auto tailBase = localBlockIndex->index[tail]->key.load(std::memory_order_relaxed);
             assert(tailBase != INVALID_BLOCK_BASE);
             // Note: Must use division instead of shift because the index may wrap around, causing a negative
             // offset, whose negativity we want to preserve
-            auto offset = static_cast<size_t>(static_cast<typename std::make_signed<index_t>::type>(index - tailBase) / static_cast<typename std::make_signed<index_t>::type>(BLOCK_SIZE));
+            auto offset = static_cast<size_t>(static_cast<typename std::make_signed<index_t>::type>(index - tailBase) / static_cast<typename std::make_signed<index_t>::type>(CQ_BLOCK_SIZE));
             size_t idx = (tail + offset) & (localBlockIndex->capacity - 1);
             assert(localBlockIndex->index[idx]->key.load(std::memory_order_relaxed) == index && localBlockIndex->index[idx]->value.load(std::memory_order_relaxed) != nullptr);
             return idx;
@@ -3171,7 +3179,7 @@ private:
                                 stats.implicitBlockIndexBytes += sizeof(typename ImplicitProducer::BlockIndexHeader) + hash->capacity * sizeof(typename ImplicitProducer::BlockIndexEntry*);
                             }
                         }
-                        for (; details::circular_less_than<index_t>(head, tail); head += BLOCK_SIZE) {
+                        for (; details::circular_less_than<index_t>(head, tail); head += CQ_BLOCK_SIZE) {
                             //auto block = prod->get_block_index_entry_for_index(head);
                             ++stats.usedBlocks;
                         }
@@ -3747,3 +3755,1005 @@ inline void swap(typename ConcurrentQueue<T, Traits>::ImplicitProducerKVP& a, ty
 #if defined(__GNUC__) && !defined(__INTEL_COMPILER)
 #pragma GCC diagnostic pop
 #endif
+
+
+////////////////////////////
+// Light-weight semaphore //
+////////////////////////////
+
+// Provides an efficient implementation of a semaphore (LightweightSemaphore).
+// This is an extension of Jeff Preshing's sempahore implementation (licensed 
+// under the terms of its separate zlib license) that has been adapted and
+// extended by Cameron Desrochers.
+
+#if defined(_WIN32)
+// Avoid including windows.h in a header; we only need a handful of
+// items, so we'll redeclare them here (this is relatively safe since
+// the API generally has to remain stable between Windows versions).
+// I know this is an ugly hack but it still beats polluting the global
+// namespace with thousands of generic names or adding a .cpp for nothing.
+extern "C" {
+    struct _SECURITY_ATTRIBUTES;
+    __declspec(dllimport) void* __stdcall CreateSemaphoreW(_SECURITY_ATTRIBUTES* lpSemaphoreAttributes, long lInitialCount, long lMaximumCount, const wchar_t* lpName);
+    __declspec(dllimport) int __stdcall CloseHandle(void* hObject);
+    __declspec(dllimport) unsigned long __stdcall WaitForSingleObject(void* hHandle, unsigned long dwMilliseconds);
+    __declspec(dllimport) int __stdcall ReleaseSemaphore(void* hSemaphore, long lReleaseCount, long* lpPreviousCount);
+}
+#elif defined(__MACH__)
+#include <mach/mach.h>
+#elif defined(__unix__)
+#include <semaphore.h>
+
+#if defined(__GLIBC_PREREQ) && defined(_GNU_SOURCE)
+#if __GLIBC_PREREQ(2,30)
+#define MOODYCAMEL_LIGHTWEIGHTSEMAPHORE_MONOTONIC
+#endif
+#endif
+#endif
+
+namespace moodycamel
+{
+namespace details
+{
+
+// Code in the mpmc_sema namespace below is an adaptation of Jeff Preshing's
+// portable + lightweight semaphore implementations, originally from
+// https://github.com/preshing/cpp11-on-multicore/blob/master/common/sema.h
+// LICENSE:
+// Copyright (c) 2015 Jeff Preshing
+//
+// This software is provided 'as-is', without any express or implied
+// warranty. In no event will the authors be held liable for any damages
+// arising from the use of this software.
+//
+// Permission is granted to anyone to use this software for any purpose,
+// including commercial applications, and to alter it and redistribute it
+// freely, subject to the following restrictions:
+//
+// 1. The origin of this software must not be misrepresented; you must not
+//  claim that you wrote the original software. If you use this software
+//  in a product, an acknowledgement in the product documentation would be
+//  appreciated but is not required.
+// 2. Altered source versions must be plainly marked as such, and must not be
+//  misrepresented as being the original software.
+// 3. This notice may not be removed or altered from any source distribution.
+#if defined(_WIN32)
+class Semaphore
+{
+private:
+    void* m_hSema;
+    
+    Semaphore(const Semaphore& other) MOODYCAMEL_DELETE_FUNCTION;
+    Semaphore& operator=(const Semaphore& other) MOODYCAMEL_DELETE_FUNCTION;
+
+public:
+    Semaphore(int initialCount = 0)
+    {
+        assert(initialCount >= 0);
+        const long maxLong = 0x7fffffff;
+        m_hSema = CreateSemaphoreW(nullptr, initialCount, maxLong, nullptr);
+        assert(m_hSema);
+    }
+
+    ~Semaphore()
+    {
+        CloseHandle(m_hSema);
+    }
+
+    bool wait()
+    {
+        const unsigned long infinite = 0xffffffff;
+        return WaitForSingleObject(m_hSema, infinite) == 0;
+    }
+    
+    bool try_wait()
+    {
+        return WaitForSingleObject(m_hSema, 0) == 0;
+    }
+    
+    bool timed_wait(std::uint64_t usecs)
+    {
+        return WaitForSingleObject(m_hSema, (unsigned long)(usecs / 1000)) == 0;
+    }
+
+    void signal(int count = 1)
+    {
+        while (!ReleaseSemaphore(m_hSema, count, nullptr));
+    }
+};
+#elif defined(__MACH__)
+//---------------------------------------------------------
+// Semaphore (Apple iOS and OSX)
+// Can't use POSIX semaphores due to http://lists.apple.com/archives/darwin-kernel/2009/Apr/msg00010.html
+//---------------------------------------------------------
+class Semaphore
+{
+private:
+    semaphore_t m_sema;
+
+    Semaphore(const Semaphore& other) MOODYCAMEL_DELETE_FUNCTION;
+    Semaphore& operator=(const Semaphore& other) MOODYCAMEL_DELETE_FUNCTION;
+
+public:
+    Semaphore(int initialCount = 0)
+    {
+        assert(initialCount >= 0);
+        kern_return_t rc = semaphore_create(mach_task_self(), &m_sema, SYNC_POLICY_FIFO, initialCount);
+        assert(rc == KERN_SUCCESS);
+        (void)rc;
+    }
+
+    ~Semaphore()
+    {
+        semaphore_destroy(mach_task_self(), m_sema);
+    }
+
+    bool wait()
+    {
+        return semaphore_wait(m_sema) == KERN_SUCCESS;
+    }
+    
+    bool try_wait()
+    {
+        return timed_wait(0);
+    }
+    
+    bool timed_wait(std::uint64_t timeout_usecs)
+    {
+        mach_timespec_t ts;
+        ts.tv_sec = static_cast<unsigned int>(timeout_usecs / 1000000);
+        ts.tv_nsec = static_cast<int>((timeout_usecs % 1000000) * 1000);
+
+        // added in OSX 10.10: https://developer.apple.com/library/prerelease/mac/documentation/General/Reference/APIDiffsMacOSX10_10SeedDiff/modules/Darwin.html
+        kern_return_t rc = semaphore_timedwait(m_sema, ts);
+        return rc == KERN_SUCCESS;
+    }
+
+    void signal()
+    {
+        while (semaphore_signal(m_sema) != KERN_SUCCESS);
+    }
+
+    void signal(int count)
+    {
+        while (count-- > 0)
+        {
+            while (semaphore_signal(m_sema) != KERN_SUCCESS);
+        }
+    }
+};
+#elif defined(__unix__)
+//---------------------------------------------------------
+// Semaphore (POSIX, Linux)
+//---------------------------------------------------------
+class Semaphore
+{
+private:
+    sem_t m_sema;
+
+    Semaphore(const Semaphore& other) MOODYCAMEL_DELETE_FUNCTION;
+    Semaphore& operator=(const Semaphore& other) MOODYCAMEL_DELETE_FUNCTION;
+
+public:
+    Semaphore(int initialCount = 0)
+    {
+        assert(initialCount >= 0);
+        int rc = sem_init(&m_sema, 0, static_cast<unsigned int>(initialCount));
+        assert(rc == 0);
+        (void)rc;
+    }
+
+    ~Semaphore()
+    {
+        sem_destroy(&m_sema);
+    }
+
+    bool wait()
+    {
+        // http://stackoverflow.com/questions/2013181/gdb-causes-sem-wait-to-fail-with-eintr-error
+        int rc;
+        do {
+            rc = sem_wait(&m_sema);
+        } while (rc == -1 && errno == EINTR);
+        return rc == 0;
+    }
+
+    bool try_wait()
+    {
+        int rc;
+        do {
+            rc = sem_trywait(&m_sema);
+        } while (rc == -1 && errno == EINTR);
+        return rc == 0;
+    }
+
+    bool timed_wait(std::uint64_t usecs)
+    {
+        struct timespec ts;
+        const int usecs_in_1_sec = 1000000;
+        const int nsecs_in_1_sec = 1000000000;
+#ifdef MOODYCAMEL_LIGHTWEIGHTSEMAPHORE_MONOTONIC
+        clock_gettime(CLOCK_MONOTONIC, &ts);
+#else
+        clock_gettime(CLOCK_REALTIME, &ts);
+#endif
+        ts.tv_sec += (time_t)(usecs / usecs_in_1_sec);
+        ts.tv_nsec += (long)(usecs % usecs_in_1_sec) * 1000;
+        // sem_timedwait bombs if you have more than 1e9 in tv_nsec
+        // so we have to clean things up before passing it in
+        if (ts.tv_nsec >= nsecs_in_1_sec) {
+            ts.tv_nsec -= nsecs_in_1_sec;
+            ++ts.tv_sec;
+        }
+
+        int rc;
+        do {
+#ifdef MOODYCAMEL_LIGHTWEIGHTSEMAPHORE_MONOTONIC
+            rc = sem_clockwait(&m_sema, CLOCK_MONOTONIC, &ts);
+#else
+            rc = sem_timedwait(&m_sema, &ts);
+#endif
+        } while (rc == -1 && errno == EINTR);
+        return rc == 0;
+    }
+
+    void signal()
+    {
+        while (sem_post(&m_sema) == -1);
+    }
+
+    void signal(int count)
+    {
+        while (count-- > 0)
+        {
+            while (sem_post(&m_sema) == -1);
+        }
+    }
+};
+#else
+#error Unsupported platform! (No semaphore wrapper available)
+#endif
+
+}   // end namespace details
+
+
+//---------------------------------------------------------
+// LightweightSemaphore
+//---------------------------------------------------------
+class LightweightSemaphore
+{
+public:
+    typedef std::make_signed<std::size_t>::type ssize_t;
+
+private:
+    std::atomic<ssize_t> m_count;
+    details::Semaphore m_sema;
+    int m_maxSpins;
+
+    bool waitWithPartialSpinning(std::int64_t timeout_usecs = -1)
+    {
+        ssize_t oldCount;
+        int spin = m_maxSpins;
+        while (--spin >= 0)
+        {
+            oldCount = m_count.load(std::memory_order_relaxed);
+            if ((oldCount > 0) && m_count.compare_exchange_strong(oldCount, oldCount - 1, std::memory_order_acquire, std::memory_order_relaxed))
+                return true;
+            std::atomic_signal_fence(std::memory_order_acquire);     // Prevent the compiler from collapsing the loop.
+        }
+        oldCount = m_count.fetch_sub(1, std::memory_order_acquire);
+        if (oldCount > 0)
+            return true;
+        if (timeout_usecs < 0)
+        {
+            if (m_sema.wait())
+                return true;
+        }
+        if (timeout_usecs > 0 && m_sema.timed_wait((std::uint64_t)timeout_usecs))
+            return true;
+        // At this point, we've timed out waiting for the semaphore, but the
+        // count is still decremented indicating we may still be waiting on
+        // it. So we have to re-adjust the count, but only if the semaphore
+        // wasn't signaled enough times for us too since then. If it was, we
+        // need to release the semaphore too.
+        while (true)
+        {
+            oldCount = m_count.load(std::memory_order_acquire);
+            if (oldCount >= 0 && m_sema.try_wait())
+                return true;
+            if (oldCount < 0 && m_count.compare_exchange_strong(oldCount, oldCount + 1, std::memory_order_relaxed, std::memory_order_relaxed))
+                return false;
+        }
+    }
+
+    ssize_t waitManyWithPartialSpinning(ssize_t max, std::int64_t timeout_usecs = -1)
+    {
+        assert(max > 0);
+        ssize_t oldCount;
+        int spin = m_maxSpins;
+        while (--spin >= 0)
+        {
+            oldCount = m_count.load(std::memory_order_relaxed);
+            if (oldCount > 0)
+            {
+                ssize_t newCount = oldCount > max ? oldCount - max : 0;
+                if (m_count.compare_exchange_strong(oldCount, newCount, std::memory_order_acquire, std::memory_order_relaxed))
+                    return oldCount - newCount;
+            }
+            std::atomic_signal_fence(std::memory_order_acquire);
+        }
+        oldCount = m_count.fetch_sub(1, std::memory_order_acquire);
+        if (oldCount <= 0)
+        {
+            if ((timeout_usecs == 0) || (timeout_usecs < 0 && !m_sema.wait()) || (timeout_usecs > 0 && !m_sema.timed_wait((std::uint64_t)timeout_usecs)))
+            {
+                while (true)
+                {
+                    oldCount = m_count.load(std::memory_order_acquire);
+                    if (oldCount >= 0 && m_sema.try_wait())
+                        break;
+                    if (oldCount < 0 && m_count.compare_exchange_strong(oldCount, oldCount + 1, std::memory_order_relaxed, std::memory_order_relaxed))
+                        return 0;
+                }
+            }
+        }
+        if (max > 1)
+            return 1 + tryWaitMany(max - 1);
+        return 1;
+    }
+
+public:
+    LightweightSemaphore(ssize_t initialCount = 0, int maxSpins = 10000) : m_count(initialCount), m_maxSpins(maxSpins)
+    {
+        assert(initialCount >= 0);
+        assert(maxSpins >= 0);
+    }
+
+    bool tryWait()
+    {
+        ssize_t oldCount = m_count.load(std::memory_order_relaxed);
+        while (oldCount > 0)
+        {
+            if (m_count.compare_exchange_weak(oldCount, oldCount - 1, std::memory_order_acquire, std::memory_order_relaxed))
+                return true;
+        }
+        return false;
+    }
+
+    bool wait()
+    {
+        return tryWait() || waitWithPartialSpinning();
+    }
+
+    bool wait(std::int64_t timeout_usecs)
+    {
+        return tryWait() || waitWithPartialSpinning(timeout_usecs);
+    }
+
+    // Acquires between 0 and (greedily) max, inclusive
+    ssize_t tryWaitMany(ssize_t max)
+    {
+        assert(max >= 0);
+        ssize_t oldCount = m_count.load(std::memory_order_relaxed);
+        while (oldCount > 0)
+        {
+            ssize_t newCount = oldCount > max ? oldCount - max : 0;
+            if (m_count.compare_exchange_weak(oldCount, newCount, std::memory_order_acquire, std::memory_order_relaxed))
+                return oldCount - newCount;
+        }
+        return 0;
+    }
+
+    // Acquires at least one, and (greedily) at most max
+    ssize_t waitMany(ssize_t max, std::int64_t timeout_usecs)
+    {
+        assert(max >= 0);
+        ssize_t result = tryWaitMany(max);
+        if (result == 0 && max > 0)
+            result = waitManyWithPartialSpinning(max, timeout_usecs);
+        return result;
+    }
+    
+    ssize_t waitMany(ssize_t max)
+    {
+        ssize_t result = waitMany(max, -1);
+        assert(result > 0);
+        return result;
+    }
+
+    void signal(ssize_t count = 1)
+    {
+        assert(count >= 0);
+        ssize_t oldCount = m_count.fetch_add(count, std::memory_order_release);
+        ssize_t toRelease = -oldCount < count ? -oldCount : count;
+        if (toRelease > 0)
+        {
+            m_sema.signal((int)toRelease);
+        }
+    }
+    
+    std::size_t availableApprox() const
+    {
+        ssize_t count = m_count.load(std::memory_order_relaxed);
+        return count > 0 ? static_cast<std::size_t>(count) : 0;
+    }
+};
+
+}   // end namespace moodycamel
+
+
+///////////////////////////////
+// Blocking concurrent queue //
+///////////////////////////////
+
+// Provides an efficient blocking version of moodycamel::ConcurrentQueue.
+// ©2015-2020 Cameron Desrochers. Distributed under the terms of the simplified
+// BSD license, available at the top of concurrentqueue.h.
+// Also dual-licensed under the Boost Software License (see LICENSE.md)
+// Uses Jeff Preshing's semaphore implementation (under the terms of its
+// separate zlib license, see lightweightsemaphore.h).
+
+namespace moodycamel
+{
+// This is a blocking version of the queue. It has an almost identical interface to
+// the normal non-blocking version, with the addition of various wait_dequeue() methods
+// and the removal of producer-specific dequeue methods.
+template<typename T, typename Traits = ConcurrentQueueDefaultTraits>
+class BlockingConcurrentQueue
+{
+private:
+    typedef ::moodycamel::ConcurrentQueue<T, Traits> ConcurrentQueue;
+    typedef ::moodycamel::LightweightSemaphore LightweightSemaphore;
+
+public:
+    typedef typename ConcurrentQueue::producer_token_t producer_token_t;
+    typedef typename ConcurrentQueue::consumer_token_t consumer_token_t;
+    
+    typedef typename ConcurrentQueue::index_t index_t;
+    typedef typename ConcurrentQueue::size_t size_t;
+    typedef typename std::make_signed<size_t>::type ssize_t;
+    
+    static const size_t CQ_BLOCK_SIZE = ConcurrentQueue::CQ_BLOCK_SIZE;
+    static const size_t EXPLICIT_BLOCK_EMPTY_COUNTER_THRESHOLD = ConcurrentQueue::EXPLICIT_BLOCK_EMPTY_COUNTER_THRESHOLD;
+    static const size_t EXPLICIT_INITIAL_INDEX_SIZE = ConcurrentQueue::EXPLICIT_INITIAL_INDEX_SIZE;
+    static const size_t IMPLICIT_INITIAL_INDEX_SIZE = ConcurrentQueue::IMPLICIT_INITIAL_INDEX_SIZE;
+    static const size_t INITIAL_IMPLICIT_PRODUCER_HASH_SIZE = ConcurrentQueue::INITIAL_IMPLICIT_PRODUCER_HASH_SIZE;
+    static const std::uint32_t EXPLICIT_CONSUMER_CONSUMPTION_QUOTA_BEFORE_ROTATE = ConcurrentQueue::EXPLICIT_CONSUMER_CONSUMPTION_QUOTA_BEFORE_ROTATE;
+    static const size_t MAX_SUBQUEUE_SIZE = ConcurrentQueue::MAX_SUBQUEUE_SIZE;
+    
+public:
+    // Creates a queue with at least `capacity` element slots; note that the
+    // actual number of elements that can be inserted without additional memory
+    // allocation depends on the number of producers and the block size (e.g. if
+    // the block size is equal to `capacity`, only a single block will be allocated
+    // up-front, which means only a single producer will be able to enqueue elements
+    // without an extra allocation -- blocks aren't shared between producers).
+    // This method is not thread safe -- it is up to the user to ensure that the
+    // queue is fully constructed before it starts being used by other threads (this
+    // includes making the memory effects of construction visible, possibly with a
+    // memory barrier).
+    explicit BlockingConcurrentQueue(size_t capacity = 6 * CQ_BLOCK_SIZE)
+        : inner(capacity), sema(create<LightweightSemaphore, ssize_t, int>(0, (int)Traits::MAX_SEMA_SPINS), &BlockingConcurrentQueue::template destroy<LightweightSemaphore>)
+    {
+        assert(reinterpret_cast<ConcurrentQueue*>((BlockingConcurrentQueue*)1) == &((BlockingConcurrentQueue*)1)->inner && "BlockingConcurrentQueue must have ConcurrentQueue as its first member");
+        if (!sema) {
+            MOODYCAMEL_THROW(std::bad_alloc());
+        }
+    }
+    
+    BlockingConcurrentQueue(size_t minCapacity, size_t maxExplicitProducers, size_t maxImplicitProducers)
+        : inner(minCapacity, maxExplicitProducers, maxImplicitProducers), sema(create<LightweightSemaphore, ssize_t, int>(0, (int)Traits::MAX_SEMA_SPINS), &BlockingConcurrentQueue::template destroy<LightweightSemaphore>)
+    {
+        assert(reinterpret_cast<ConcurrentQueue*>((BlockingConcurrentQueue*)1) == &((BlockingConcurrentQueue*)1)->inner && "BlockingConcurrentQueue must have ConcurrentQueue as its first member");
+        if (!sema) {
+            MOODYCAMEL_THROW(std::bad_alloc());
+        }
+    }
+    
+    // Disable copying and copy assignment
+    BlockingConcurrentQueue(BlockingConcurrentQueue const&) MOODYCAMEL_DELETE_FUNCTION;
+    BlockingConcurrentQueue& operator=(BlockingConcurrentQueue const&) MOODYCAMEL_DELETE_FUNCTION;
+    
+    // Moving is supported, but note that it is *not* a thread-safe operation.
+    // Nobody can use the queue while it's being moved, and the memory effects
+    // of that move must be propagated to other threads before they can use it.
+    // Note: When a queue is moved, its tokens are still valid but can only be
+    // used with the destination queue (i.e. semantically they are moved along
+    // with the queue itself).
+    BlockingConcurrentQueue(BlockingConcurrentQueue&& other) MOODYCAMEL_NOEXCEPT
+        : inner(std::move(other.inner)), sema(std::move(other.sema))
+    { }
+    
+    inline BlockingConcurrentQueue& operator=(BlockingConcurrentQueue&& other) MOODYCAMEL_NOEXCEPT
+    {
+        return swap_internal(other);
+    }
+    
+    // Swaps this queue's state with the other's. Not thread-safe.
+    // Swapping two queues does not invalidate their tokens, however
+    // the tokens that were created for one queue must be used with
+    // only the swapped queue (i.e. the tokens are tied to the
+    // queue's movable state, not the object itself).
+    inline void swap(BlockingConcurrentQueue& other) MOODYCAMEL_NOEXCEPT
+    {
+        swap_internal(other);
+    }
+    
+private:
+    BlockingConcurrentQueue& swap_internal(BlockingConcurrentQueue& other)
+    {
+        if (this == &other) {
+            return *this;
+        }
+        
+        inner.swap(other.inner);
+        sema.swap(other.sema);
+        return *this;
+    }
+    
+public:
+    // Enqueues a single item (by copying it).
+    // Allocates memory if required. Only fails if memory allocation fails (or implicit
+    // production is disabled because Traits::INITIAL_IMPLICIT_PRODUCER_HASH_SIZE is 0,
+    // or Traits::MAX_SUBQUEUE_SIZE has been defined and would be surpassed).
+    // Thread-safe.
+    inline bool enqueue(T const& item)
+    {
+        if ((details::likely)(inner.enqueue(item))) {
+            sema->signal();
+            return true;
+        }
+        return false;
+    }
+    
+    // Enqueues a single item (by moving it, if possible).
+    // Allocates memory if required. Only fails if memory allocation fails (or implicit
+    // production is disabled because Traits::INITIAL_IMPLICIT_PRODUCER_HASH_SIZE is 0,
+    // or Traits::MAX_SUBQUEUE_SIZE has been defined and would be surpassed).
+    // Thread-safe.
+    inline bool enqueue(T&& item)
+    {
+        if ((details::likely)(inner.enqueue(std::move(item)))) {
+            sema->signal();
+            return true;
+        }
+        return false;
+    }
+    
+    // Enqueues a single item (by copying it) using an explicit producer token.
+    // Allocates memory if required. Only fails if memory allocation fails (or
+    // Traits::MAX_SUBQUEUE_SIZE has been defined and would be surpassed).
+    // Thread-safe.
+    inline bool enqueue(producer_token_t const& token, T const& item)
+    {
+        if ((details::likely)(inner.enqueue(token, item))) {
+            sema->signal();
+            return true;
+        }
+        return false;
+    }
+    
+    // Enqueues a single item (by moving it, if possible) using an explicit producer token.
+    // Allocates memory if required. Only fails if memory allocation fails (or
+    // Traits::MAX_SUBQUEUE_SIZE has been defined and would be surpassed).
+    // Thread-safe.
+    inline bool enqueue(producer_token_t const& token, T&& item)
+    {
+        if ((details::likely)(inner.enqueue(token, std::move(item)))) {
+            sema->signal();
+            return true;
+        }
+        return false;
+    }
+    
+    // Enqueues several items.
+    // Allocates memory if required. Only fails if memory allocation fails (or
+    // implicit production is disabled because Traits::INITIAL_IMPLICIT_PRODUCER_HASH_SIZE
+    // is 0, or Traits::MAX_SUBQUEUE_SIZE has been defined and would be surpassed).
+    // Note: Use std::make_move_iterator if the elements should be moved instead of copied.
+    // Thread-safe.
+    template<typename It>
+    inline bool enqueue_bulk(It itemFirst, size_t count)
+    {
+        if ((details::likely)(inner.enqueue_bulk(std::forward<It>(itemFirst), count))) {
+            sema->signal((LightweightSemaphore::ssize_t)(ssize_t)count);
+            return true;
+        }
+        return false;
+    }
+    
+    // Enqueues several items using an explicit producer token.
+    // Allocates memory if required. Only fails if memory allocation fails
+    // (or Traits::MAX_SUBQUEUE_SIZE has been defined and would be surpassed).
+    // Note: Use std::make_move_iterator if the elements should be moved
+    // instead of copied.
+    // Thread-safe.
+    template<typename It>
+    inline bool enqueue_bulk(producer_token_t const& token, It itemFirst, size_t count)
+    {
+        if ((details::likely)(inner.enqueue_bulk(token, std::forward<It>(itemFirst), count))) {
+            sema->signal((LightweightSemaphore::ssize_t)(ssize_t)count);
+            return true;
+        }
+        return false;
+    }
+    
+    // Enqueues a single item (by copying it).
+    // Does not allocate memory. Fails if not enough room to enqueue (or implicit
+    // production is disabled because Traits::INITIAL_IMPLICIT_PRODUCER_HASH_SIZE
+    // is 0).
+    // Thread-safe.
+    inline bool try_enqueue(T const& item)
+    {
+        if (inner.try_enqueue(item)) {
+            sema->signal();
+            return true;
+        }
+        return false;
+    }
+    
+    // Enqueues a single item (by moving it, if possible).
+    // Does not allocate memory (except for one-time implicit producer).
+    // Fails if not enough room to enqueue (or implicit production is
+    // disabled because Traits::INITIAL_IMPLICIT_PRODUCER_HASH_SIZE is 0).
+    // Thread-safe.
+    inline bool try_enqueue(T&& item)
+    {
+        if (inner.try_enqueue(std::move(item))) {
+            sema->signal();
+            return true;
+        }
+        return false;
+    }
+    
+    // Enqueues a single item (by copying it) using an explicit producer token.
+    // Does not allocate memory. Fails if not enough room to enqueue.
+    // Thread-safe.
+    inline bool try_enqueue(producer_token_t const& token, T const& item)
+    {
+        if (inner.try_enqueue(token, item)) {
+            sema->signal();
+            return true;
+        }
+        return false;
+    }
+    
+    // Enqueues a single item (by moving it, if possible) using an explicit producer token.
+    // Does not allocate memory. Fails if not enough room to enqueue.
+    // Thread-safe.
+    inline bool try_enqueue(producer_token_t const& token, T&& item)
+    {
+        if (inner.try_enqueue(token, std::move(item))) {
+            sema->signal();
+            return true;
+        }
+        return false;
+    }
+    
+    // Enqueues several items.
+    // Does not allocate memory (except for one-time implicit producer).
+    // Fails if not enough room to enqueue (or implicit production is
+    // disabled because Traits::INITIAL_IMPLICIT_PRODUCER_HASH_SIZE is 0).
+    // Note: Use std::make_move_iterator if the elements should be moved
+    // instead of copied.
+    // Thread-safe.
+    template<typename It>
+    inline bool try_enqueue_bulk(It itemFirst, size_t count)
+    {
+        if (inner.try_enqueue_bulk(std::forward<It>(itemFirst), count)) {
+            sema->signal((LightweightSemaphore::ssize_t)(ssize_t)count);
+            return true;
+        }
+        return false;
+    }
+    
+    // Enqueues several items using an explicit producer token.
+    // Does not allocate memory. Fails if not enough room to enqueue.
+    // Note: Use std::make_move_iterator if the elements should be moved
+    // instead of copied.
+    // Thread-safe.
+    template<typename It>
+    inline bool try_enqueue_bulk(producer_token_t const& token, It itemFirst, size_t count)
+    {
+        if (inner.try_enqueue_bulk(token, std::forward<It>(itemFirst), count)) {
+            sema->signal((LightweightSemaphore::ssize_t)(ssize_t)count);
+            return true;
+        }
+        return false;
+    }
+    
+    
+    // Attempts to dequeue from the queue.
+    // Returns false if all producer streams appeared empty at the time they
+    // were checked (so, the queue is likely but not guaranteed to be empty).
+    // Never allocates. Thread-safe.
+    template<typename U>
+    inline bool try_dequeue(U& item)
+    {
+        if (sema->tryWait()) {
+            while (!inner.try_dequeue(item)) {
+                continue;
+            }
+            return true;
+        }
+        return false;
+    }
+    
+    // Attempts to dequeue from the queue using an explicit consumer token.
+    // Returns false if all producer streams appeared empty at the time they
+    // were checked (so, the queue is likely but not guaranteed to be empty).
+    // Never allocates. Thread-safe.
+    template<typename U>
+    inline bool try_dequeue(consumer_token_t& token, U& item)
+    {
+        if (sema->tryWait()) {
+            while (!inner.try_dequeue(token, item)) {
+                continue;
+            }
+            return true;
+        }
+        return false;
+    }
+    
+    // Attempts to dequeue several elements from the queue.
+    // Returns the number of items actually dequeued.
+    // Returns 0 if all producer streams appeared empty at the time they
+    // were checked (so, the queue is likely but not guaranteed to be empty).
+    // Never allocates. Thread-safe.
+    template<typename It>
+    inline size_t try_dequeue_bulk(It itemFirst, size_t max)
+    {
+        size_t count = 0;
+        max = (size_t)sema->tryWaitMany((LightweightSemaphore::ssize_t)(ssize_t)max);
+        while (count != max) {
+            count += inner.template try_dequeue_bulk<It&>(itemFirst, max - count);
+        }
+        return count;
+    }
+    
+    // Attempts to dequeue several elements from the queue using an explicit consumer token.
+    // Returns the number of items actually dequeued.
+    // Returns 0 if all producer streams appeared empty at the time they
+    // were checked (so, the queue is likely but not guaranteed to be empty).
+    // Never allocates. Thread-safe.
+    template<typename It>
+    inline size_t try_dequeue_bulk(consumer_token_t& token, It itemFirst, size_t max)
+    {
+        size_t count = 0;
+        max = (size_t)sema->tryWaitMany((LightweightSemaphore::ssize_t)(ssize_t)max);
+        while (count != max) {
+            count += inner.template try_dequeue_bulk<It&>(token, itemFirst, max - count);
+        }
+        return count;
+    }
+    
+    
+    
+    // Blocks the current thread until there's something to dequeue, then
+    // dequeues it.
+    // Never allocates. Thread-safe.
+    template<typename U>
+    inline void wait_dequeue(U& item)
+    {
+        while (!sema->wait()) {
+            continue;
+        }
+        while (!inner.try_dequeue(item)) {
+            continue;
+        }
+    }
+
+    // Blocks the current thread until either there's something to dequeue
+    // or the timeout (specified in microseconds) expires. Returns false
+    // without setting `item` if the timeout expires, otherwise assigns
+    // to `item` and returns true.
+    // Using a negative timeout indicates an indefinite timeout,
+    // and is thus functionally equivalent to calling wait_dequeue.
+    // Never allocates. Thread-safe.
+    template<typename U>
+    inline bool wait_dequeue_timed(U& item, std::int64_t timeout_usecs)
+    {
+        if (!sema->wait(timeout_usecs)) {
+            return false;
+        }
+        while (!inner.try_dequeue(item)) {
+            continue;
+        }
+        return true;
+    }
+    
+    // Blocks the current thread until either there's something to dequeue
+    // or the timeout expires. Returns false without setting `item` if the
+    // timeout expires, otherwise assigns to `item` and returns true.
+    // Never allocates. Thread-safe.
+    template<typename U, typename Rep, typename Period>
+    inline bool wait_dequeue_timed(U& item, std::chrono::duration<Rep, Period> const& timeout)
+    {
+        return wait_dequeue_timed(item, std::chrono::duration_cast<std::chrono::microseconds>(timeout).count());
+    }
+    
+    // Blocks the current thread until there's something to dequeue, then
+    // dequeues it using an explicit consumer token.
+    // Never allocates. Thread-safe.
+    template<typename U>
+    inline void wait_dequeue(consumer_token_t& token, U& item)
+    {
+        while (!sema->wait()) {
+            continue;
+        }
+        while (!inner.try_dequeue(token, item)) {
+            continue;
+        }
+    }
+    
+    // Blocks the current thread until either there's something to dequeue
+    // or the timeout (specified in microseconds) expires. Returns false
+    // without setting `item` if the timeout expires, otherwise assigns
+    // to `item` and returns true.
+    // Using a negative timeout indicates an indefinite timeout,
+    // and is thus functionally equivalent to calling wait_dequeue.
+    // Never allocates. Thread-safe.
+    template<typename U>
+    inline bool wait_dequeue_timed(consumer_token_t& token, U& item, std::int64_t timeout_usecs)
+    {
+        if (!sema->wait(timeout_usecs)) {
+            return false;
+        }
+        while (!inner.try_dequeue(token, item)) {
+            continue;
+        }
+        return true;
+    }
+    
+    // Blocks the current thread until either there's something to dequeue
+    // or the timeout expires. Returns false without setting `item` if the
+    // timeout expires, otherwise assigns to `item` and returns true.
+    // Never allocates. Thread-safe.
+    template<typename U, typename Rep, typename Period>
+    inline bool wait_dequeue_timed(consumer_token_t& token, U& item, std::chrono::duration<Rep, Period> const& timeout)
+    {
+        return wait_dequeue_timed(token, item, std::chrono::duration_cast<std::chrono::microseconds>(timeout).count());
+    }
+    
+    // Attempts to dequeue several elements from the queue.
+    // Returns the number of items actually dequeued, which will
+    // always be at least one (this method blocks until the queue
+    // is non-empty) and at most max.
+    // Never allocates. Thread-safe.
+    template<typename It>
+    inline size_t wait_dequeue_bulk(It itemFirst, size_t max)
+    {
+        size_t count = 0;
+        max = (size_t)sema->waitMany((LightweightSemaphore::ssize_t)(ssize_t)max);
+        while (count != max) {
+            count += inner.template try_dequeue_bulk<It&>(itemFirst, max - count);
+        }
+        return count;
+    }
+    
+    // Attempts to dequeue several elements from the queue.
+    // Returns the number of items actually dequeued, which can
+    // be 0 if the timeout expires while waiting for elements,
+    // and at most max.
+    // Using a negative timeout indicates an indefinite timeout,
+    // and is thus functionally equivalent to calling wait_dequeue_bulk.
+    // Never allocates. Thread-safe.
+    template<typename It>
+    inline size_t wait_dequeue_bulk_timed(It itemFirst, size_t max, std::int64_t timeout_usecs)
+    {
+        size_t count = 0;
+        max = (size_t)sema->waitMany((LightweightSemaphore::ssize_t)(ssize_t)max, timeout_usecs);
+        while (count != max) {
+            count += inner.template try_dequeue_bulk<It&>(itemFirst, max - count);
+        }
+        return count;
+    }
+    
+    // Attempts to dequeue several elements from the queue.
+    // Returns the number of items actually dequeued, which can
+    // be 0 if the timeout expires while waiting for elements,
+    // and at most max.
+    // Never allocates. Thread-safe.
+    template<typename It, typename Rep, typename Period>
+    inline size_t wait_dequeue_bulk_timed(It itemFirst, size_t max, std::chrono::duration<Rep, Period> const& timeout)
+    {
+        return wait_dequeue_bulk_timed<It&>(itemFirst, max, std::chrono::duration_cast<std::chrono::microseconds>(timeout).count());
+    }
+    
+    // Attempts to dequeue several elements from the queue using an explicit consumer token.
+    // Returns the number of items actually dequeued, which will
+    // always be at least one (this method blocks until the queue
+    // is non-empty) and at most max.
+    // Never allocates. Thread-safe.
+    template<typename It>
+    inline size_t wait_dequeue_bulk(consumer_token_t& token, It itemFirst, size_t max)
+    {
+        size_t count = 0;
+        max = (size_t)sema->waitMany((LightweightSemaphore::ssize_t)(ssize_t)max);
+        while (count != max) {
+            count += inner.template try_dequeue_bulk<It&>(token, itemFirst, max - count);
+        }
+        return count;
+    }
+    
+    // Attempts to dequeue several elements from the queue using an explicit consumer token.
+    // Returns the number of items actually dequeued, which can
+    // be 0 if the timeout expires while waiting for elements,
+    // and at most max.
+    // Using a negative timeout indicates an indefinite timeout,
+    // and is thus functionally equivalent to calling wait_dequeue_bulk.
+    // Never allocates. Thread-safe.
+    template<typename It>
+    inline size_t wait_dequeue_bulk_timed(consumer_token_t& token, It itemFirst, size_t max, std::int64_t timeout_usecs)
+    {
+        size_t count = 0;
+        max = (size_t)sema->waitMany((LightweightSemaphore::ssize_t)(ssize_t)max, timeout_usecs);
+        while (count != max) {
+            count += inner.template try_dequeue_bulk<It&>(token, itemFirst, max - count);
+        }
+        return count;
+    }
+    
+    // Attempts to dequeue several elements from the queue using an explicit consumer token.
+    // Returns the number of items actually dequeued, which can
+    // be 0 if the timeout expires while waiting for elements,
+    // and at most max.
+    // Never allocates. Thread-safe.
+    template<typename It, typename Rep, typename Period>
+    inline size_t wait_dequeue_bulk_timed(consumer_token_t& token, It itemFirst, size_t max, std::chrono::duration<Rep, Period> const& timeout)
+    {
+        return wait_dequeue_bulk_timed<It&>(token, itemFirst, max, std::chrono::duration_cast<std::chrono::microseconds>(timeout).count());
+    }
+    
+    
+    // Returns an estimate of the total number of elements currently in the queue. This
+    // estimate is only accurate if the queue has completely stabilized before it is called
+    // (i.e. all enqueue and dequeue operations have completed and their memory effects are
+    // visible on the calling thread, and no further operations start while this method is
+    // being called).
+    // Thread-safe.
+    inline size_t size_approx() const
+    {
+        return (size_t)sema->availableApprox();
+    }
+    
+    
+    // Returns true if the underlying atomic variables used by
+    // the queue are lock-free (they should be on most platforms).
+    // Thread-safe.
+    static constexpr bool is_lock_free()
+    {
+        return ConcurrentQueue::is_lock_free();
+    }
+    
+
+private:
+    template<typename U, typename A1, typename A2>
+    static inline U* create(A1&& a1, A2&& a2)
+    {
+        void* p = (Traits::malloc)(sizeof(U));
+        return p != nullptr ? new (p) U(std::forward<A1>(a1), std::forward<A2>(a2)) : nullptr;
+    }
+    
+    template<typename U>
+    static inline void destroy(U* p)
+    {
+        if (p != nullptr) {
+            p->~U();
+        }
+        (Traits::free)(p);
+    }
+    
+private:
+    ConcurrentQueue inner;
+    std::unique_ptr<LightweightSemaphore, void (*)(LightweightSemaphore*)> sema;
+};
+
+
+template<typename T, typename Traits>
+inline void swap(BlockingConcurrentQueue<T, Traits>& a, BlockingConcurrentQueue<T, Traits>& b) MOODYCAMEL_NOEXCEPT
+{
+    a.swap(b);
+}
+
+}   // end namespace moodycamel

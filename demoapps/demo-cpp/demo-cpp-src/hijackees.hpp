@@ -101,16 +101,18 @@ void exper_looping(void *args);
 
 struct ExperReadSeqArgs : ExperArgs {
     const int fd;
-    char * const rbuf;
+    std::vector<char *> rbufs;
     const size_t rlen;
     const unsigned nreads;
 
     ExperReadSeqArgs(int fd, size_t rlen, unsigned nreads)
-        : fd(fd), rbuf(new char[rlen]), rlen(rlen), nreads(nreads) {
-        assert(rbuf != nullptr);
+        : fd(fd), rlen(rlen), nreads(nreads) {
+        for (unsigned i = 0; i < nreads; ++i)
+            rbufs.push_back(new char[rlen]);
     }
     ~ExperReadSeqArgs() {
-        delete[] rbuf;
+        for (auto buf : rbufs)
+            delete[] buf;
     }
 };
 
@@ -119,13 +121,15 @@ void exper_read_seq(void *args);
 
 struct ExperWriteSeqArgs : ExperArgs {
     const int fd;
-    const std::string wcontent;
+    std::vector<std::string> wcontents;
     const size_t wlen;
     const unsigned nwrites;
 
     ExperWriteSeqArgs(int fd, std::string wcontent, unsigned nwrites)
-        : fd(fd), wcontent(wcontent), wlen(wcontent.length()),
-          nwrites(nwrites) {}
+        : fd(fd), wlen(wcontent.length()), nwrites(nwrites) {
+        for (unsigned i = 0; i < nwrites; ++i)
+            wcontents.push_back(wcontent);
+    }
     ~ExperWriteSeqArgs() {}
 };
 

@@ -5,7 +5,9 @@
 #include "debug.hpp"
 #include "timer.hpp"
 #include "env_vars.hpp"
+#include "io_engine.hpp"
 #include "io_uring.hpp"
+#include "thread_pool.hpp"
 #include "scg_graph.hpp"
 #include "scg_nodes.hpp"
 #include "syscalls.hpp"
@@ -43,8 +45,11 @@ void __attribute__((destructor)) foreactor_dtor() {
 // For each hijacked app function, there's one SCGraph instance per thread.
 thread_local std::unordered_map<unsigned, SCGraph> scgraphs;
 
-// One IOUring instance per SCGraph instance.
-thread_local std::unordered_map<unsigned, IOUring> rings;
+// If on, one IOUring instance per SCGraph instance per thread.
+thread_local std::unordered_map<unsigned, IOUring> io_urings;
+
+// If on, one ThreadPool instance per SCGraph instance per thread.
+thread_local std::unordered_map<unsigned, ThreadPool> thread_pools;
 
 
 //////////////////////////
@@ -95,19 +100,30 @@ void foreactor_CreateSCGraph(unsigned graph_id, unsigned total_dims) {
 
     PANIC_IF(scgraphs.contains(graph_id),
              "graph_id %u already exists in scgraphs\n", graph_id);
-    PANIC_IF(rings.contains(graph_id),
-             "graph_id %u already exists in rings\n", graph_id);
+    PANIC_IF(io_urings.contains(graph_id),
+             "graph_id %u already exists in io_urings\n", graph_id);
 
-    // create new IOUring instance
-    rings.emplace(std::piecewise_construct,
-                  std::forward_as_tuple(graph_id),
-                  std::forward_as_tuple(EnvUringQueueLen(graph_id)));
+    // create new backend async syscall engine instance
+    IOEngine *engine = nullptr;
+    int num_uthreads = EnvThreadPoolSize(graph_id);
+    if (num_uthreads <= 0) {
+        DEBUG("using IOUring backend engine\n");
+        io_urings.emplace(std::piecewise_construct,
+                          std::forward_as_tuple(graph_id),
+                          std::forward_as_tuple(EnvUringQueueLen(graph_id)));
+        engine = &io_urings.at(graph_id);
+    } else {
+        DEBUG("using ThreadPool backend engine\n");
+        thread_pools.emplace(std::piecewise_construct,
+                             std::forward_as_tuple(graph_id),
+                             std::forward_as_tuple(num_uthreads));
+        engine = &thread_pools.at(graph_id);
+    }
 
     // create new SCGraph instance, add to map
     scgraphs.emplace(std::piecewise_construct,
                      std::forward_as_tuple(graph_id),
-                     std::forward_as_tuple(graph_id, total_dims,
-                                           &rings.at(graph_id),
+                     std::forward_as_tuple(graph_id, total_dims, engine,
                                            EnvPreIssueDepth(graph_id)));
 }
 

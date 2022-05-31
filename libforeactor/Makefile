@@ -1,5 +1,6 @@
 CC=g++
 CXXFLAGS=-Wall -Werror -std=c++20 -D_GNU_SOURCE
+CXXLIBS=-luring -ldl -pthread
 
 FA_SRCS:=$(wildcard core/*.cpp)
 FA_SRCS+=$(wildcard syscalls/*.cpp)
@@ -39,10 +40,10 @@ debug-timer: libforeactor.so
 
 
 %.o: %.cpp $(FA_HDRS)
-	$(CC) $(CXXFLAGS) -c -fPIC $(FA_INCL) $< -o $@ -luring -ldl
+	$(CC) $(CXXFLAGS) -c -fPIC $(FA_INCL) $< -o $@ $(CXXLIBS)
 
 libforeactor.so: $(FA_OBJS)
-	$(CC) $(CXXFLAGS) -fPIC -shared $^ -o $@ -luring -ldl
+	$(CC) $(CXXFLAGS) -fPIC -shared $^ -o $@ $(CXXLIBS)
 
 
 .PHONY: clean

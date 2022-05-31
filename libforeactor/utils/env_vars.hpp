@@ -12,8 +12,10 @@ extern bool UseForeactor;
 
 
 void ParseEnvValues();
-int EnvUringQueueLen(unsigned graph_id);
+
 int EnvPreIssueDepth(unsigned graph_id);
+int EnvUringQueueLen(unsigned graph_id);
+int EnvThreadPoolSize(unsigned graph_id);
 
 
 }

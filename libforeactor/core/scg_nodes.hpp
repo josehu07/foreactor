@@ -19,6 +19,7 @@ namespace foreactor {
 class SCGraph;  // forward declarations
 class IOEngine;
 class IOUring;
+class ThreadPool;
 
 
 // Types of nodes in graph.
@@ -72,15 +73,6 @@ class SCGraphNode {
 };
 
 
-// Concrete syscall types of SyscallNode.
-typedef enum SyscallType {
-    SC_BASE,
-    SC_OPEN,    // open
-    SC_CLOSE,   // close
-    SC_PREAD,   // pread
-    SC_PWRITE   // pwrite
-} SyscallType;
-
 // Stages of a SyscallNode.
 typedef enum SyscallStage {
     STAGE_NOTREADY,     // there are missing arguments, not ready for issuing
@@ -93,6 +85,10 @@ typedef enum SyscallStage {
 } SyscallStage;
 
 
+enum SyscallType : unsigned;    // forward declarations
+struct ThreadPoolSQEntry;
+
+
 // Parent class of a syscall node in the dependency graph.
 // Each syscall type is a child class that inherits from this class, and a
 // dependency graph instance should be composed of instances of those
@@ -102,9 +98,10 @@ class SyscallNode : public SCGraphNode {
     friend class SCGraph;
     friend class IOEngine;
     friend class IOUring;
+    friend class ThreadPool;
 
     public:
-        const SyscallType sc_type = SC_BASE;
+        const SyscallType sc_type;
 
     protected:
         // Fields that stay the same across loops.
@@ -126,6 +123,8 @@ class SyscallNode : public SCGraphNode {
                                  void *output_buf) = 0;
         virtual void PrepUringSqe(int epoch_sum,
                                   struct io_uring_sqe *sqe) = 0;
+        virtual void PrepUpoolSqe(int epoch_sum,
+                                  ThreadPoolSQEntry *sqe) = 0;
         virtual void ReflectResult(const EpochList& epoch,
                                    void *output_buf) = 0;
         virtual bool GenerateArgs(const EpochList&) = 0;

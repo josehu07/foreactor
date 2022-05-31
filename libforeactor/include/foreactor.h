@@ -21,6 +21,13 @@
 //   (i.e., SCGraph type) involved in the application; for example, giving
 //   QUEUE_0=32 and DEPTH_0=8 says that the IOUring queue length for SCGraph
 //   type 0 is 32 and the pre-issuing depth is set to be 8
+//   
+//   alternatively, one can use a user-level thread pool backend engine for
+//   handling async syscalls instead of io_uring, by giving:
+//   
+//   UTHREADS_{SCGRAPH_ID}=num  (> 0, < # CPU cores)
+//   
+//   this will override the QUEUE_* env var for that graph ID.
 //
 
 

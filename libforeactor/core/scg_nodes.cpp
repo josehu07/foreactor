@@ -4,10 +4,12 @@
 #include <unordered_set>
 #include <functional>
 #include <assert.h>
+#include <liburing.h>
 
 #include "debug.hpp"
 #include "timer.hpp"
 #include "io_engine.hpp"
+#include "thread_pool.hpp"
 #include "scg_nodes.hpp"
 #include "scg_graph.hpp"
 #include "syscalls.hpp"

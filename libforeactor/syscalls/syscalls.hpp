@@ -18,6 +18,19 @@
 namespace foreactor {
 
 
+// Concrete syscall types of SyscallNode.
+typedef enum SyscallType : unsigned {
+    SC_BASE,
+    SC_OPEN,    // open
+    SC_CLOSE,   // close
+    SC_PREAD,   // pread
+    SC_PWRITE   // pwrite
+} SyscallType;
+
+
+struct ThreadPoolSQEntry;   // forward declaration
+
+
 // open
 class SyscallOpen final : public SyscallNode {
     private:
@@ -38,6 +51,7 @@ class SyscallOpen final : public SyscallNode {
 
         long SyscallSync(const EpochList& epoch, void *output_buf);
         void PrepUringSqe(int epoch_sum, struct io_uring_sqe *sqe);
+        void PrepUpoolSqe(int epoch_sum, ThreadPoolSQEntry *sqe);
         void ReflectResult(const EpochList& epoch, void *output_buf);
 
         bool GenerateArgs(const EpochList& epoch);
@@ -81,6 +95,7 @@ class SyscallClose final : public SyscallNode {
 
         long SyscallSync(const EpochList& epoch, void *output_buf);
         void PrepUringSqe(int epoch_sum, struct io_uring_sqe *sqe);
+        void PrepUpoolSqe(int epoch_sum, ThreadPoolSQEntry *sqe);
         void ReflectResult(const EpochList& epoch, void *output_buf);
 
         bool GenerateArgs(const EpochList& epoch);
@@ -121,6 +136,7 @@ class SyscallPread final : public SyscallNode {
 
         long SyscallSync(const EpochList& epoch, void *output_buf);
         void PrepUringSqe(int epoch_sum, struct io_uring_sqe *sqe);
+        void PrepUpoolSqe(int epoch_sum, ThreadPoolSQEntry *sqe);
         void ReflectResult(const EpochList& epoch, void *output_buf);
 
         bool GenerateArgs(const EpochList& epoch);
@@ -164,6 +180,7 @@ class SyscallPwrite final : public SyscallNode {
 
         long SyscallSync(const EpochList& epoch, void *output_buf);
         void PrepUringSqe(int epoch_sum, struct io_uring_sqe *sqe);
+        void PrepUpoolSqe(int epoch_sum, ThreadPoolSQEntry *sqe);
         void ReflectResult(const EpochList& epoch, void *output_buf);
 
         bool GenerateArgs(const EpochList& epoch);

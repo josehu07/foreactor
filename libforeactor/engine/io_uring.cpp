@@ -46,7 +46,7 @@ IOUring::~IOUring() {
 
 
 void IOUring::Prepare(SyscallNode *node, int epoch_sum) {
-    IOUring::EntryId entry_id = IOUring::EncodeEntryId(node, epoch_sum);
+    EntryId entry_id = EncodeEntryId(node, epoch_sum);
     
     assert(!prepared.contains(entry_id));
     prepared.insert(entry_id);
@@ -76,6 +76,7 @@ int IOUring::SubmitAll() {
 
     prepared.clear();
 
+    // call io_uring_submit() once for this bulk
     return io_uring_submit(&ring);
 }
 
