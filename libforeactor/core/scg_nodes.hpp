@@ -10,8 +10,7 @@
 #include "foreactor.h"
 
 
-#ifndef __FOREACTOR_SCG_NODES_H__
-#define __FOREACTOR_SCG_NODES_H__
+#pragma once
 
 
 namespace foreactor {
@@ -204,6 +203,3 @@ class BranchNode final : public SCGraphNode {
 
 
 }
-
-
-#endif

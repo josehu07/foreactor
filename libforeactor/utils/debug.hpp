@@ -8,8 +8,7 @@
 #include <stdlib.h>
 
 
-#ifndef __FOREACTOR_DEBUG_H__
-#define __FOREACTOR_DEBUG_H__
+#pragma once
 
 
 ///////////////////
@@ -75,6 +74,3 @@ static inline std::string StreamStr(const T& item) {
 
 
 }
-
-
-#endif

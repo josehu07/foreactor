@@ -7,8 +7,7 @@
 #include "value_pool.hpp"
 
 
-#ifndef __FOREACTOR_SCG_GRAPH_H__
-#define __FOREACTOR_SCG_GRAPH_H__
+#pragma once
 
 
 namespace foreactor {
@@ -106,6 +105,3 @@ class SCGraph {
 
 // Include template implementation in-place.
 #include "scg_graph.tpl.hpp"
-
-
-#endif

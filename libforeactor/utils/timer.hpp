@@ -5,8 +5,7 @@
 #include "debug.hpp"
 
 
-#ifndef __FOREACTOR_TIMER_H__
-#define __FOREACTOR_TIMER_H__
+#pragma once
 
 
 //////////////////
@@ -119,6 +118,3 @@ extern std::unordered_map<std::string, Timer> timers;
 
 
 }
-
-
-#endif

@@ -8,8 +8,7 @@
 #include "debug.hpp"
 
 
-#ifndef __FOREACTOR_VALUE_POOL_H__
-#define __FOREACTOR_VALUE_POOL_H__
+#pragma once
 
 
 namespace foreactor {
@@ -99,6 +98,3 @@ class ValuePool {
 
 // Include template implementation in-place.
 #include "value_pool.tpl.hpp"
-
-
-#endif

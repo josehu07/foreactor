@@ -9,8 +9,7 @@
 #include "value_pool.hpp"
 
 
-#ifndef __FOREACTOR_IO_URING_H__
-#define __FOREACTOR_IO_URING_H__
+#pragma once
 
 
 namespace foreactor {
@@ -40,6 +39,3 @@ class IOUring : public IOEngine {
 
 
 }
-
-
-#endif

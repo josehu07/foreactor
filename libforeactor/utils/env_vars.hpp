@@ -1,8 +1,7 @@
 #include <stdlib.h>
 
 
-#ifndef __FOREACTOR_ENV_VARS_H__
-#define __FOREACTOR_ENV_VARS_H__
+#pragma once
 
 
 namespace foreactor {
@@ -18,6 +17,3 @@ int EnvPreIssueDepth(unsigned graph_id);
 
 
 }
-
-
-#endif

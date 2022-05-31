@@ -5,8 +5,7 @@
 #include "scg_nodes.hpp"
 
 
-#ifndef __FOREACTOR_IO_ENGINE_H__
-#define __FOREACTOR_IO_ENGINE_H__
+#pragma once
 
 
 namespace foreactor {
@@ -53,6 +52,3 @@ class IOEngine {
 
 
 }
-
-
-#endif

@@ -2,8 +2,7 @@
 #include <unistd.h>
 
 
-#ifndef __FOREACTOR_POSIX_ITF_H__
-#define __FOREACTOR_POSIX_ITF_H__
+#pragma once
 
 
 namespace foreactor::posix {
@@ -26,6 +25,3 @@ DECL_POSIX_FN(pwrite);
 
 
 }
-
-
-#endif

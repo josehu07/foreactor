@@ -1,6 +1,9 @@
 // Template implementation should be included in-place with the ".hpp".
 
 
+#pragma once
+
+
 namespace foreactor {
 
 

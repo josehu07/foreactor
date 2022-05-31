@@ -12,8 +12,7 @@
 #include "value_pool.hpp"
 
 
-#ifndef __FOREACTOR_SYSCALLS_H__
-#define __FOREACTOR_SYSCALLS_H__
+#pragma once
 
 
 namespace foreactor {
@@ -195,6 +194,3 @@ class SyscallPwrite final : public SyscallNode {
 
 
 }
-
-
-#endif

@@ -8,8 +8,7 @@
 #include "value_pool.hpp"
 
 
-#ifndef __FOREACTOR_THREAD_POOL_H__
-#define __FOREACTOR_THREAD_POOL_H__
+#pragma once
 
 
 namespace foreactor {
@@ -36,6 +35,3 @@ class ThreadPool : public IOEngine {
 
 
 }
-
-
-#endif
