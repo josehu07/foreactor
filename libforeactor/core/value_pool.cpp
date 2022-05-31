@@ -12,10 +12,6 @@
 namespace foreactor {
 
 
-//////////////////////////////
-// EpochList implementation //
-//////////////////////////////
-
 EpochList::EpochList(unsigned total_dims)
         : total_dims(total_dims), epochs(total_dims, 0) {
     Reset();

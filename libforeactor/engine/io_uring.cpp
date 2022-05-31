@@ -5,19 +5,17 @@
 
 #include "debug.hpp"
 #include "timer.hpp"
+#include "io_engine.hpp"
 #include "io_uring.hpp"
 #include "scg_nodes.hpp"
+#include "value_pool.hpp"
 
 
 namespace foreactor {
 
 
-////////////////////////////
-// IOUring implementation //
-////////////////////////////
-
 IOUring::IOUring(int sq_length)
-        : sq_length(sq_length), prepared{}, onthefly{} {
+        : sq_length(sq_length) {
     assert(sq_length >= 0);
 
     TIMER_START("uring-init");
@@ -47,43 +45,21 @@ IOUring::~IOUring() {
 }
 
 
-struct io_uring *IOUring::Ring() {
-    return &ring;
-}
-
-
-IOUring::EntryId IOUring::EncodeEntryId(SyscallNode *node, int epoch_sum) {
-    // relies on the fact that Linux on x86_64 only uses 48-bit virtual
-    // addresses currently. We encode the top 48 bits of the uint64_t
-    // user_data as the node pointer, and the lower 16 bits as the epoch_sum
-    // number.
-    assert(epoch_sum >= 0 && epoch_sum < (1 << 16));
-    uint64_t node_bits = reinterpret_cast<uint64_t>(node);
-    uint64_t epoch_bits = static_cast<uint64_t>(epoch_sum);
-    uint64_t entry_id = (node_bits << 16) | (epoch_bits & ((1 << 16) - 1));
-    return entry_id;
-}
-
-std::tuple<SyscallNode *, int> IOUring::DecodeEntryId(EntryId entry_id) {
-    uint64_t node_bits = entry_id >> 16;
-    uint64_t epoch_bits = entry_id & ((1 << 16) - 1);
-    return std::make_tuple(reinterpret_cast<SyscallNode *>(node_bits),
-                           static_cast<int>(epoch_bits));
-}
-
-
-void IOUring::Prepare(EntryId entry_id) {
+void IOUring::Prepare(SyscallNode *node, int epoch_sum) {
+    IOUring::EntryId entry_id = IOUring::EncodeEntryId(node, epoch_sum);
+    
     assert(!prepared.contains(entry_id));
     prepared.insert(entry_id);
 }
 
-void IOUring::SubmitAll() {
+int IOUring::SubmitAll() {
+    // move everything from prepared set to onthefly set
     for (EntryId entry_id : prepared) {
         auto [node, epoch_sum] = DecodeEntryId(entry_id);
         assert(!onthefly.contains(entry_id));
         assert(node->stage.Get(epoch_sum) == STAGE_PREPARED);
 
-        struct io_uring_sqe *sqe = io_uring_get_sqe(Ring());
+        struct io_uring_sqe *sqe = io_uring_get_sqe(&ring);
         assert(sqe != nullptr);
         io_uring_sqe_set_data(sqe, reinterpret_cast<void *>(entry_id));
 
@@ -99,32 +75,29 @@ void IOUring::SubmitAll() {
     }
 
     prepared.clear();
-    // io_uring_submit() will be done by SyscallNode->Issue()
+
+    return io_uring_submit(&ring);
 }
 
-void IOUring::RemoveOne(EntryId entry_id) {
-    assert(onthefly.contains(entry_id));
-    onthefly.erase(entry_id);
-}
-
-
-struct io_uring_cqe *IOUring::WaitOneCqe() {
+std::tuple<SyscallNode *, int, long> IOUring::CompleteOne() {
     struct io_uring_cqe *cqe;
-    int ret = io_uring_wait_cqe(Ring(), &cqe);
+    int ret = io_uring_wait_cqe(&ring, &cqe);
     if (ret != 0) {
         DEBUG("wait CQE failed %d\n", ret);
         // TODO: handle this more elegantly
         assert(false);
     }
-    return cqe;
-}
 
-void IOUring::SeenOneCqe(struct io_uring_cqe *cqe) {
-    io_uring_cqe_seen(Ring(), cqe);
-}
+    EntryId entry_id = reinterpret_cast<EntryId>(io_uring_cqe_get_data(cqe));
+    auto [node, epoch_sum] = DecodeEntryId(entry_id);
+    assert(node->stage.Get(epoch_sum) == STAGE_ONTHEFLY);
 
-IOUring::EntryId IOUring::GetCqeEntryId(struct io_uring_cqe *cqe) {
-    return reinterpret_cast<EntryId>(io_uring_cqe_get_data(cqe));
+    io_uring_cqe_seen(&ring, cqe);
+
+    assert(onthefly.contains(entry_id));
+    onthefly.erase(entry_id);
+
+    return std::make_tuple(node, epoch_sum, cqe->res);
 }
 
 

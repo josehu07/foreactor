@@ -11,6 +11,7 @@
 #include "timer.hpp"
 #include "scg_nodes.hpp"
 #include "scg_graph.hpp"
+#include "io_engine.hpp"
 #include "value_pool.hpp"
 
 
@@ -41,18 +42,18 @@ void SCGraph::UnregisterSCGraph() {
 // SCGraph implementation //
 ////////////////////////////
 
-SCGraph::SCGraph(unsigned graph_id, unsigned total_dims, IOUring *ring,
+SCGraph::SCGraph(unsigned graph_id, unsigned total_dims, IOEngine *engine,
                  int pre_issue_depth)
         : graph_id(graph_id), total_dims(total_dims), nodes{},
           pre_issue_depth(pre_issue_depth),
-          graph_built(false), ring(ring),
+          graph_built(false), engine(engine),
           num_prepared(0), prepared_distance(-1),
           initial_frontier(nullptr), frontier(nullptr),
           frontier_epoch(total_dims),
           peekhead(nullptr), peekhead_edge(EDGE_BASE),
           peekhead_epoch(total_dims), peekhead_distance(-1),
           peekhead_hit_end(false) {
-    assert(ring != nullptr);
+    assert(engine != nullptr);
     assert(pre_issue_depth >= 0);
 }
 
@@ -88,22 +89,22 @@ bool SCGraph::IsBuilt() const {
 
 void SCGraph::ClearAllReqs() {
     TIMER_START(TimerNameStr("clear-prog"));
-    ring->CleanUp();
+    engine->CleanUp();
     TIMER_PAUSE(TimerNameStr("clear-prog"));
     DEBUG("cleared SCGraph %u\n", graph_id);
 
-    TIMER_PRINT(TimerNameStr("pool-flush"),  TIME_MICRO);
-    TIMER_PRINT(TimerNameStr("pool-clear"),  TIME_MICRO);
-    TIMER_PRINT(TimerNameStr("peek-algo"),   TIME_MICRO);
-    TIMER_PRINT(TimerNameStr("ring-submit"), TIME_MICRO);
-    TIMER_PRINT(TimerNameStr("sync-call"),   TIME_MICRO);
-    TIMER_PRINT(TimerNameStr("ring-cmpl"),   TIME_MICRO);
-    TIMER_PRINT(TimerNameStr("clear-prog"),  TIME_MICRO);
+    TIMER_PRINT(TimerNameStr("pool-flush"),    TIME_MICRO);
+    TIMER_PRINT(TimerNameStr("pool-clear"),    TIME_MICRO);
+    TIMER_PRINT(TimerNameStr("peek-algo"),     TIME_MICRO);
+    TIMER_PRINT(TimerNameStr("engine-submit"), TIME_MICRO);
+    TIMER_PRINT(TimerNameStr("sync-call"),     TIME_MICRO);
+    TIMER_PRINT(TimerNameStr("engine-cmpl"),   TIME_MICRO);
+    TIMER_PRINT(TimerNameStr("clear-prog"),    TIME_MICRO);
     TIMER_RESET(TimerNameStr("pool-flush"));
     TIMER_RESET(TimerNameStr("peek-algo"));
-    TIMER_RESET(TimerNameStr("ring-submit"));
+    TIMER_RESET(TimerNameStr("engine-submit"));
     TIMER_RESET(TimerNameStr("sync-call"));
-    TIMER_RESET(TimerNameStr("ring-cmpl"));
+    TIMER_RESET(TimerNameStr("engine-cmpl"));
     TIMER_RESET(TimerNameStr("clear-prog"));
 }
 

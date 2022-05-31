@@ -17,7 +17,9 @@
 namespace foreactor {
 
 
-class SCGraph;  // forward declaration
+class SCGraph;  // forward declarations
+class IOEngine;
+class IOUring;
 
 
 // Types of nodes in graph.
@@ -84,9 +86,9 @@ typedef enum SyscallType {
 typedef enum SyscallStage {
     STAGE_NOTREADY,     // there are missing arguments, not ready for issuing
     STAGE_ARGREADY,     // args are complete, not issued yet
-    STAGE_PREPARED,     // ready to get filled to io_uring submission queue,
+    STAGE_PREPARED,     // ready to get filled to engine's submission queue,
                         // actual io_uring_prep_xxx() not called yet
-    STAGE_ONTHEFLY,     // prepared and has been submitted to io_uring async,
+    STAGE_ONTHEFLY,     // prepared and has been submitted to engine async,
                         // completion not harvested yet
     STAGE_FINISHED      // issued sync / issued async and completion harvested
 } SyscallStage;
@@ -99,6 +101,7 @@ typedef enum SyscallStage {
 // See syscalls.hpp.
 class SyscallNode : public SCGraphNode {
     friend class SCGraph;
+    friend class IOEngine;
     friend class IOUring;
 
     public:

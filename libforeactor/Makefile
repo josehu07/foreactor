@@ -3,16 +3,18 @@ CXXFLAGS=-Wall -Werror -std=c++20 -D_GNU_SOURCE
 
 FA_SRCS:=$(wildcard core/*.cpp)
 FA_SRCS+=$(wildcard syscalls/*.cpp)
+FA_SRCS+=$(wildcard engine/*.cpp)
 FA_SRCS+=$(wildcard utils/*.cpp)
 
 FA_HDRS:=$(wildcard core/*.hpp)
 FA_HDRS+=$(wildcard syscalls/*.hpp)
+FA_HDRS+=$(wildcard engine/*.hpp)
 FA_HDRS+=$(wildcard utils/*.hpp)
 FA_HDRS+=$(wildcard include/foreactor.h)
 
 FA_OBJS:=$(patsubst %.cpp,%.o,$(FA_SRCS))
 
-FA_INCL:=-I./core -I./syscalls -I./utils -I./include
+FA_INCL:=-I./core -I./syscalls -I./engine -I./utils -I./include
 
 
 .PHONY: all

@@ -4,11 +4,10 @@
 #include <unordered_set>
 #include <functional>
 #include <assert.h>
-#include <liburing.h>
 
 #include "debug.hpp"
 #include "timer.hpp"
-#include "io_uring.hpp"
+#include "io_engine.hpp"
 #include "scg_nodes.hpp"
 #include "scg_graph.hpp"
 #include "syscalls.hpp"
@@ -124,11 +123,7 @@ void SyscallNode::PrepAsync(const EpochList& epoch) {
     assert(stage.Get(epoch) == STAGE_ARGREADY);
     assert(scgraph != nullptr);
 
-    // encode node ptr and epoch_sum number into a uint64_t user_data
-    IOUring::EntryId entry_id = IOUring::EncodeEntryId(this, EpochSum(epoch));
-
-    // put this node to prepared state
-    scgraph->ring->Prepare(entry_id);
+    scgraph->engine->Prepare(this, EpochSum(epoch));
     stage.Set(epoch, STAGE_PREPARED);
 }
 
@@ -138,22 +133,14 @@ void SyscallNode::CmplAsync(const EpochList& epoch) {
 
     // loop until the completion for myself is seen
     while (true) {
-        struct io_uring_cqe *cqe = scgraph->ring->WaitOneCqe();
-        assert(cqe != nullptr);
+        auto [entry_node, entry_epoch_sum, entry_rc] =
+            scgraph->engine->CompleteOne();
 
-        // fetch the node ptr and epoch of this request
-        IOUring::EntryId entry_id = scgraph->ring->GetCqeEntryId(cqe);
-        auto [sqe_node, sqe_epoch_sum] = IOUring::DecodeEntryId(entry_id);
-        assert(sqe_node->stage.Get(sqe_epoch_sum) == STAGE_ONTHEFLY);
-        
-        // reflect rc and stage
-        sqe_node->rc.Set(sqe_epoch_sum, cqe->res);
-        sqe_node->stage.Set(sqe_epoch_sum, STAGE_FINISHED);
-        scgraph->ring->SeenOneCqe(cqe);
-        scgraph->ring->RemoveOne(entry_id);
+        entry_node->rc.Set(entry_epoch_sum, entry_rc);
+        entry_node->stage.Set(entry_epoch_sum, STAGE_FINISHED);
         
         // if desired completion found, break
-        if (sqe_node == this && sqe_epoch_sum == epoch_sum)
+        if (entry_node == this && entry_epoch_sum == epoch_sum)
             break;
     }
 }
@@ -274,12 +261,11 @@ long SyscallNode::Issue(const EpochList& epoch, void *output_buf) {
             assert(syscall_node->stage.Get(peek_epoch) == STAGE_ARGREADY);
 
             // decide if the next node is pre-issuable, and if so, prepare
-            // for submission to uring
+            // for submission to engine
             if (edge == EDGE_WEAK)
                 weak_state = true;
             if (IsForeactable(weak_state, syscall_node)) {
-                // prepare the IOUring submission entry, set node stage to be
-                // in-progress
+                // prepare the submission entry, set node stage to be ONTHEFLY
                 syscall_node->PrepAsync(peek_epoch);
                 DEBUG("prepared %d %s<%p>@%s\n",
                       scgraph->num_prepared, StreamStr(*syscall_node).c_str(),
@@ -300,7 +286,7 @@ long SyscallNode::Issue(const EpochList& epoch, void *output_buf) {
         TIMER_PAUSE(scgraph->TimerNameStr("peek-algo"));
     }
 
-    // see some number of syscall nodes prepared, may do io_uring_submit
+    // see some number of syscall nodes prepared, may do SubmitAll()
     // if we have a sufficient number of prepared entries or if the
     // earliest prepared entry is close enough to current frontier
     if (scgraph->num_prepared > 0) {
@@ -309,12 +295,9 @@ long SyscallNode::Issue(const EpochList& epoch, void *output_buf) {
             (scgraph->prepared_distance <= 1)) {
             // move all prepared requests to in_progress stage, actually
             // call the io_uring_prep_xxx()s
-            TIMER_START(scgraph->TimerNameStr("ring-submit"));
-            scgraph->ring->SubmitAll();
-            // do io_uring_submit()
-            [[maybe_unused]] int num_submitted =
-                io_uring_submit(scgraph->ring->Ring());
-            TIMER_PAUSE(scgraph->TimerNameStr("ring-submit"));
+            TIMER_START(scgraph->TimerNameStr("engine-submit"));
+            [[maybe_unused]] int num_submitted = scgraph->engine->SubmitAll();
+            TIMER_PAUSE(scgraph->TimerNameStr("engine-submit"));
             DEBUG("submitted %d / %d entries to SQ\n",
                   num_submitted, scgraph->num_prepared);
             assert(num_submitted == scgraph->num_prepared);
@@ -337,19 +320,18 @@ long SyscallNode::Issue(const EpochList& epoch, void *output_buf) {
         TIMER_PAUSE(scgraph->TimerNameStr("sync-call"));
         DEBUG("sync-call finished rc %ld\n", syscall_rc);
     } else {
-        // if has been pre-issued, process CQEs from io_uring until mine
-        // completion is seen
+        // if has been pre-issued, process CQEs until mine is seen
         assert(stage.Get(epoch) != STAGE_PREPARED);
-        DEBUG("ring-cmpl %s<%p>@%s\n",
+        DEBUG("engine-cmpl %s<%p>@%s\n",
               StreamStr(*this).c_str(), this, StreamStr(epoch).c_str());
-        TIMER_START(scgraph->TimerNameStr("ring-cmpl"));
+        TIMER_START(scgraph->TimerNameStr("engine-cmpl"));
         if (stage.Get(epoch) == STAGE_ONTHEFLY)
             CmplAsync(epoch);
         assert(stage.Get(epoch) == STAGE_FINISHED);
-        TIMER_PAUSE(scgraph->TimerNameStr("ring-cmpl"));
-        DEBUG("ring-cmpl finished rc %ld\n", rc.Get(epoch));
+        TIMER_PAUSE(scgraph->TimerNameStr("engine-cmpl"));
+        DEBUG("engine-cmpl finished rc %ld\n", rc.Get(epoch));
         ReflectResult(epoch, output_buf);
-        DEBUG("ring-cmpl result reflected\n");
+        DEBUG("engine-cmpl result reflected\n");
     }
 
     // push frontier forward, reduce distance counters by 1

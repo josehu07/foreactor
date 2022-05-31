@@ -2,7 +2,7 @@
 #include <unordered_map>
 #include <assert.h>
 
-#include "io_uring.hpp"
+#include "io_engine.hpp"
 #include "scg_nodes.hpp"
 #include "value_pool.hpp"
 
@@ -46,7 +46,7 @@ class SCGraph {
 
     private:
         bool graph_built = false;
-        IOUring *ring = nullptr;
+        IOEngine *engine = nullptr;
 
         // Number of uring-prepared syscalls not yet submitted, and the
         // distance of the earliest prepared SyscallNode from frontier.
@@ -76,7 +76,7 @@ class SCGraph {
 
     public:
         SCGraph() = delete;
-        SCGraph(unsigned graph_id, unsigned total_dims, IOUring *ring,
+        SCGraph(unsigned graph_id, unsigned total_dims, IOEngine *backend,
                 int pre_issue_depth);
         ~SCGraph();
 
@@ -86,7 +86,7 @@ class SCGraph {
 
         // Reset graph state to initial state.
         void ResetToStart();
-        void ClearAllReqs();    // TODO: do GC instead of this
+        void ClearAllReqs();
 
         // Add a new node into graph -- used at graph building.
         void AddNode(SCGraphNode *node, bool is_start = false);
