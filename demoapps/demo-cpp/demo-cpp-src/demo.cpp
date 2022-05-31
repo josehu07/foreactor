@@ -56,9 +56,20 @@ void run_iters(ExperFunc exper_func, ExperArgs *exper_args,
 
     if (print_time) {
         std::cerr << "  Time elapsed: [ ";
-        for (double& us : elapsed_us)
+        double sum_us = 0.;
+        int skip = 3, cnt = 0;
+        for (double& us : elapsed_us) {
             std::cerr << us << " ";
-        std::cerr << "] us" << std::endl;
+            if (skip <= 0) {
+                sum_us += us;
+                cnt++;
+            } else
+                skip--;
+        }
+        std::cerr << "] ";
+        if (cnt > 0)
+            std::cerr << "avg " << sum_us / cnt;
+        std::cerr << " us" << std::endl;
     }
 }
 

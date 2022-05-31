@@ -49,7 +49,7 @@ def run_dump(name, dbdir, libforeactor, queue, depths, args=[]):
         print("CORRECT")
 
 def run_demo(name, dbdir, libforeactor, queue, depths, args=[]):
-    cmd = ['./demo', name, dbdir, '5']
+    cmd = ['./demo', name, dbdir, '100']
     cmd += args
 
     env = gen_env(libforeactor, queue, depths)
