@@ -80,6 +80,7 @@ void foreactor_AddSyscallPread(unsigned graph_id,
                                                    size_t *,
                                                    off_t *),
                                void (*rcsave_func)(const int *, ssize_t),
+                               size_t pre_alloc_buf_size,
                                bool is_start);
 
 void foreactor_AddSyscallPwrite(unsigned graph_id,

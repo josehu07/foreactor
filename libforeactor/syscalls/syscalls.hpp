@@ -1,6 +1,7 @@
 #include <iostream>
 #include <string>
 #include <vector>
+#include <unordered_set>
 #include <functional>
 #include <fcntl.h>
 #include <unistd.h>
@@ -111,6 +112,7 @@ class SyscallPread final : public SyscallNode {
 
         // Used when issued async.
         ValuePool<char *> internal_buf;
+        std::unordered_set<char *> pre_alloced_bufs;
 
         std::function<bool(const int *,
                            int *,
@@ -134,8 +136,9 @@ class SyscallPread final : public SyscallNode {
                                         int *,
                                         size_t *,
                                         off_t *)> arggen_func,
-                     std::function<void(const int *, ssize_t)> rcsave_func);
-        ~SyscallPread() {}
+                     std::function<void(const int *, ssize_t)> rcsave_func,
+                     size_t pre_alloc_buf_size);
+        ~SyscallPread();
 
         friend std::ostream& operator<<(std::ostream& s,
                                         const SyscallPread& n);

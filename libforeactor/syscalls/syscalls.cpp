@@ -11,6 +11,7 @@
 
 #include "debug.hpp"
 #include "posix_itf.hpp"
+#include "scg_graph.hpp"
 #include "scg_nodes.hpp"
 #include "syscalls.hpp"
 #include "value_pool.hpp"
@@ -220,13 +221,22 @@ SyscallPread::SyscallPread(unsigned node_id, std::string name,
                                               int *,
                                               size_t *,
                                               off_t *)> arggen_func,
-                           std::function<void(const int *, ssize_t)> rcsave_func)
+                           std::function<void(const int *, ssize_t)> rcsave_func,
+                           size_t pre_alloc_buf_size)
         : SyscallNode(node_id, name, SC_PREAD, /*pure_sc*/ true,
                       scgraph, assoc_dims),
           fd(assoc_dims), count(assoc_dims), offset(assoc_dims),
           internal_buf(assoc_dims), arggen_func(arggen_func),
           rcsave_func(rcsave_func) {
     assert(arggen_func != nullptr);
+    // TODO: may need fewer than these many pre-alloced buffers
+    for (int i = 0; i < scgraph->pre_issue_depth; ++i)
+        pre_alloced_bufs.insert(new char[pre_alloc_buf_size]);
+}
+
+SyscallPread::~SyscallPread() {
+    for (auto buf : pre_alloced_bufs)
+        delete[] buf;
 }
 
 
@@ -252,7 +262,9 @@ void SyscallPread::PrepUringSqe(int epoch_sum,
                                 struct io_uring_sqe *sqe) {
     if ((!internal_buf.Has(epoch_sum)) ||
         internal_buf.Get(epoch_sum) == nullptr) {
-        internal_buf.Set(epoch_sum, new char[count.Get(epoch_sum)]);
+        assert(pre_alloced_bufs.size() > 0);
+        internal_buf.Set(epoch_sum,
+            pre_alloced_bufs.extract(pre_alloced_bufs.cbegin()).value());
     }
     io_uring_prep_read(sqe,
                        fd.Get(epoch_sum),
@@ -299,7 +311,7 @@ void SyscallPread::RemoveOneEpoch(const EpochList& epoch) {
     count.Remove(epoch);
     offset.Remove(epoch);
     if (internal_buf.Has(epoch))
-        internal_buf.Remove(epoch, /*do_delete*/ true);
+        internal_buf.Remove(epoch, /*move_into*/ &pre_alloced_bufs);
 }
 
 void SyscallPread::ResetValuePools() {
@@ -307,7 +319,7 @@ void SyscallPread::ResetValuePools() {
     fd.Reset();
     count.Reset();
     offset.Reset();
-    internal_buf.Reset(/*do_delete*/ true);
+    internal_buf.Reset(/*move_into*/ &pre_alloced_bufs);
 }
 
 

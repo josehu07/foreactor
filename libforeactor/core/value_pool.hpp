@@ -83,13 +83,14 @@ class ValuePool {
             const EpochList& epoch);
         template <typename U = T>
         std::enable_if_t<std::is_pointer<U>::value, void> Remove(
-            const EpochList& epoch, bool do_delete = false);
+            const EpochList& epoch,
+            std::unordered_set<U> *move_into = nullptr);
 
         template <typename U = T>
         std::enable_if_t<!std::is_pointer<U>::value, void> Reset();
         template <typename U = T>
         std::enable_if_t<std::is_pointer<U>::value, void> Reset(
-            bool do_delete = false);
+            std::unordered_set<U> *move_into = nullptr);
 };
 
 

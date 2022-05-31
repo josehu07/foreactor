@@ -153,10 +153,8 @@ void SyscallNode::CmplAsync(const EpochList& epoch) {
         scgraph->ring->RemoveOne(entry_id);
         
         // if desired completion found, break
-        if (sqe_node == this && sqe_epoch_sum == epoch_sum) {
-
+        if (sqe_node == this && sqe_epoch_sum == epoch_sum)
             break;
-        }
     }
 }
 

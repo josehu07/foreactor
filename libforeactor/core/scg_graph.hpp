@@ -33,6 +33,10 @@ class SCGraph {
 
         std::unordered_map<unsigned, SCGraphNode *> nodes;
 
+        // How many syscalls we try to issue ahead of time.
+        // Must be no larger than the length of SQ of uring.
+        const int pre_issue_depth = 0;
+
         // Register this SCGraph as active on my thread. The SCGraph must have
         // been initialized and associated with the given IOUring queue pair.
         static void RegisterSCGraph(SCGraph *scgraph);
@@ -43,10 +47,6 @@ class SCGraph {
     private:
         bool graph_built = false;
         IOUring *ring = nullptr;
-
-        // How many syscalls we try to issue ahead of time.
-        // Must be no larger than the length of SQ of uring.
-        int pre_issue_depth = 0;
 
         // Number of uring-prepared syscalls not yet submitted, and the
         // distance of the earliest prepared SyscallNode from frontier.

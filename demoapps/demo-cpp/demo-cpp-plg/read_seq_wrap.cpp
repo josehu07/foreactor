@@ -31,7 +31,7 @@ static void BuildSCGraph() {
     int pread_assoc_dims[1] = {0};
     int branch_assoc_dims[1] = {0};
 
-    foreactor_AddSyscallPread(graph_id, 0, "pread", pread_assoc_dims, 1, pread_arggen, nullptr, /*is_start*/ true);
+    foreactor_AddSyscallPread(graph_id, 0, "pread", pread_assoc_dims, 1, pread_arggen, nullptr, (1 << 20), /*is_start*/ true);
     foreactor_AddBranchNode(graph_id, 1, "branch", branch_assoc_dims, 1, branch_arggen, 2, false);
 
     foreactor_SyscallSetNext(graph_id, 0, 1, /*weak_edge*/ false);

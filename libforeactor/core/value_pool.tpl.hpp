@@ -73,6 +73,7 @@ template <typename T>
 template <typename U>
 std::enable_if_t<!std::is_pointer<U>::value, void>
 ValuePool<T>::Remove(const EpochList& epoch) {
+    // non-pointer type
     assert(Has(epoch));
     data.erase(epoch.Sum(assoc_dims));
 }
@@ -80,13 +81,13 @@ ValuePool<T>::Remove(const EpochList& epoch) {
 template <typename T>
 template <typename U>
 std::enable_if_t<std::is_pointer<U>::value, void>
-ValuePool<T>::Remove(const EpochList& epoch, bool do_delete) {
+ValuePool<T>::Remove(const EpochList& epoch,
+                     std::unordered_set<U> *move_into) {
+    // pointer type specialization
     assert(Has(epoch));
     auto&& ptr = data.extract(epoch.Sum(assoc_dims)).mapped();
-    if (do_delete) {
-        if (ptr != nullptr)
-            delete[] ptr;
-    }
+    if (move_into != nullptr && ptr != nullptr)
+        move_into->insert(ptr);
 }
 
 
@@ -101,12 +102,12 @@ ValuePool<T>::Reset() {
 template <typename T>
 template <typename U>
 std::enable_if_t<std::is_pointer<U>::value, void>
-ValuePool<T>::Reset(bool do_delete) {
+ValuePool<T>::Reset(std::unordered_set<U> *move_into) {
     // pointer type specialization
-    if (do_delete) {
+    if (move_into != nullptr) {
         for (auto&& [_, ptr] : data) {
             if (ptr != nullptr)
-                delete[] ptr;
+                move_into->insert(ptr);
         }
     }
     data.clear();

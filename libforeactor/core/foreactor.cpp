@@ -178,6 +178,7 @@ void foreactor_AddSyscallPread(unsigned graph_id,
                                                   size_t *,
                                                   off_t *),
                               void (*rcsave_func)(const int *, ssize_t),
+                              size_t pre_alloc_buf_size,
                               bool is_start) {
     SCGraph *scgraph = GetSCGraphFromId(graph_id);
     std::unordered_set<int> assoc_dims_set =
@@ -186,7 +187,7 @@ void foreactor_AddSyscallPread(unsigned graph_id,
     PanicIfNodeExists(scgraph, graph_id, node_id);
     SyscallPread *node = new SyscallPread(node_id, std::string(name), scgraph,
                                           assoc_dims_set, arggen_func,
-                                          rcsave_func);
+                                          rcsave_func, pre_alloc_buf_size);
     scgraph->AddNode(node, is_start);
 }
 

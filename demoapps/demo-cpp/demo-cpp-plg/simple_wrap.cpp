@@ -80,8 +80,8 @@ static void BuildSCGraph() {
 
     foreactor_AddSyscallOpen(graph_id, 0, "open", nullptr, 0, open_arggen, open_rcsave, /*is_start*/ true);
     foreactor_AddSyscallPwrite(graph_id, 1, "pwrite", nullptr, 0, pwrite_arggen, pwrite_rcsave, false);
-    foreactor_AddSyscallPread(graph_id, 2, "pread0", nullptr, 0, pread0_arggen, pread0_rcsave, false);
-    foreactor_AddSyscallPread(graph_id, 3, "pread1", nullptr, 0, pread1_arggen, pread1_rcsave, false);
+    foreactor_AddSyscallPread(graph_id, 2, "pread0", nullptr, 0, pread0_arggen, pread0_rcsave, 4096, false);
+    foreactor_AddSyscallPread(graph_id, 3, "pread1", nullptr, 0, pread1_arggen, pread1_rcsave, 4096, false);
     foreactor_AddSyscallClose(graph_id, 4, "close", nullptr, 0, close_arggen, nullptr, false);
 
     foreactor_SyscallSetNext(graph_id, 0, 1, /*weak_edge*/ false);

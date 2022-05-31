@@ -104,8 +104,8 @@ static void BuildSCGraph() {
     foreactor_AddSyscallOpen(graph_id, 0, "open", nullptr, 0, open_arggen, open_rcsave, /*is_start*/ true);
     foreactor_AddSyscallPwrite(graph_id, 1, "pwrite", pwrite_assoc_dims, 2, pwrite_arggen, pwrite_rcsave, false);
     foreactor_AddBranchNode(graph_id, 2, "branch0", branch0_assoc_dims, 2, branch0_arggen, 2, false);
-    foreactor_AddSyscallPread(graph_id, 3, "pread0", pread_assoc_dims, 2, pread0_arggen, pread0_rcsave, false);
-    foreactor_AddSyscallPread(graph_id, 4, "pread1", pread_assoc_dims, 2, pread1_arggen, pread1_rcsave, false);
+    foreactor_AddSyscallPread(graph_id, 3, "pread0", pread_assoc_dims, 2, pread0_arggen, pread0_rcsave, 256, false);
+    foreactor_AddSyscallPread(graph_id, 4, "pread1", pread_assoc_dims, 2, pread1_arggen, pread1_rcsave, 256, false);
     foreactor_AddBranchNode(graph_id, 5, "branch1", branch1_assoc_dims, 2, branch1_arggen, 2, false);
     foreactor_AddBranchNode(graph_id, 6, "branch2", branch2_assoc_dims, 1, branch2_arggen, 2, false);
     foreactor_AddSyscallClose(graph_id, 7, "close", nullptr, 0, close_arggen, nullptr, false);

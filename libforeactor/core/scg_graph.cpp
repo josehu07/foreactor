@@ -44,8 +44,8 @@ void SCGraph::UnregisterSCGraph() {
 SCGraph::SCGraph(unsigned graph_id, unsigned total_dims, IOUring *ring,
                  int pre_issue_depth)
         : graph_id(graph_id), total_dims(total_dims), nodes{},
-          graph_built(false), ring(ring),
           pre_issue_depth(pre_issue_depth),
+          graph_built(false), ring(ring),
           num_prepared(0), prepared_distance(-1),
           initial_frontier(nullptr), frontier(nullptr),
           frontier_epoch(total_dims),
