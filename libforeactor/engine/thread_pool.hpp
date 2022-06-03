@@ -46,6 +46,7 @@ struct ThreadPoolCQEntry {
 // User-level thread pool backend, mimicking the io_uring interface.
 class ThreadPool : public IOEngine {
     using IOEngine::EntryId;
+    static constexpr EntryId termination_entry_id = 0xDEAD00000000DEAD;
 
     using SQEntry = ThreadPoolSQEntry;
     using CQEntry = ThreadPoolCQEntry;

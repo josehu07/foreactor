@@ -66,7 +66,7 @@ void __wrap__Z14exper_read_seqPv(void *args) {
     if (!foreactor_HasSCGraph(graph_id))
         BuildSCGraph();
 
-    foreactor_EnterSCGraph(graph_id);    
+    foreactor_EnterSCGraph(graph_id);
     curr_args = reinterpret_cast<ExperReadSeqArgs *>(args);
 
     // Call the original function with corresponding SCGraph activated.

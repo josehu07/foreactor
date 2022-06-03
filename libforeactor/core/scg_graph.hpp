@@ -2,6 +2,8 @@
 #include <unordered_map>
 #include <assert.h>
 
+#include "debug.hpp"
+#include "timer.hpp"
 #include "io_engine.hpp"
 #include "scg_nodes.hpp"
 #include "value_pool.hpp"
@@ -69,11 +71,22 @@ class SCGraph {
         int peekhead_distance = -1;
         bool peekhead_hit_end = false;
 
-        std::string TimerNameStr(std::string timer) const;
-        void StartTimer(std::string timer) const;
-        void PauseTimer(std::string timer) const;
-
     public:
+        Timer timer_get_frontier;
+        Timer timer_check_args;
+        Timer timer_peek_algo;
+        Timer timer_sync_call;
+        Timer timer_engine_submit;
+        Timer timer_engine_cmpl;
+        Timer timer_reflect_res;
+        Timer timer_push_forward;
+        Timer timer_clear_prog;
+        Timer timer_reset_graph;
+
+        inline std::string TimerIdStr(std::string name) {
+            return "t" + tid_str + "-g" + std::to_string(graph_id) + "-" + name;
+        }
+
         SCGraph() = delete;
         SCGraph(unsigned graph_id, unsigned total_dims, IOEngine *backend,
                 int pre_issue_depth);

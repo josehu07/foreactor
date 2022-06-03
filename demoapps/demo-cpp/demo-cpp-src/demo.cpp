@@ -95,9 +95,8 @@ void run_exper(const char *self, std::string& dbdir, std::string& exper,
     if (manual_ring) {
         [[maybe_unused]] int ret = io_uring_queue_init(256, &ring, 0);
         assert(ret == 0);
-    } else if (manual_pool) {
+    } else if (manual_pool)
         pool.StartThreads(8);
-    }
 
     if (exper == "simple") {
         ExperSimpleArgs args("simple.dat", rand_string(8192));
@@ -171,11 +170,10 @@ void run_exper(const char *self, std::string& dbdir, std::string& exper,
     } else
         print_usage_exit(self);
 
-    if (manual_ring) {
+    if (manual_ring)
         io_uring_queue_exit(&ring);
-    } else if (manual_pool) {
-        // nothing
-    }
+    else if (manual_pool)
+        pool.JoinThreads();
 }
 
 

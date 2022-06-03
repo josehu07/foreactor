@@ -122,6 +122,7 @@ void SyscallOpen::ResetValuePools() {
 
 void SyscallOpen::CheckArgs(const EpochList& epoch,
                             const char *pathname_, int flags_, mode_t mode_) {
+    TIMER_START(scgraph->timer_check_args);
     assert(pathname_ != nullptr);
     if (!stage.Has(epoch) || stage.Get(epoch) == STAGE_NOTREADY) {
         if (!pathname.Has(epoch))
@@ -135,6 +136,7 @@ void SyscallOpen::CheckArgs(const EpochList& epoch,
     assert(strcmp(pathname_, pathname.Get(epoch)) == 0);
     assert(flags_ == flags.Get(epoch));
     assert(mode_ == mode.Get(epoch));
+    TIMER_PAUSE(scgraph->timer_check_args);
 }
 
 
@@ -212,12 +214,14 @@ void SyscallClose::ResetValuePools() {
 
 
 void SyscallClose::CheckArgs(const EpochList& epoch, int fd_) {
+    TIMER_START(scgraph->timer_check_args);
     if (!stage.Has(epoch) || stage.Get(epoch) == STAGE_NOTREADY) {
         if (!fd.Has(epoch))
             fd.Set(epoch, fd_);
         stage.Set(epoch, STAGE_ARGREADY);
     }
     assert(fd_ == fd.Get(epoch));
+    TIMER_PAUSE(scgraph->timer_check_args);
 }
 
 
@@ -349,6 +353,7 @@ void SyscallPread::ResetValuePools() {
 
 void SyscallPread::CheckArgs(const EpochList& epoch,
                              int fd_, size_t count_, off_t offset_) {
+    TIMER_START(scgraph->timer_check_args);
     if (!stage.Has(epoch) || stage.Get(epoch) == STAGE_NOTREADY) {
         if (!fd.Has(epoch))
             fd.Set(epoch, fd_);
@@ -361,6 +366,7 @@ void SyscallPread::CheckArgs(const EpochList& epoch,
     assert(fd_ == fd.Get(epoch));
     assert(count_ == count.Get(epoch));
     assert(offset_ == offset.Get(epoch));
+    TIMER_PAUSE(scgraph->timer_check_args);
 }
 
 
@@ -479,6 +485,7 @@ void SyscallPwrite::CheckArgs(const EpochList& epoch,
                               const void *buf_,
                               size_t count_,
                               off_t offset_) {
+    TIMER_START(scgraph->timer_check_args);
     if (!stage.Has(epoch) || stage.Get(epoch) == STAGE_NOTREADY) {
         if (!fd.Has(epoch))
             fd.Set(epoch, fd_);
@@ -494,6 +501,7 @@ void SyscallPwrite::CheckArgs(const EpochList& epoch,
     assert(memcmp(buf_, buf.Get(epoch), count_) == 0);
     assert(count_ == count.Get(epoch));
     assert(offset_ == offset.Get(epoch));
+    TIMER_PAUSE(scgraph->timer_check_args);
 }
 
 

@@ -52,7 +52,17 @@ SCGraph::SCGraph(unsigned graph_id, unsigned total_dims, IOEngine *engine,
           frontier_epoch(total_dims),
           peekhead(nullptr), peekhead_edge(EDGE_BASE),
           peekhead_epoch(total_dims), peekhead_distance(-1),
-          peekhead_hit_end(false) {
+          peekhead_hit_end(false),
+          timer_get_frontier(TimerIdStr("get-frontier")),
+          timer_check_args(TimerIdStr("check-args")),
+          timer_peek_algo(TimerIdStr("peek-algo")),
+          timer_sync_call(TimerIdStr("sync-call")),
+          timer_engine_submit(TimerIdStr("engine-submit")),
+          timer_engine_cmpl(TimerIdStr("engine-cmpl")),
+          timer_reflect_res(TimerIdStr("reflect-res")),
+          timer_push_forward(TimerIdStr("push-forward")),
+          timer_clear_prog(TimerIdStr("clear-prog")),
+          timer_reset_graph(TimerIdStr("reset-graph")) {
     assert(engine != nullptr);
     assert(pre_issue_depth >= 0);
 }
@@ -61,19 +71,6 @@ SCGraph::~SCGraph() {
     // clean up and delete all nodes added
     for (auto&& [_, node] : nodes)
         delete node;
-}
-
-
-std::string SCGraph::TimerNameStr(std::string timer) const {
-    return "g" + std::to_string(graph_id) + "-" + timer;
-}
-
-void SCGraph::StartTimer(std::string timer) const {
-    TIMER_START(TimerNameStr(timer));
-}
-
-void SCGraph::PauseTimer(std::string timer) const {
-    TIMER_PAUSE(TimerNameStr(timer));
 }
 
 
@@ -88,41 +85,50 @@ bool SCGraph::IsBuilt() const {
 
 
 void SCGraph::ClearAllReqs() {
-    TIMER_START(TimerNameStr("clear-prog"));
+    TIMER_START(timer_clear_prog);
     engine->CleanUp();
-    TIMER_PAUSE(TimerNameStr("clear-prog"));
+    TIMER_PAUSE(timer_clear_prog);
     DEBUG("cleared SCGraph %u\n", graph_id);
-
-    TIMER_PRINT(TimerNameStr("pool-flush"),    TIME_MICRO);
-    TIMER_PRINT(TimerNameStr("pool-clear"),    TIME_MICRO);
-    TIMER_PRINT(TimerNameStr("peek-algo"),     TIME_MICRO);
-    TIMER_PRINT(TimerNameStr("engine-submit"), TIME_MICRO);
-    TIMER_PRINT(TimerNameStr("sync-call"),     TIME_MICRO);
-    TIMER_PRINT(TimerNameStr("engine-cmpl"),   TIME_MICRO);
-    TIMER_PRINT(TimerNameStr("clear-prog"),    TIME_MICRO);
-    TIMER_RESET(TimerNameStr("pool-flush"));
-    TIMER_RESET(TimerNameStr("peek-algo"));
-    TIMER_RESET(TimerNameStr("engine-submit"));
-    TIMER_RESET(TimerNameStr("sync-call"));
-    TIMER_RESET(TimerNameStr("engine-cmpl"));
-    TIMER_RESET(TimerNameStr("clear-prog"));
 }
 
 void SCGraph::ResetToStart() {
+    TIMER_START(timer_reset_graph);
     num_prepared = 0;
     prepared_distance = -1;
 
     frontier = initial_frontier;
     frontier_epoch.Reset();
-    
+
     peekhead = nullptr;
     peekhead_edge = EDGE_BASE;
     peekhead_epoch.Reset();
     peekhead_distance = -1;
     peekhead_hit_end = false;
-
+    
     for (auto&& [_, node] : nodes)
         node->ResetValuePools();
+    TIMER_PAUSE(timer_reset_graph);
+
+    TIMER_PRINT(timer_get_frontier,  TIME_MICRO);
+    TIMER_PRINT(timer_check_args,    TIME_MICRO);
+    TIMER_PRINT(timer_peek_algo,     TIME_MICRO);
+    TIMER_PRINT(timer_sync_call,     TIME_MICRO);
+    TIMER_PRINT(timer_engine_submit, TIME_MICRO);
+    TIMER_PRINT(timer_engine_cmpl,   TIME_MICRO);
+    TIMER_PRINT(timer_reflect_res,   TIME_MICRO);
+    TIMER_PRINT(timer_push_forward,  TIME_MICRO);
+    TIMER_PRINT(timer_clear_prog,    TIME_MICRO);
+    TIMER_PRINT(timer_reset_graph,   TIME_MICRO);
+    TIMER_RESET(timer_get_frontier);
+    TIMER_RESET(timer_check_args);
+    TIMER_RESET(timer_peek_algo);
+    TIMER_RESET(timer_sync_call);
+    TIMER_RESET(timer_engine_submit);
+    TIMER_RESET(timer_engine_cmpl);
+    TIMER_RESET(timer_reflect_res);
+    TIMER_RESET(timer_push_forward);
+    TIMER_RESET(timer_clear_prog);
+    TIMER_RESET(timer_reset_graph);
 }
 
 

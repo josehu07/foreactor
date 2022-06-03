@@ -11,10 +11,6 @@
 namespace foreactor {
 
 
-// Externed in header.
-std::unordered_map<std::string, Timer> timers;
-
-
 static std::string TimeUnitStr(TimeUnit unit) {
     switch (unit) {
     case TIME_NANO:  return "ns";
@@ -98,12 +94,12 @@ void Timer::ShowStat(TimeUnit unit) const {
         }
         double avg = sum / stat.size();
         fprintf(stderr, "# %-24s #  cnt %5lu  "
-                        "avg %10.3lf  max %10.3lf  min %10.3lf  %s\n",
-               id.c_str(), stat.size(), avg, max, min,
+                        "avg %10.3lf  max %10.3lf  min %10.3lf  sum %10.3lf  "
+                        "%s\n",
+               id.c_str(), stat.size(), avg, max, min, sum,
                TimeUnitStr(unit).c_str());
-    } else {
+    } else
         fprintf(stderr, "# %-24s #  cnt %5lu\n", id.c_str(), 0lu);
-    }
 }
 
 

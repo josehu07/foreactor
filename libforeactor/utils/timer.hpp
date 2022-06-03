@@ -16,58 +16,17 @@
 // by the build system.
 #ifdef NTIMER
 
-#define TIMER_START(id)
-#define TIMER_PAUSE(id)
-#define TIMER_PRINT(id, unit)
-#define TIMER_RESET(id)
-#define TIMER_CLEAR(id)
-#define TIMER_PRINT_ALL(unit)
+#define TIMER_START(timer)
+#define TIMER_PAUSE(timer)
+#define TIMER_PRINT(timer, unit)
+#define TIMER_RESET(timer)
 
 #else
 
-#define TIMER_START(id)                       \
-    do {                                      \
-        std::string uid = tid_str + "-" + id; \
-        if (!timers.contains(uid))            \
-            timers.emplace((uid), (uid));     \
-        timers.at(uid).Start();               \
-    } while (0)
-
-#define TIMER_PAUSE(id)                       \
-    do {                                      \
-        std::string uid = tid_str + "-" + id; \
-        assert(timers.contains(uid));         \
-        timers.at(uid).Pause();               \
-    } while (0)
-
-#define TIMER_PRINT(id, unit)                 \
-    do {                                      \
-        std::string uid = tid_str + "-" + id; \
-        if (timers.contains(uid))             \
-            timers.at(uid).ShowStat(unit);    \
-    } while (0)
-
-#define TIMER_RESET(id)                       \
-    do {                                      \
-        std::string uid = tid_str + "-" + id; \
-        if (timers.contains(uid))             \
-            timers.at(uid).Reset();           \
-    } while (0)
-
-#define TIMER_CLEAR(id)                       \
-    do {                                      \
-        std::string uid = tid_str + "-" + id; \
-        if (timers.contains(uid))             \
-            timers.erase(uid);                \
-    } while (0)
-
-#define TIMER_PRINT_ALL(unit)               \
-    do {                                    \
-        for (auto& [uid, timer] : timers) { \
-            if (uid.rfind(tid_str, 0) == 0) \
-                timer.ShowStat(unit);       \
-        }                                   \
-    } while (0)
+#define TIMER_START(timer)       timer.Start()
+#define TIMER_PAUSE(timer)       timer.Pause()
+#define TIMER_PRINT(timer, unit) timer.ShowStat(unit)
+#define TIMER_RESET(timer)       timer.Reset()
 
 #endif
 
@@ -85,6 +44,7 @@ typedef enum TimeUnit {
     TIME_MILLI,
     TIME_SEC
 } TimeUnit;
+
 
 class Timer {
     private:
@@ -111,10 +71,6 @@ class Timer {
 
         void ShowStat(TimeUnit unit) const;
 };
-
-
-// collection of timers created
-extern std::unordered_map<std::string, Timer> timers;
 
 
 }

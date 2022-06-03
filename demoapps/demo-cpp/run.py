@@ -78,6 +78,7 @@ def run_all(dbdir, libforeactor, io_uring):
     run_dump("simple", dbdir, libforeactor, queue, depths, io_uring)
     run_dump("branching", dbdir, libforeactor, queue, depths, io_uring)
     run_dump("looping", dbdir, libforeactor, queue, depths, io_uring)
+    run_dump("read_seq", dbdir, libforeactor, queue, depths, io_uring)
 
     print("\nRunning normal experiments ---")
     run_demo("simple", dbdir, libforeactor, queue, depths, io_uring)

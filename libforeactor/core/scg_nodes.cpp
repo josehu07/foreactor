@@ -184,7 +184,7 @@ long SyscallNode::Issue(const EpochList& epoch, void *output_buf) {
     // if pre_issue_depth > 0, and previous pre-issuing procedure has not hit
     // the end of SCGraph, try to peek and pre-issue
     if (scgraph->pre_issue_depth > 0 && !scgraph->peekhead_hit_end) {
-        TIMER_START(scgraph->TimerNameStr("peek-algo"));
+        TIMER_START(scgraph->timer_peek_algo);
         // sometimes, peekhead might get stuck due to some barrier, and thus
         // the current frontier might proceed ahead of the stored peekhead;
         // in this case, update peekhead to be current frontier
@@ -285,7 +285,7 @@ long SyscallNode::Issue(const EpochList& epoch, void *output_buf) {
             } else
                 break;
         }
-        TIMER_PAUSE(scgraph->TimerNameStr("peek-algo"));
+        TIMER_PAUSE(scgraph->timer_peek_algo);
     }
 
     // see some number of syscall nodes prepared, may do SubmitAll()
@@ -297,15 +297,15 @@ long SyscallNode::Issue(const EpochList& epoch, void *output_buf) {
             (scgraph->prepared_distance <= 1)) {
             // move all prepared requests to in_progress stage, actually
             // call the io_uring_prep_xxx()s
-            TIMER_START(scgraph->TimerNameStr("engine-submit"));
+            TIMER_START(scgraph->timer_engine_submit);
             [[maybe_unused]] int num_submitted = scgraph->engine->SubmitAll();
-            TIMER_PAUSE(scgraph->TimerNameStr("engine-submit"));
             DEBUG("submitted %d / %d entries to SQ\n",
                   num_submitted, scgraph->num_prepared);
             assert(num_submitted == scgraph->num_prepared);
             // clear num_prepared and prepared_distance
             scgraph->num_prepared = 0;
             scgraph->prepared_distance = -1;
+            TIMER_PAUSE(scgraph->timer_engine_submit);
         }
     }
 
@@ -313,30 +313,34 @@ long SyscallNode::Issue(const EpochList& epoch, void *output_buf) {
     assert(stage.Get(epoch) != STAGE_NOTREADY);  // must have done CheckArgs
     if (stage.Get(epoch) == STAGE_ARGREADY) {
         // if not pre-issued, invoke syscall synchronously
+        TIMER_START(scgraph->timer_sync_call);
         DEBUG("sync-call %s<%p>@%s\n",
               StreamStr(*this).c_str(), this, StreamStr(epoch).c_str());
-        TIMER_START(scgraph->TimerNameStr("sync-call"));
         long syscall_rc = SyscallSync(epoch, output_buf);
         rc.Set(epoch, syscall_rc);
         stage.Set(epoch, STAGE_FINISHED);
-        TIMER_PAUSE(scgraph->TimerNameStr("sync-call"));
         DEBUG("sync-call finished rc %ld\n", syscall_rc);
+        TIMER_PAUSE(scgraph->timer_sync_call);
     } else {
         // if has been pre-issued, process CQEs until mine is seen
+        TIMER_START(scgraph->timer_engine_cmpl);
         assert(stage.Get(epoch) != STAGE_PREPARED);
         DEBUG("engine-cmpl %s<%p>@%s\n",
               StreamStr(*this).c_str(), this, StreamStr(epoch).c_str());
-        TIMER_START(scgraph->TimerNameStr("engine-cmpl"));
         if (stage.Get(epoch) == STAGE_ONTHEFLY)
             CmplAsync(epoch);
         assert(stage.Get(epoch) == STAGE_FINISHED);
-        TIMER_PAUSE(scgraph->TimerNameStr("engine-cmpl"));
         DEBUG("engine-cmpl finished rc %ld\n", rc.Get(epoch));
+        TIMER_PAUSE(scgraph->timer_engine_cmpl);
+        // reflect result into actual output_buf arg
+        TIMER_START(scgraph->timer_reflect_res);
         ReflectResult(epoch, output_buf);
         DEBUG("engine-cmpl result reflected\n");
+        TIMER_PAUSE(scgraph->timer_reflect_res);
     }
 
     // push frontier forward, reduce distance counters by 1
+    TIMER_START(scgraph->timer_push_forward);
     scgraph->frontier = next_node;
     scgraph->peekhead_distance--;
     scgraph->prepared_distance--;
@@ -345,6 +349,8 @@ long SyscallNode::Issue(const EpochList& epoch, void *output_buf) {
     assert(rc.Has(epoch));
     long rc_this_epoch = rc.Get(epoch);
     RemoveOneEpoch(epoch);
+    TIMER_PAUSE(scgraph->timer_push_forward);
+
     return rc_this_epoch;
 }
 

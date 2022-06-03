@@ -55,6 +55,10 @@ void ThreadPool::WorkerThreadFunc(int id, std::promise<void> init_barrier) {
         SQEntry sqe;
         submission_queue.wait_dequeue(sqe);     // SQE will be moved
 
+        // if see speical entry_id of termination, exit this thread
+        if (sqe.entry_id == termination_entry_id)
+            return;
+
         // call the corresponding syscall handler based on entry type, fill
         // in CQE struct
         CQEntry cqe;
@@ -92,8 +96,6 @@ ThreadPool::ThreadPool(int nthreads)
             pthread_setaffinity_np(workers.back().native_handle(),
                                    sizeof(cpu_set_t), &cpuset);
         assert(ret == 0);
-
-        workers.back().detach();
     }
 
     // wait for everyone finishes initialization
@@ -104,6 +106,14 @@ ThreadPool::ThreadPool(int nthreads)
 }
 
 ThreadPool::~ThreadPool() {
+    // put nthreads termination entries into submission queue
+    for (int i = 0; i < nthreads; ++i)
+        submission_queue.enqueue(SQEntry{.entry_id = termination_entry_id});
+
+    // wait and join all worker threads
+    for (int id = 0; id < nthreads; ++id)
+        workers[id].join();
+
     DEBUG("destroyed ThreadPool\n");
 }
 

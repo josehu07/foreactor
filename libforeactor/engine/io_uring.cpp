@@ -18,7 +18,6 @@ IOUring::IOUring(int sq_length)
         : sq_length(sq_length) {
     assert(sq_length >= 0);
 
-    TIMER_START("uring-init");
     if (sq_length > 0) {
         int ret = io_uring_queue_init(sq_length, &ring, /*flags*/ 0);
         if (ret != 0) {
@@ -27,21 +26,11 @@ IOUring::IOUring(int sq_length)
         }
         DEBUG("inited IOUring @ %p sq_length %d\n", &ring, sq_length);
     }
-    TIMER_PAUSE("uring-init");
 }
 
 IOUring::~IOUring() {
-    TIMER_START("uring-exit");
     io_uring_queue_exit(&ring);
     DEBUG("destroyed IOUring @ %p\n", &ring);
-    TIMER_PAUSE("uring-exit");
-
-    TIMER_PRINT("uring-init", TIME_MICRO);
-    TIMER_PRINT("uring-exit", TIME_MICRO);
-    TIMER_RESET("uring-init");
-    TIMER_RESET("uring-exit");
-    
-    // TIMER_PRINT_ALL(TIME_MICRO);
 }
 
 

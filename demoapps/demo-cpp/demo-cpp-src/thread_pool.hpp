@@ -44,6 +44,8 @@ struct ThreadPoolCQEntry {
 
 
 class ThreadPool {
+    static constexpr uint64_t termination_entry_id = 0xDEAD00000000DEAD;
+
     using SQEntry = ThreadPoolSQEntry;
     using CQEntry = ThreadPoolCQEntry;
 
@@ -87,6 +89,10 @@ class ThreadPool {
                 SQEntry sqe;
                 submission_queue.wait_dequeue(sqe);     // SQE will be moved
 
+                // if see speical entry_id of termination, exit this thread
+                if (sqe.entry_id == termination_entry_id)
+                    return;
+
                 // call the corresponding syscall handler based on entry type,
                 // fill in CQE struct
                 CQEntry cqe;
@@ -127,6 +133,16 @@ class ThreadPool {
             // wait for everyone finishes initialization
             for (auto&& init_barrier : init_barriers)
                 init_barrier.wait();
+        }
+
+        void JoinThreads() {
+            // put nthreads termination entries into submission queue
+            for (int i = 0; i < nthreads; ++i)
+                submission_queue.enqueue(SQEntry{.entry_id = termination_entry_id});
+
+            // wait and join all worker threads
+            for (int id = 0; id < nthreads; ++id)
+                workers[id].join();
         }
 
         void SubmitBulk(std::vector<SQEntry>& entries) {

@@ -16,6 +16,7 @@ std::tuple<NodeT *, const EpochList *> SCGraph::GetFrontier() {
 
     // if current frontier is a BranchNode, it must have been decided
     // at this time point -- check and fetch the correct child
+    TIMER_START(timer_get_frontier);
     while (frontier != nullptr &&
            frontier->node_type == NODE_BRANCH) {
         BranchNode *branch_node = static_cast<BranchNode *>(frontier);
@@ -35,6 +36,7 @@ std::tuple<NodeT *, const EpochList *> SCGraph::GetFrontier() {
         frontier = branch_node->PickBranch(frontier_epoch, /*do_remove*/ true);
         DEBUG("picked branch %p in frontier\n", frontier);
     }
+    TIMER_PAUSE(timer_get_frontier);
 
     assert(frontier != nullptr);
     assert(frontier->node_type == NODE_SC_PURE ||
