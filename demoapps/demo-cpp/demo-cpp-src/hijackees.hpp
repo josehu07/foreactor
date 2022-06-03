@@ -5,6 +5,9 @@
 #include <fcntl.h>
 #include <unistd.h>
 #include <assert.h>
+#include <liburing.h>
+
+#include "thread_pool.hpp"
 
 
 #ifndef __DEMO_HIJACKEES_H__
@@ -104,6 +107,8 @@ struct ExperReadSeqArgs : ExperArgs {
     std::vector<char *> rbufs;
     const size_t rlen;
     const unsigned nreads;
+    struct io_uring *manual_ring;
+    ThreadPool *manual_pool;
 
     ExperReadSeqArgs(int fd, size_t rlen, unsigned nreads)
         : fd(fd), rlen(rlen), nreads(nreads) {
@@ -117,6 +122,8 @@ struct ExperReadSeqArgs : ExperArgs {
 };
 
 void exper_read_seq(void *args);
+void exper_read_seq_manual_ring(void *args);
+void exper_read_seq_manual_pool(void *args);
 
 
 struct ExperWriteSeqArgs : ExperArgs {
@@ -124,6 +131,8 @@ struct ExperWriteSeqArgs : ExperArgs {
     std::vector<std::string> wcontents;
     const size_t wlen;
     const unsigned nwrites;
+    struct io_uring *manual_ring;
+    ThreadPool *manual_pool;
 
     ExperWriteSeqArgs(int fd, std::string wcontent, unsigned nwrites)
         : fd(fd), wlen(wcontent.length()), nwrites(nwrites) {
@@ -134,6 +143,8 @@ struct ExperWriteSeqArgs : ExperArgs {
 };
 
 void exper_write_seq(void *args);
+void exper_write_seq_manual_ring(void *args);
+void exper_write_seq_manual_pool(void *args);
 
 
 #endif

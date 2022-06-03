@@ -10,8 +10,10 @@
 #include <unistd.h>
 #include <time.h>
 #include <assert.h>
+#include <liburing.h>
 
 #include "hijackees.hpp"
+#include "thread_pool.hpp"
 
 
 static const std::string rand_string(size_t length) {
@@ -28,7 +30,8 @@ static const std::string rand_string(size_t length) {
 
 static void print_usage_exit(const char *self) {
     std::cerr << "Usage: " << self << " EXPER_NAME DBDIR_PATH NUM_ITERS"
-              << " [--drop_caches] [--dump_result]" << std::endl;
+              << " [--drop_caches] [--dump_result] [--manual_ring|pool]"
+              << std::endl;
     exit(1);
 }
 
@@ -83,13 +86,22 @@ void run_iters(ExperFunc exper_func, ExperArgs *exper_args,
 }
 
 void run_exper(const char *self, std::string& dbdir, std::string& exper,
-               unsigned num_iters, bool drop_caches, bool dump_result) {
+               unsigned num_iters, bool drop_caches, bool dump_result,
+               bool manual_ring, bool manual_pool) {
     std::filesystem::current_path(dbdir);
 
+    struct io_uring ring;
+    ThreadPool pool;
+    if (manual_ring) {
+        [[maybe_unused]] int ret = io_uring_queue_init(256, &ring, 0);
+        assert(ret == 0);
+    } else if (manual_pool) {
+        pool.StartThreads(8);
+    }
+
     if (exper == "simple") {
-        ExperFunc func = exper_simple;
         ExperSimpleArgs args("simple.dat", rand_string(8192));
-        run_iters(func, &args, num_iters, drop_caches, !dump_result);
+        run_iters(exper_simple, &args, num_iters, drop_caches, !dump_result);
         if (dump_result) {
             std::cout << std::string(args.rbuf0, args.rbuf0 + args.rlen)
                       << std::endl
@@ -98,10 +110,9 @@ void run_exper(const char *self, std::string& dbdir, std::string& exper,
         }
 
     } else if (exper == "branching") {
-        ExperFunc func = exper_branching;
         ExperBranchingArgs args("branching.dat", rand_string(4096),
                                 rand_string(4096), rand_string(4096));
-        run_iters(func, &args, num_iters, drop_caches, !dump_result);
+        run_iters(exper_branching, &args, num_iters, drop_caches, !dump_result);
         if (dump_result) {
             std::cout << std::string(args.rbuf0, args.rbuf0 + args.rlen)
                       << std::endl
@@ -110,16 +121,14 @@ void run_exper(const char *self, std::string& dbdir, std::string& exper,
         }
 
     } else if (exper == "looping") {
-        ExperFunc func = exper_looping;
         ExperLoopingArgs args("looping.dat", rand_string(1024), 10, 20, 5);
-        run_iters(func, &args, num_iters, drop_caches, !dump_result);
+        run_iters(exper_looping, &args, num_iters, drop_caches, !dump_result);
         if (dump_result) {
             for (auto buf : args.rbufs)
                 std::cout << std::string(buf, buf + args.rlen) << std::endl;
         }
 
     } else if (exper == "read_seq") {
-        ExperFunc func = exper_read_seq;
         int fd = open("read_seq.dat", O_CREAT | O_RDWR, S_IRUSR | S_IWUSR);
         unsigned nreads = 128;
         size_t rlen = (1 << 20);
@@ -129,22 +138,44 @@ void run_exper(const char *self, std::string& dbdir, std::string& exper,
                 pwrite(fd, wcontent.c_str(), rlen, i * rlen);
         }
         ExperReadSeqArgs args(fd, rlen, nreads);
-        run_iters(func, &args, num_iters, drop_caches, !dump_result);
+
+        if (manual_ring) {
+            args.manual_ring = &ring;
+            run_iters(exper_read_seq_manual_ring, &args, num_iters, drop_caches, !dump_result);
+        } else if (manual_pool) {
+            args.manual_pool = &pool;
+            run_iters(exper_read_seq_manual_pool, &args, num_iters, drop_caches, !dump_result);
+        } else
+            run_iters(exper_read_seq, &args, num_iters, drop_caches, !dump_result);
+        
         if (dump_result) {
             for (auto buf : args.rbufs)
                 std::cout << std::string(buf, buf + args.rlen) << std::endl;
         }
 
     } else if (exper == "write_seq") {
-        ExperFunc func = exper_write_seq;
         int fd = open("write_seq.dat", O_CREAT | O_RDWR, S_IRUSR | S_IWUSR);
         unsigned nwrites = 128;
         size_t wlen = (1 << 20);
         ExperWriteSeqArgs args(fd, rand_string(wlen), nwrites);
-        run_iters(func, &args, num_iters, drop_caches, !dump_result);
+        
+        if (manual_ring) {
+            args.manual_ring = &ring;
+            run_iters(exper_write_seq_manual_ring, &args, num_iters, drop_caches, !dump_result);
+        } else if (manual_pool) {
+            args.manual_pool = &pool;
+            run_iters(exper_write_seq_manual_pool, &args, num_iters, drop_caches, !dump_result);
+        } else
+            run_iters(exper_write_seq, &args, num_iters, drop_caches, !dump_result);
 
     } else
         print_usage_exit(self);
+
+    if (manual_ring) {
+        io_uring_queue_exit(&ring);
+    } else if (manual_pool) {
+        // nothing
+    }
 }
 
 
@@ -160,15 +191,26 @@ int main(int argc, char *argv[]) {
 
     bool drop_caches = false;
     bool dump_result = false;
+    bool manual_ring = false;
+    bool manual_pool = false;
     for (int i = 4; i < argc; ++i) {
-        if (strcmp(argv[i], "--drop_caches") == 0)
+        if (strcmp(argv[i], "--drop_caches") == 0) {
             drop_caches = true;
-        else if (strcmp(argv[i], "--dump_result") == 0) {
+        } else if (strcmp(argv[i], "--dump_result") == 0) {
             dump_result = true;
             srand(1234567);     // use fixed seed for result comparison
-        }
+        } else if (strcmp(argv[i], "--manual_ring") == 0) {
+            manual_ring = true;
+        } else if (strcmp(argv[i], "--manual_pool") == 0)
+            manual_pool = true;
+    }
+    if (manual_pool && manual_ring) {
+        std::cerr << "Error: --manual_ring and --manual_pool both given"
+                  << std::endl;
+        print_usage_exit(argv[0]);
     }
 
-    run_exper(argv[0], dbdir, exper, num_iters, drop_caches, dump_result);
+    run_exper(argv[0], dbdir, exper, num_iters, drop_caches, dump_result,
+              manual_ring, manual_pool);
     return 0;
 }

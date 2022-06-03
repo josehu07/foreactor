@@ -1,5 +1,6 @@
 CC=g++
 CXXFLAGS=-Wall -Werror -std=c++20
+CXXLIBS=-luring -pthread
 
 APP_SRCS:=$(wildcard ./demo-cpp-src/*.cpp)
 APP_OBJS:=$(patsubst %.cpp,%.o,$(APP_SRCS))
@@ -30,13 +31,13 @@ debug: demo
 
 
 $(APP_OBJS): %.o: %.cpp
-	$(CC) $(CXXFLAGS) -c $< -o $@
+	$(CC) $(CXXFLAGS) -c $< -o $@ $(CXXLIBS)
 
 $(PLG_OBJS): %.o: %.cpp
 	$(CC) $(CXXFLAGS) -c $(APP_INCL) $(FA_INCL) $< -o $@ $(FA_DLIB)
 
 demo: $(APP_OBJS) $(PLG_OBJS)
-	$(CC) $(CXXFLAGS) $^ -o $@ $(WRAPS) $(FA_DLIB)
+	$(CC) $(CXXFLAGS) $^ -o $@ $(WRAPS) $(CXXLIBS) $(FA_DLIB)
 
 
 .PHONY: clean

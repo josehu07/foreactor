@@ -4,8 +4,10 @@
 #include <fcntl.h>
 #include <unistd.h>
 #include <assert.h>
+#include <liburing.h>
 
 #include "hijackees.hpp"
+#include "thread_pool.hpp"
 
 
 void exper_simple(void *args_) {
@@ -82,6 +84,49 @@ void exper_read_seq(void *args_) {
         ret = pread(args->fd, args->rbufs[i], args->rlen, i * args->rlen);
 }
 
+void exper_read_seq_manual_ring(void *args_) {
+    ExperReadSeqArgs *args = reinterpret_cast<ExperReadSeqArgs *>(args_);
+    assert(args->manual_ring != nullptr);
+
+    for (unsigned i = 0; i < args->nreads; ++i) {
+        struct io_uring_sqe *sqe = io_uring_get_sqe(args->manual_ring);
+        assert(sqe != nullptr);
+        io_uring_sqe_set_data(sqe, reinterpret_cast<void *>(i));
+        io_uring_prep_read(sqe, args->fd, args->rbufs[i], args->rlen, i * args->rlen);
+        sqe->flags |= IOSQE_ASYNC;
+    }
+    io_uring_submit(args->manual_ring);
+
+    for (unsigned i = 0; i < args->nreads; ++i) {
+        struct io_uring_cqe *cqe;
+        [[maybe_unused]] int ret = io_uring_wait_cqe(args->manual_ring, &cqe);
+        assert(ret == 0);
+        io_uring_cqe_seen(args->manual_ring, cqe);
+    }
+}
+
+void exper_read_seq_manual_pool(void *args_) {
+    ExperReadSeqArgs *args = reinterpret_cast<ExperReadSeqArgs *>(args_);
+    assert(args->manual_pool != nullptr);
+
+    std::vector<ThreadPoolSQEntry> entries;
+    entries.reserve(args->nreads);
+    for (unsigned i = 0; i < args->nreads; ++i) {
+        entries.emplace_back(ThreadPoolSQEntry{
+            .entry_id = i,
+            .sc_type = SC_PREAD,
+            .fd = args->fd,
+            .offset = static_cast<off_t>(i * args->rlen),
+            .buf = reinterpret_cast<uint64_t>(args->rbufs[i]),
+            .rw_len = args->rlen
+        });
+    }
+    args->manual_pool->SubmitBulk(entries);
+
+    for (unsigned i = 0; i < args->nreads; ++i)
+        args->manual_pool->CompleteOne();
+}
+
 
 void exper_write_seq(void *args_) {
     ExperWriteSeqArgs *args = reinterpret_cast<ExperWriteSeqArgs *>(args_);
@@ -89,4 +134,47 @@ void exper_write_seq(void *args_) {
 
     for (unsigned i = 0; i < args->nwrites; ++i)
         ret = pwrite(args->fd, args->wcontents[i].c_str(), args->wlen, i * args->wlen);
+}
+
+void exper_write_seq_manual_ring(void *args_) {
+    ExperWriteSeqArgs *args = reinterpret_cast<ExperWriteSeqArgs *>(args_);
+    assert(args->manual_ring != nullptr);
+
+    for (unsigned i = 0; i < args->nwrites; ++i) {
+        struct io_uring_sqe *sqe = io_uring_get_sqe(args->manual_ring);
+        assert(sqe != nullptr);
+        io_uring_sqe_set_data(sqe, reinterpret_cast<void *>(i));
+        io_uring_prep_write(sqe, args->fd, args->wcontents[i].c_str(), args->wlen, i * args->wlen);
+        sqe->flags |= IOSQE_ASYNC;
+    }
+    io_uring_submit(args->manual_ring);
+
+    for (unsigned i = 0; i < args->nwrites; ++i) {
+        struct io_uring_cqe *cqe;
+        [[maybe_unused]] int ret = io_uring_wait_cqe(args->manual_ring, &cqe);
+        assert(ret == 0);
+        io_uring_cqe_seen(args->manual_ring, cqe);
+    }
+}
+
+void exper_write_seq_manual_pool(void *args_) {
+    ExperWriteSeqArgs *args = reinterpret_cast<ExperWriteSeqArgs *>(args_);
+    assert(args->manual_pool != nullptr);
+
+    std::vector<ThreadPoolSQEntry> entries;
+    entries.reserve(args->nwrites);
+    for (unsigned i = 0; i < args->nwrites; ++i) {
+        entries.emplace_back(ThreadPoolSQEntry{
+            .entry_id = i,
+            .sc_type = SC_PWRITE,
+            .fd = args->fd,
+            .offset = static_cast<off_t>(i * args->wlen),
+            .buf = reinterpret_cast<uint64_t>(args->wcontents[i].c_str()),
+            .rw_len = args->wlen
+        });
+    }
+    args->manual_pool->SubmitBulk(entries);
+
+    for (unsigned i = 0; i < args->nwrites; ++i)
+        args->manual_pool->CompleteOne();
 }

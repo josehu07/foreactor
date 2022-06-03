@@ -34,14 +34,14 @@ void Timer::Reset() {
 
 void Timer::Start() {
     assert(!started);
-    [[maybe_unused]] int ret = clock_gettime(CLOCK_REALTIME, &start_ts);
+    [[maybe_unused]] int ret = clock_gettime(CLOCK_MONOTONIC, &start_ts);
     assert(ret == 0);
     started = true;
 }
 
 void Timer::Pause() {
     assert(started);
-    [[maybe_unused]] int ret = clock_gettime(CLOCK_REALTIME, &pause_ts);
+    [[maybe_unused]] int ret = clock_gettime(CLOCK_MONOTONIC, &pause_ts);
     assert(ret == 0);
     started = false;
 
