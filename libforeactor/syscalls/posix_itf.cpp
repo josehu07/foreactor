@@ -93,14 +93,14 @@ ssize_t pread(int fd, void *buf, size_t count, off_t offset) {
         DEBUG("posix::pread(%d, %p, %lu, %ld)\n", fd, buf, count, offset);
         return posix::pread(fd, buf, count, offset);
     } else {
-        DEBUG("foreactor::pread(%d, %lu, %ld)\n", fd, count, offset);
+        DEBUG("foreactor::pread(%d, %p, %lu, %ld)\n", fd, buf, count, offset);
         auto [node, epoch] = active_scgraph->GetFrontier<SyscallPread>();
         assert(node != nullptr);
         assert(node->sc_type == SC_PREAD);
-        node->CheckArgs(*epoch, fd, count, offset);
-        DEBUG("pread<%p>->Issue(%s, %p)\n",
-              node, StreamStr(*epoch).c_str(), buf);
-        return static_cast<ssize_t>(node->Issue(*epoch, buf));
+        node->CheckArgs(*epoch, fd, buf, count, offset);
+        DEBUG("pread<%p>->Issue(%s)\n",
+              node, StreamStr(*epoch).c_str());
+        return static_cast<ssize_t>(node->Issue(*epoch));
     }
 }
 

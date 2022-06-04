@@ -119,14 +119,12 @@ class SyscallNode : public SCGraphNode {
         virtual ~SyscallNode() {}
 
         // Every child class must implement these methods.
-        virtual long SyscallSync(const EpochList& epoch,
-                                 void *output_buf) = 0;
+        virtual long SyscallSync(const EpochList& epoch) = 0;
         virtual void PrepUringSqe(int epoch_sum,
                                   struct io_uring_sqe *sqe) = 0;
         virtual void PrepUpoolSqe(int epoch_sum,
                                   ThreadPoolSQEntry *sqe) = 0;
-        virtual void ReflectResult(const EpochList& epoch,
-                                   void *output_buf) = 0;
+        virtual void ReflectResult(const EpochList& epoch) = 0;
         virtual bool GenerateArgs(const EpochList&) = 0;
         virtual void RemoveOneEpoch(const EpochList&) = 0;
         virtual void ResetValuePools() = 0;
@@ -150,7 +148,7 @@ class SyscallNode : public SCGraphNode {
         // Invoke this syscall, possibly pre-issuing the next few syscalls
         // in graph. Must be invoked on current frontier node only. Both epoch
         // numbers are managed (incremented) by this function as well.
-        long Issue(const EpochList& epoch, void *output_buf = nullptr);
+        long Issue(const EpochList& epoch);
 };
 
 

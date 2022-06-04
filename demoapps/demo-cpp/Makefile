@@ -14,7 +14,7 @@ FA_INCL:=-I$(FA_PATH)/include
 FA_DLIB:=-L$(FA_PATH) -lforeactor -Wl,-rpath=$(FA_PATH)
 
 WRAPS:=-Wl,--wrap=_Z12exper_simplePv -Wl,--wrap=_Z15exper_branchingPv -Wl,--wrap=_Z13exper_loopingPv
-WRAPS+=-Wl,--wrap=_Z14exper_read_seqPv -Wl,--wrap=_Z15exper_write_seqPv
+WRAPS+=-Wl,--wrap=_Z14exper_read_seqPv -Wl,--wrap=_Z15exper_write_seqPv -Wl,--wrap=_Z26exper_read_seq_same_bufferPv
 
 
 .PHONY: all

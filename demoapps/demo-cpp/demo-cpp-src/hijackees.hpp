@@ -122,6 +122,7 @@ struct ExperReadSeqArgs : ExperArgs {
 };
 
 void exper_read_seq(void *args);
+void exper_read_seq_same_buffer(void *args);
 void exper_read_seq_manual_ring(void *args);
 void exper_read_seq_manual_pool(void *args);
 

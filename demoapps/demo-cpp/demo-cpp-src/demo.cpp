@@ -87,7 +87,7 @@ void run_iters(ExperFunc exper_func, ExperArgs *exper_args,
 
 void run_exper(const char *self, std::string& dbdir, std::string& exper,
                unsigned num_iters, bool drop_caches, bool dump_result,
-               bool manual_ring, bool manual_pool) {
+               bool manual_ring, bool manual_pool, bool same_buffer) {
     std::filesystem::current_path(dbdir);
 
     struct io_uring ring;
@@ -144,12 +144,17 @@ void run_exper(const char *self, std::string& dbdir, std::string& exper,
         } else if (manual_pool) {
             args.manual_pool = &pool;
             run_iters(exper_read_seq_manual_pool, &args, num_iters, drop_caches, !dump_result);
-        } else
+        } else if (same_buffer)
+            run_iters(exper_read_seq_same_buffer, &args, num_iters, drop_caches, !dump_result);
+        else
             run_iters(exper_read_seq, &args, num_iters, drop_caches, !dump_result);
         
         if (dump_result) {
-            for (auto buf : args.rbufs)
-                std::cout << std::string(buf, buf + args.rlen) << std::endl;
+            if (!same_buffer) {
+                for (auto buf : args.rbufs)
+                    std::cout << std::string(buf, buf + args.rlen) << std::endl;
+            } else
+                std::cout << std::string(args.rbufs[0], args.rbufs[0] + args.rlen) << std::endl;
         }
 
     } else if (exper == "write_seq") {
@@ -180,7 +185,7 @@ void run_exper(const char *self, std::string& dbdir, std::string& exper,
 int main(int argc, char *argv[]) {
     srand(time(NULL));
 
-    if ((argc < 4) || (argc > 6))
+    if ((argc < 4) || (argc > 8))
         print_usage_exit(argv[0]);
 
     std::string exper(argv[1]);
@@ -191,16 +196,19 @@ int main(int argc, char *argv[]) {
     bool dump_result = false;
     bool manual_ring = false;
     bool manual_pool = false;
+    bool same_buffer = false;
     for (int i = 4; i < argc; ++i) {
-        if (strcmp(argv[i], "--drop_caches") == 0) {
+        if (strcmp(argv[i], "--drop_caches") == 0)
             drop_caches = true;
-        } else if (strcmp(argv[i], "--dump_result") == 0) {
+        else if (strcmp(argv[i], "--dump_result") == 0) {
             dump_result = true;
             srand(1234567);     // use fixed seed for result comparison
-        } else if (strcmp(argv[i], "--manual_ring") == 0) {
+        } else if (strcmp(argv[i], "--manual_ring") == 0)
             manual_ring = true;
-        } else if (strcmp(argv[i], "--manual_pool") == 0)
+        else if (strcmp(argv[i], "--manual_pool") == 0)
             manual_pool = true;
+        else if (strcmp(argv[i], "--same_buffer") == 0)
+            same_buffer = true;
     }
     if (manual_pool && manual_ring) {
         std::cerr << "Error: --manual_ring and --manual_pool both given"
@@ -209,6 +217,6 @@ int main(int argc, char *argv[]) {
     }
 
     run_exper(argv[0], dbdir, exper, num_iters, drop_caches, dump_result,
-              manual_ring, manual_pool);
+              manual_ring, manual_pool, same_buffer);
     return 0;
 }

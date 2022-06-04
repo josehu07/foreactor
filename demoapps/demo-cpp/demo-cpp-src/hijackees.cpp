@@ -84,6 +84,14 @@ void exper_read_seq(void *args_) {
         ret = pread(args->fd, args->rbufs[i], args->rlen, i * args->rlen);
 }
 
+void exper_read_seq_same_buffer(void *args_) {
+    ExperReadSeqArgs *args = reinterpret_cast<ExperReadSeqArgs *>(args_);
+    [[maybe_unused]] ssize_t ret;
+
+    for (unsigned i = 0; i < args->nreads; ++i)
+        ret = pread(args->fd, args->rbufs[0], args->rlen, i * args->rlen);
+}
+
 void exper_read_seq_manual_ring(void *args_) {
     ExperReadSeqArgs *args = reinterpret_cast<ExperReadSeqArgs *>(args_);
     assert(args->manual_ring != nullptr);

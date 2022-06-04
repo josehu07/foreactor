@@ -173,7 +173,7 @@ bool SyscallNode::IsForeactable(bool weak_state, const SyscallNode *next) {
 
 // The Issue() method contains the core logic of foreactor's syscall
 // pre-issuing algorithm. The epoch argument is the current frontier_epoch.
-long SyscallNode::Issue(const EpochList& epoch, void *output_buf) {
+long SyscallNode::Issue(const EpochList& epoch) {
     // can only call issue on frontier node
     assert(scgraph != nullptr);
     assert(this == scgraph->frontier);
@@ -316,7 +316,7 @@ long SyscallNode::Issue(const EpochList& epoch, void *output_buf) {
         TIMER_START(scgraph->timer_sync_call);
         DEBUG("sync-call %s<%p>@%s\n",
               StreamStr(*this).c_str(), this, StreamStr(epoch).c_str());
-        long syscall_rc = SyscallSync(epoch, output_buf);
+        long syscall_rc = SyscallSync(epoch);
         rc.Set(epoch, syscall_rc);
         stage.Set(epoch, STAGE_FINISHED);
         DEBUG("sync-call finished rc %ld\n", syscall_rc);
@@ -332,9 +332,10 @@ long SyscallNode::Issue(const EpochList& epoch, void *output_buf) {
         assert(stage.Get(epoch) == STAGE_FINISHED);
         DEBUG("engine-cmpl finished rc %ld\n", rc.Get(epoch));
         TIMER_PAUSE(scgraph->timer_engine_cmpl);
-        // reflect result into actual output_buf arg
+        // reflect result, only effective if this is a read-like syscall and
+        // was issued async with an internal read buffer
         TIMER_START(scgraph->timer_reflect_res);
-        ReflectResult(epoch, output_buf);
+        ReflectResult(epoch);
         DEBUG("engine-cmpl result reflected\n");
         TIMER_PAUSE(scgraph->timer_reflect_res);
     }

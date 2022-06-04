@@ -46,13 +46,15 @@ static bool branch0_arggen(const int *epoch, int *decision) {
     return true;
 }
 
-static bool pread0_arggen(const int *epoch, int *fd, size_t *count, off_t *offset) {
+static bool pread0_arggen(const int *epoch, int *fd, char **buf, size_t *count, off_t *offset, bool *buf_ready) {
     if (curr_pwrites_done == 0 || curr_pwrites_done % curr_args->nwrites != 0)
         return false;
     *fd = curr_fd;
-    *count = curr_args->rlen;
     int j = (epoch[0] + epoch[2]) % curr_args->nreadsd2;
+    *buf = curr_args->rbufs[j*2];
+    *count = curr_args->rlen;
     *offset = (j*2) * curr_args->rlen;
+    *buf_ready = true;
     return true;
 }
 
@@ -60,13 +62,15 @@ static void pread0_rcsave(const int *epoch, ssize_t res) {
     curr_preads_done++;
 }
 
-static bool pread1_arggen(const int *epoch, int *fd, size_t *count, off_t *offset) {
+static bool pread1_arggen(const int *epoch, int *fd, char **buf, size_t *count, off_t *offset, bool *buf_ready) {
     if (curr_pwrites_done == 0 || curr_pwrites_done % curr_args->nwrites != 0)
         return false;
     *fd = curr_fd;
-    *count = curr_args->rlen;
     int j = (epoch[0] + epoch[2]) % curr_args->nreadsd2;
+    *buf = curr_args->rbufs[j*2+1];
+    *count = curr_args->rlen;
     *offset = (j*2+1) * curr_args->rlen;
+    *buf_ready = true;
     return true;
 }
 

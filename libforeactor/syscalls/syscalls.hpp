@@ -49,10 +49,10 @@ class SyscallOpen final : public SyscallNode {
         // User-defined return code saver function.
         std::function<void(const int *, int)> rcsave_func;        
 
-        long SyscallSync(const EpochList& epoch, void *output_buf);
+        long SyscallSync(const EpochList& epoch);
         void PrepUringSqe(int epoch_sum, struct io_uring_sqe *sqe);
         void PrepUpoolSqe(int epoch_sum, ThreadPoolSQEntry *sqe);
-        void ReflectResult(const EpochList& epoch, void *output_buf);
+        void ReflectResult(const EpochList& epoch);
 
         bool GenerateArgs(const EpochList& epoch);
         void RemoveOneEpoch(const EpochList& epoch);
@@ -93,10 +93,10 @@ class SyscallClose final : public SyscallNode {
         std::function<bool(const int *, int *)> arggen_func;
         std::function<void(const int *, int)> rcsave_func;
 
-        long SyscallSync(const EpochList& epoch, void *output_buf);
+        long SyscallSync(const EpochList& epoch);
         void PrepUringSqe(int epoch_sum, struct io_uring_sqe *sqe);
         void PrepUpoolSqe(int epoch_sum, ThreadPoolSQEntry *sqe);
-        void ReflectResult(const EpochList& epoch, void *output_buf);
+        void ReflectResult(const EpochList& epoch);
 
         bool GenerateArgs(const EpochList& epoch);
         void RemoveOneEpoch(const EpochList& epoch);
@@ -121,6 +121,7 @@ class SyscallClose final : public SyscallNode {
 class SyscallPread final : public SyscallNode {
     private:
         ValuePool<int> fd;
+        ValuePool<char *> buf;
         ValuePool<size_t> count;
         ValuePool<off_t> offset;
 
@@ -130,14 +131,16 @@ class SyscallPread final : public SyscallNode {
 
         std::function<bool(const int *,
                            int *,
+                           char **,
                            size_t *,
-                           off_t *)> arggen_func;
+                           off_t *,
+                           bool *)> arggen_func;
         std::function<void(const int *, ssize_t)> rcsave_func;
 
-        long SyscallSync(const EpochList& epoch, void *output_buf);
+        long SyscallSync(const EpochList& epoch);
         void PrepUringSqe(int epoch_sum, struct io_uring_sqe *sqe);
         void PrepUpoolSqe(int epoch_sum, ThreadPoolSQEntry *sqe);
-        void ReflectResult(const EpochList& epoch, void *output_buf);
+        void ReflectResult(const EpochList& epoch);
 
         bool GenerateArgs(const EpochList& epoch);
         void RemoveOneEpoch(const EpochList& epoch);
@@ -149,8 +152,10 @@ class SyscallPread final : public SyscallNode {
                      const std::unordered_set<int>& assoc_dims,
                      std::function<bool(const int *,
                                         int *,
+                                        char **,
                                         size_t *,
-                                        off_t *)> arggen_func,
+                                        off_t *,
+                                        bool *)> arggen_func,
                      std::function<void(const int *, ssize_t)> rcsave_func,
                      size_t pre_alloc_buf_size);
         ~SyscallPread();
@@ -159,7 +164,10 @@ class SyscallPread final : public SyscallNode {
                                         const SyscallPread& n);
 
         void CheckArgs(const EpochList& epoch,
-                       int fd_, size_t count_, off_t offset_);
+                       int fd_,
+                       void *buf_,
+                       size_t count_,
+                       off_t offset_);
 };
 
 
@@ -178,10 +186,10 @@ class SyscallPwrite final : public SyscallNode {
                            off_t *)> arggen_func;
         std::function<void(const int *, ssize_t)> rcsave_func;
 
-        long SyscallSync(const EpochList& epoch, void *output_buf);
+        long SyscallSync(const EpochList& epoch);
         void PrepUringSqe(int epoch_sum, struct io_uring_sqe *sqe);
         void PrepUpoolSqe(int epoch_sum, ThreadPoolSQEntry *sqe);
-        void ReflectResult(const EpochList& epoch, void *output_buf);
+        void ReflectResult(const EpochList& epoch);
 
         bool GenerateArgs(const EpochList& epoch);
         void RemoveOneEpoch(const EpochList& epoch);

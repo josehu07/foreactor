@@ -41,12 +41,14 @@ static void pwrite_rcsave(const int *epoch, ssize_t res) {
     curr_pwrite_done = true;
 }
 
-static bool pread0_arggen(const int *epoch, int *fd, size_t *count, off_t *offset) {
+static bool pread0_arggen(const int *epoch, int *fd, char **buf, size_t *count, off_t *offset, bool *buf_ready) {
     if (!curr_pwrite_done)
         return false;
     *fd = curr_fd;
+    *buf = curr_args->rbuf0;
     *count = curr_args->rlen;
     *offset = 0;
+    *buf_ready = true;
     return true;
 }
 
@@ -54,12 +56,14 @@ static void pread0_rcsave(const int *epoch, ssize_t res) {
     curr_pread0_done = true;
 }
 
-static bool pread1_arggen(const int *epoch, int *fd, size_t *count, off_t *offset) {
+static bool pread1_arggen(const int *epoch, int *fd, char **buf, size_t *count, off_t *offset, bool *buf_ready) {
     if (!curr_pwrite_done)
         return false;
     *fd = curr_fd;
+    *buf = curr_args->rbuf1;
     *count = curr_args->rlen;
     *offset = curr_args->rlen;
+    *buf_ready = true;
     return true;
 }
 
