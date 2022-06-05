@@ -100,17 +100,23 @@ void __real__Z14exper_read_seqPv(void *args);
 
 extern "C"
 void __wrap__Z14exper_read_seqPv(void *args) {
-    if (!foreactor_HasSCGraph(graph_id))
-        BuildSCGraph();
+    if (!foreactor_UsingForeactor()) {
+        // Call the original function.
+        __real__Z14exper_read_seqPv(args);
+    } else {
+        // Build SCGraph once if haven't done yet.
+        if (!foreactor_HasSCGraph(graph_id))
+            BuildSCGraph();
 
-    foreactor_EnterSCGraph(graph_id);
-    curr_args = reinterpret_cast<ExperReadSeqArgs *>(args);
+        foreactor_EnterSCGraph(graph_id);
+        curr_args = reinterpret_cast<ExperReadSeqArgs *>(args);
 
-    // Call the original function with corresponding SCGraph activated.
-    __real__Z14exper_read_seqPv(args);
+        // Call the original function with corresponding SCGraph activated.
+        __real__Z14exper_read_seqPv(args);
 
-    foreactor_LeaveSCGraph(graph_id);
-    curr_args = nullptr;
+        foreactor_LeaveSCGraph(graph_id);
+        curr_args = nullptr;
+    }
 }
 
 extern "C"
@@ -118,16 +124,22 @@ void __real__Z26exper_read_seq_same_bufferPv(void *args);
 
 extern "C"
 void __wrap__Z26exper_read_seq_same_bufferPv(void *args) {
-    if (!foreactor_HasSCGraph(graph_id))
-        BuildSCGraphSameBuffer();
+    if (!foreactor_UsingForeactor()) {
+        // Call the original function.
+        __real__Z26exper_read_seq_same_bufferPv(args);
+    } else {
+        // Build SCGraph once if haven't done yet.
+        if (!foreactor_HasSCGraph(graph_id))
+            BuildSCGraphSameBuffer();
 
-    foreactor_EnterSCGraph(graph_id);
-    curr_args = reinterpret_cast<ExperReadSeqArgs *>(args);
+        foreactor_EnterSCGraph(graph_id);
+        curr_args = reinterpret_cast<ExperReadSeqArgs *>(args);
 
-    // Call the original function with corresponding SCGraph activated.
-    __real__Z26exper_read_seq_same_bufferPv(args);
+        // Call the original function with corresponding SCGraph activated.
+        __real__Z26exper_read_seq_same_bufferPv(args);
 
-    foreactor_LeaveSCGraph(graph_id);
-    curr_args = nullptr;
-    curr_preads_done = 0;
+        foreactor_LeaveSCGraph(graph_id);
+        curr_args = nullptr;
+        curr_preads_done = 0;
+    }
 }

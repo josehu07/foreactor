@@ -14,8 +14,8 @@
 namespace foreactor {
 
 
-IOUring::IOUring(int sq_length)
-        : sq_length(sq_length) {
+IOUring::IOUring(int sq_length, bool sqe_async_flag)
+        : sq_length(sq_length), sqe_async_flag(sqe_async_flag) {
     assert(sq_length >= 0);
 
     if (sq_length > 0) {
@@ -56,8 +56,8 @@ int IOUring::SubmitAll() {
         node->PrepUringSqe(epoch_sum, sqe);
 
         // use async flag to force using kernel workers
-        // TODO: tune this option on/off
-        sqe->flags |= IOSQE_ASYNC;
+        if (sqe_async_flag)
+            sqe->flags |= IOSQE_ASYNC;
 
         onthefly.insert(entry_id);
         node->stage.Set(epoch_sum, STAGE_ONTHEFLY);

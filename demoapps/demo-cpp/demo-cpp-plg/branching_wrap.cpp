@@ -270,26 +270,32 @@ void __real__Z15exper_branchingPv(void *args);
 
 extern "C"
 void __wrap__Z15exper_branchingPv(void *args) {
-    if (!foreactor_HasSCGraph(graph_id))
-        BuildSCGraph();
+    if (!foreactor_UsingForeactor()) {
+        // Call the original function.
+        __real__Z15exper_branchingPv(args);
+    } else {
+        // Build SCGraph once if haven't done yet.
+        if (!foreactor_HasSCGraph(graph_id))
+            BuildSCGraph();
 
-    foreactor_EnterSCGraph(graph_id);    
-    curr_args = reinterpret_cast<ExperBranchingArgs *>(args);
-    curr_fd = curr_args->fd;
+        foreactor_EnterSCGraph(graph_id);    
+        curr_args = reinterpret_cast<ExperBranchingArgs *>(args);
+        curr_fd = curr_args->fd;
 
-    // Call the original function with corresponding SCGraph activated.
-    __real__Z15exper_branchingPv(args);
+        // Call the original function with corresponding SCGraph activated.
+        __real__Z15exper_branchingPv(args);
 
-    foreactor_LeaveSCGraph(graph_id);
-    curr_args = nullptr;
-    curr_fd = -1;
-    curr_ret = 0;
-    curr_branch0_done = false;
-    curr_pwrite2_done = false;
-    curr_branch1_done = false;
-    curr_pread1_done = false;
-    curr_pread2_done = false;
-    curr_pread3_done = false;
-    curr_pread4_done = false;
-    curr_branch3_done = false;
+        foreactor_LeaveSCGraph(graph_id);
+        curr_args = nullptr;
+        curr_fd = -1;
+        curr_ret = 0;
+        curr_branch0_done = false;
+        curr_pwrite2_done = false;
+        curr_branch1_done = false;
+        curr_pread1_done = false;
+        curr_pread2_done = false;
+        curr_pread3_done = false;
+        curr_pread4_done = false;
+        curr_branch3_done = false;
+    }
 }

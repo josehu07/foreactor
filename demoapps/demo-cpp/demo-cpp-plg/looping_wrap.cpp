@@ -150,18 +150,24 @@ void __real__Z13exper_loopingPv(void *args);
 
 extern "C"
 void __wrap__Z13exper_loopingPv(void *args) {
-    if (!foreactor_HasSCGraph(graph_id))
-        BuildSCGraph();
+    if (!foreactor_UsingForeactor()) {
+        // Call the original function.
+        __real__Z13exper_loopingPv(args);
+    } else {
+        // Build SCGraph once if haven't done yet.
+        if (!foreactor_HasSCGraph(graph_id))
+            BuildSCGraph();
 
-    foreactor_EnterSCGraph(graph_id);    
-    curr_args = reinterpret_cast<ExperLoopingArgs *>(args);
+        foreactor_EnterSCGraph(graph_id);    
+        curr_args = reinterpret_cast<ExperLoopingArgs *>(args);
 
-    // Call the original function with corresponding SCGraph activated.
-    __real__Z13exper_loopingPv(args);
+        // Call the original function with corresponding SCGraph activated.
+        __real__Z13exper_loopingPv(args);
 
-    foreactor_LeaveSCGraph(graph_id);
-    curr_args = nullptr;
-    curr_fd = -1;
-    curr_pwrites_done = 0;
-    curr_preads_done = 0;
+        foreactor_LeaveSCGraph(graph_id);
+        curr_args = nullptr;
+        curr_fd = -1;
+        curr_pwrites_done = 0;
+        curr_preads_done = 0;
+    }
 }

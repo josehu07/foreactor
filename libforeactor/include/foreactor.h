@@ -4,30 +4,41 @@
 // This header hides all C++ class-specific details, so that it is safe to
 // be included by C applications.
 //
+
 //
 // The foreactor library expects the following environment variables:
 // 
-//   USE_FOREACTOR=yes       (any other string means no)
+//   LD_PRELOAD=/abs/path/to/libforeactor.so
+//   
+//     required for foreactor to hijack POSIX library calls
+// 
+//   USE_FOREACTOR=yes          (any other string means no)
 //
-//   if USE_FOREACTOR is not present in env, or if its value is not the
-//   string yes, then foreactor will not be active; in this case, the
-//   following two sets of env variables will have no effect
+//     if USE_FOREACTOR is not present in env, or if its value is not the
+//     string yes, then foreactor will not be active; in this case, the
+//     following two sets of env variables will have no effect
 //   
-//   QUEUE_{SCGRAPH_ID}=num  (> 0, >= PRE_ISSUE_DEPTH, <= 1024)
-//   DEPTH_{SCGRAPH_ID}=num  (>= 0, <= URING_QUEUE_LEN)
+//   DEPTH_{SCGRAPH_ID}=num     (>= 0)
 //   
-//   if USE_FOREACTOR is present and has the string value yes, then these
-//   two groups of env variables must be present for each wrapped function
-//   (i.e., SCGraph type) involved in the application; for example, giving
-//   QUEUE_0=32 and DEPTH_0=8 says that the IOUring queue length for SCGraph
-//   type 0 is 32 and the pre-issuing depth is set to be 8
+//     the pre-issuing depth of corresponding SCGraph; setting 0 means no
+//     pre-issuing for this graph (i.e., wrapped app function); otherwise,
+//     one of the following async I/O backend must be active
 //   
-//   alternatively, one can use a user-level thread pool backend engine for
-//   handling async syscalls instead of io_uring, by giving:
+//   QUEUE_{SCGRAPH_ID}=num     (> 0, >= DEPTH, <= 1024)
+//   SQE_ASYNC_FLAG=yes         (any other string means no)
+//   
+//     if QUEUE_xxx env var is given for an SCGraph, it means to use the
+//     io_uring backend for pre-issuing syscalls in this graph, and the
+//     value specifies the queue length of this io_uring instance; the
+//     SQE_ASYNC_FLAG env var controls whether to force IOSQE_ASYNC flag
+//     in submissions
 //   
 //   UTHREADS_{SCGRAPH_ID}=num  (> 0, < # CPU cores)
 //   
-//   this will override the QUEUE_* env var for that graph ID.
+//     alternatively, one can use a user-level thread pool backend engine
+//     for pre-issuing syscalls instead of io_uring, and the value specifies
+//     the number of threads in the thread pool for this SCGraph; giving
+//     this env var shadows the QUEUE_xxx env var for this graph
 //
 
 
@@ -47,6 +58,11 @@ extern "C" {
 //////////////////////////
 // Interface to plugins //
 //////////////////////////
+
+// Check env var to see if using foreactor. The first call by a plugin into
+// the library must be this function.
+bool foreactor_UsingForeactor();
+
 
 // Create a new SCGraph representing a hijacked app function.
 void foreactor_CreateSCGraph(unsigned grpah_id, unsigned total_dims);

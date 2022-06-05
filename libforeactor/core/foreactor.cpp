@@ -59,6 +59,13 @@ thread_local std::unordered_map<unsigned, ThreadPool> thread_pools;
 extern "C" {
 
 
+bool foreactor_UsingForeactor() {
+    if (!EnvParsed)
+        ParseEnvValues();
+    return UseForeactor;
+}
+
+
 static SCGraph *GetSCGraphFromId(unsigned graph_id) {
     PANIC_IF(!scgraphs.contains(graph_id),
              "graph_id %u not found\n", graph_id);
@@ -94,10 +101,6 @@ static SCGraphNode *GetNodeFromId(SCGraph *scgraph, unsigned graph_id,
 
 
 void foreactor_CreateSCGraph(unsigned graph_id, unsigned total_dims) {
-    // upon first call into library, parse environment config variables
-    if (!EnvParsed)
-        ParseEnvValues();
-
     PANIC_IF(scgraphs.contains(graph_id),
              "graph_id %u already exists in scgraphs\n", graph_id);
     PANIC_IF(io_urings.contains(graph_id),
@@ -110,7 +113,8 @@ void foreactor_CreateSCGraph(unsigned graph_id, unsigned total_dims) {
         DEBUG("using IOUring backend engine\n");
         io_urings.emplace(std::piecewise_construct,
                           std::forward_as_tuple(graph_id),
-                          std::forward_as_tuple(EnvUringQueueLen(graph_id)));
+                          std::forward_as_tuple(EnvUringQueueLen(graph_id),
+                                                EnvUringAsyncFlag(graph_id)));
         engine = &io_urings.at(graph_id);
     } else {
         DEBUG("using ThreadPool backend engine\n");
@@ -136,9 +140,6 @@ void foreactor_SetSCGraphBuilt(unsigned graph_id) {
 }
 
 bool foreactor_HasSCGraph(unsigned graph_id) {
-    // upon first call into library, parse environment config variables
-    if (!EnvParsed)
-        ParseEnvValues();
     return scgraphs.contains(graph_id);
 }
 

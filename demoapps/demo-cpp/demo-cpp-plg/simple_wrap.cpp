@@ -118,19 +118,25 @@ void __real__Z12exper_simplePv(void *args);
 
 extern "C"
 void __wrap__Z12exper_simplePv(void *args) {
-    if (!foreactor_HasSCGraph(graph_id))
-        BuildSCGraph();
+    if (!foreactor_UsingForeactor()) {
+        // Call the original function.
+        __real__Z12exper_simplePv(args);
+    } else {
+        // Build SCGraph once if haven't done yet.
+        if (!foreactor_HasSCGraph(graph_id))
+            BuildSCGraph();
 
-    foreactor_EnterSCGraph(graph_id);    
-    curr_args = reinterpret_cast<ExperSimpleArgs *>(args);
+        foreactor_EnterSCGraph(graph_id);    
+        curr_args = reinterpret_cast<ExperSimpleArgs *>(args);
 
-    // Call the original function with corresponding SCGraph activated.
-    __real__Z12exper_simplePv(args);
+        // Call the original function with corresponding SCGraph activated.
+        __real__Z12exper_simplePv(args);
 
-    foreactor_LeaveSCGraph(graph_id);
-    curr_args = nullptr;
-    curr_fd = -1;
-    curr_pwrite_done = false;
-    curr_pread0_done = false;
-    curr_pread1_done = false;
+        foreactor_LeaveSCGraph(graph_id);
+        curr_args = nullptr;
+        curr_fd = -1;
+        curr_pwrite_done = false;
+        curr_pread0_done = false;
+        curr_pread1_done = false;
+    }
 }

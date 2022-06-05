@@ -24,10 +24,11 @@ class IOUring : public IOEngine {
     private:
         struct io_uring ring;
         int sq_length = 0;
+        bool sqe_async_flag = false;
 
     public:
         IOUring() = delete;
-        IOUring(int sq_length);
+        IOUring(int sq_length, bool sqe_async_flag);
         ~IOUring();
 
         void Prepare(SyscallNode *node, int epoch_sum);

@@ -64,15 +64,21 @@ void __real__Z15exper_write_seqPv(void *args);
 
 extern "C"
 void __wrap__Z15exper_write_seqPv(void *args) {
-    if (!foreactor_HasSCGraph(graph_id))
-        BuildSCGraph();
+    if (!foreactor_UsingForeactor()) {
+        // Call the original function.
+        __real__Z15exper_write_seqPv(args);
+    } else {
+        // Build SCGraph once if haven't done yet.
+        if (!foreactor_HasSCGraph(graph_id))
+            BuildSCGraph();
 
-    foreactor_EnterSCGraph(graph_id);    
-    curr_args = reinterpret_cast<ExperWriteSeqArgs *>(args);
+        foreactor_EnterSCGraph(graph_id);    
+        curr_args = reinterpret_cast<ExperWriteSeqArgs *>(args);
 
-    // Call the original function with corresponding SCGraph activated.
-    __real__Z15exper_write_seqPv(args);
+        // Call the original function with corresponding SCGraph activated.
+        __real__Z15exper_write_seqPv(args);
 
-    foreactor_LeaveSCGraph(graph_id);
-    curr_args = nullptr;
+        foreactor_LeaveSCGraph(graph_id);
+        curr_args = nullptr;
+    }
 }

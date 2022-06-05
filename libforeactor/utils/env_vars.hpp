@@ -15,6 +15,7 @@ void ParseEnvValues();
 
 int EnvPreIssueDepth(unsigned graph_id);
 int EnvUringQueueLen(unsigned graph_id);
+bool EnvUringAsyncFlag(unsigned graph_id);
 int EnvThreadPoolSize(unsigned graph_id);
 
 

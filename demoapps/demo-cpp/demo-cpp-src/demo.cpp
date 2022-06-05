@@ -172,6 +172,15 @@ void run_exper(const char *self, std::string& dbdir, std::string& exper,
         } else
             run_iters(exper_write_seq, &args, num_iters, drop_caches, !dump_result);
 
+        if (dump_result) {
+            char *rbuf = new char[wlen];
+            for (unsigned i = 0; i < nwrites; ++i) {
+                [[maybe_unused]] ssize_t ret = pread(fd, rbuf, wlen, i * wlen);
+                std::cout << std::string(rbuf, rbuf + wlen) << std::endl;
+            }
+            delete[] rbuf;
+        }
+
     } else
         print_usage_exit(self);
 
