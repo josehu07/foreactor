@@ -71,6 +71,9 @@ class SCGraph {
         int peekhead_distance = -1;
         bool peekhead_hit_end = false;
 
+        // Other states for correct bookkeeping.
+        int weakedge_distance = -1;
+
     public:
         Timer timer_get_frontier;
         Timer timer_check_args;

@@ -102,6 +102,30 @@ struct ExperLoopingArgs : ExperArgs {
 void exper_looping(void *args);
 
 
+struct ExperWeakEdgeArgs : ExperArgs {
+    const int fd;
+    const std::vector<std::string> wcontents;
+    const size_t len;
+    char * const rbuf0;
+    char * const rbuf1;
+    const unsigned nrepeats;
+
+    ExperWeakEdgeArgs(int fd, std::vector<std::string> wcontents)
+        : fd(fd), wcontents(wcontents), len(wcontents[0].length()),
+          rbuf0(new char[len]), rbuf1(new char[len]),
+          nrepeats(wcontents.size()) {
+        assert(rbuf0 != nullptr);
+        assert(rbuf1 != nullptr);
+    }
+    ~ExperWeakEdgeArgs() {
+        delete[] rbuf0;
+        delete[] rbuf1;
+    }
+};
+
+void exper_weak_edge(void *args);
+
+
 struct ExperReadSeqArgs : ExperArgs {
     const int fd;
     std::vector<char *> rbufs;

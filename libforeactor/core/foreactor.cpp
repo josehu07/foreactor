@@ -305,13 +305,13 @@ void foreactor_EnterSCGraph(unsigned graph_id) {
 
 void foreactor_LeaveSCGraph(unsigned graph_id) {
     if (UseForeactor) {
-        // unregister this SCGraph
-        SCGraph::UnregisterSCGraph();
         // clear everything prepared/on-the-fly, reset all epoch numbers to 0
         SCGraph *scgraph = GetSCGraphFromId(graph_id);
         assert(scgraph->IsBuilt());
         scgraph->ClearAllReqs();
         scgraph->ResetToStart();
+        // unregister this SCGraph
+        SCGraph::UnregisterSCGraph();
     }
 }
 

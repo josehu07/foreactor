@@ -100,32 +100,50 @@ void run_exper(const char *self, std::string& dbdir, std::string& exper,
 
     if (exper == "simple") {
         ExperSimpleArgs args("simple.dat", rand_string(8192));
+
         run_iters(exper_simple, &args, num_iters, drop_caches, !dump_result);
+
         if (dump_result) {
-            std::cout << std::string(args.rbuf0, args.rbuf0 + args.rlen)
-                      << std::endl
-                      << std::string(args.rbuf1, args.rbuf1 + args.rlen)
-                      << std::endl;
+            std::cout << std::string(args.rbuf0, args.rbuf0 + args.rlen) << std::endl
+                      << std::string(args.rbuf1, args.rbuf1 + args.rlen) << std::endl;
         }
 
     } else if (exper == "branching") {
         ExperBranchingArgs args("branching.dat", rand_string(4096),
                                 rand_string(4096), rand_string(4096));
+
         run_iters(exper_branching, &args, num_iters, drop_caches, !dump_result);
+
         if (dump_result) {
-            std::cout << std::string(args.rbuf0, args.rbuf0 + args.rlen)
-                      << std::endl
-                      << std::string(args.rbuf1, args.rbuf1 + args.rlen)
-                      << std::endl;
+            std::cout << std::string(args.rbuf0, args.rbuf0 + args.rlen) << std::endl
+                      << std::string(args.rbuf1, args.rbuf1 + args.rlen) << std::endl;
         }
 
     } else if (exper == "looping") {
         ExperLoopingArgs args("looping.dat", rand_string(1024), 10, 20, 5);
+
         run_iters(exper_looping, &args, num_iters, drop_caches, !dump_result);
+
         if (dump_result) {
             for (auto buf : args.rbufs)
                 std::cout << std::string(buf, buf + args.rlen) << std::endl;
         }
+
+    } else if (exper == "weak_edge") {
+        int fd = open("weak_edge.dat", O_CREAT | O_RDWR, S_IRUSR | S_IWUSR);
+        std::vector<std::string> wcontents;
+        for (int i = 0; i < 5; ++i)
+            wcontents.push_back(rand_string(512));
+        ExperWeakEdgeArgs args(fd, std::move(wcontents));
+
+        run_iters(exper_weak_edge, &args, num_iters, drop_caches, !dump_result);
+
+        if (dump_result) {
+            std::cout << std::string(args.rbuf0, args.rbuf0 + args.len) << std::endl
+                      << std::string(args.rbuf1, args.rbuf1 + args.len) << std::endl;
+        }
+
+        close(fd);
 
     } else if (exper == "read_seq") {
         int fd = open("read_seq.dat", O_CREAT | O_RDWR, S_IRUSR | S_IWUSR);
@@ -157,6 +175,8 @@ void run_exper(const char *self, std::string& dbdir, std::string& exper,
                 std::cout << std::string(args.rbufs[0], args.rbufs[0] + args.rlen) << std::endl;
         }
 
+        close(fd);
+
     } else if (exper == "write_seq") {
         int fd = open("write_seq.dat", O_CREAT | O_RDWR, S_IRUSR | S_IWUSR);
         unsigned nwrites = 128;
@@ -181,8 +201,12 @@ void run_exper(const char *self, std::string& dbdir, std::string& exper,
             delete[] rbuf;
         }
 
-    } else
+        close(fd);
+
+    } else {
+        std::cerr << "Error: unrecognized experiment " << exper << std::endl;
         print_usage_exit(self);
+    }
 
     if (manual_ring)
         io_uring_queue_exit(&ring);

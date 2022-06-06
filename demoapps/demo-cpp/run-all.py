@@ -6,7 +6,7 @@ import subprocess
 
 
 def gen_env(libforeactor, use_foreactor, backend):
-    DEPTHS = [8, 8, 32, 128, 128]
+    DEPTHS = [8, 8, 32, 2, 0, 128, 128]
     QUEUE = 256
     UTHREADS = 8
 
@@ -112,6 +112,7 @@ def run_all(dbdir, libforeactor):
     run_dump("simple", dbdir, libforeactor)
     run_dump("branching", dbdir, libforeactor)
     run_dump("looping", dbdir, libforeactor)
+    run_dump("weak_edge", dbdir, libforeactor)
     run_dump("read_seq", dbdir, libforeactor,
              extra_configs=[{'use_foreactor': False, 'backend': None, 'extra_args': ['--manual_ring']},
                             {'use_foreactor': False, 'backend': None, 'extra_args': ['--manual_pool']}])
@@ -123,9 +124,6 @@ def run_all(dbdir, libforeactor):
                             {'use_foreactor': False, 'backend': None, 'extra_args': ['--manual_pool']}])
 
     print("\nRunning timed experiments ---")
-    run_demo("simple", dbdir, libforeactor)
-    run_demo("branching", dbdir, libforeactor)
-    run_demo("looping", dbdir, libforeactor)
     run_demo("read_seq", dbdir, libforeactor,
              extra_configs=[{'use_foreactor': False, 'backend': None, 'extra_args': ['--manual_ring']},
                             {'use_foreactor': False, 'backend': None, 'extra_args': ['--manual_pool']}])

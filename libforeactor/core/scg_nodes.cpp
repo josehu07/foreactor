@@ -198,7 +198,6 @@ long SyscallNode::Issue(const EpochList& epoch) {
         }
         SCGraphNode *next = scgraph->peekhead;
         EdgeType edge = scgraph->peekhead_edge;
-        bool weak_state = false;
 
         // peek and pre-issue the next few syscalls asynchronously; at most
         // peek as far as pre_issue_depth nodes beyond current frontier
@@ -212,7 +211,7 @@ long SyscallNode::Issue(const EpochList& epoch) {
                   StreamStr(peek_epoch).c_str());
         } else {
             scgraph->peekhead_hit_end = true;
-            DEBUG("peeking hit end of SCGraph\n");
+            DEBUG("peeking hit the end of SCGraph\n");
         }
         while (depth-- > 0 && next != nullptr) {
             // while next node is a branching node, pick up the correct
@@ -236,7 +235,7 @@ long SyscallNode::Issue(const EpochList& epoch) {
             if (next == nullptr && !decision_barrier) {
                 // hit end of graph, no need of peeking for future Issue()s
                 scgraph->peekhead_hit_end = true;
-                DEBUG("peeking hit end of SCGraph\n");
+                DEBUG("peeking hit the end of SCGraph\n");
                 break;
             } else if (decision_barrier) {
                 DEBUG("peeking hit a decision barrier\n");
@@ -264,9 +263,12 @@ long SyscallNode::Issue(const EpochList& epoch) {
 
             // decide if the next node is pre-issuable, and if so, prepare
             // for submission to engine
-            if (edge == EDGE_WEAK)
-                weak_state = true;
-            if (IsForeactable(weak_state, syscall_node)) {
+            if (edge == EDGE_WEAK) {
+                scgraph->weakedge_distance = scgraph->peekhead_distance;
+                DEBUG("weakedge distance set to %d\n",
+                      scgraph->weakedge_distance);
+            }
+            if (IsForeactable(scgraph->weakedge_distance >= 0, syscall_node)) {
                 // prepare the submission entry, set node stage to be ONTHEFLY
                 syscall_node->PrepAsync(peek_epoch);
                 DEBUG("prepared %d %s<%p>@%s\n",
@@ -282,8 +284,10 @@ long SyscallNode::Issue(const EpochList& epoch) {
                 if (scgraph->num_prepared == 0)
                     scgraph->prepared_distance = scgraph->peekhead_distance;
                 scgraph->num_prepared++;
-            } else
+            } else {
+                DEBUG("peeking hit a non foreactable situation\n");
                 break;
+            }
         }
         TIMER_PAUSE(scgraph->timer_peek_algo);
     }
@@ -345,6 +349,7 @@ long SyscallNode::Issue(const EpochList& epoch) {
     scgraph->frontier = next_node;
     scgraph->peekhead_distance--;
     scgraph->prepared_distance--;
+    scgraph->weakedge_distance--;
     DEBUG("pushed frontier -> %p\n", scgraph->frontier);
 
     assert(rc.Has(epoch));

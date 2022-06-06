@@ -92,16 +92,12 @@ std::tuple<SyscallNode *, int, long> IOUring::CompleteOne() {
 
 
 void IOUring::CleanUp() {
-    // clear the prepared set
+    // discard the prepared set
     prepared.clear();
 
-    // call CmplAsync() on all requests in the onthefly set
-    while (onthefly.size() > 0) {
-        EntryId entry_id = *(onthefly.begin());
-        auto [node, epoch_sum] = DecodeEntryId(entry_id);
-        assert(node->stage.Get(epoch_sum) == STAGE_ONTHEFLY);
-        node->CmplAsync(epoch_sum);     // entry_id will be removed here
-    }
+    // harvest completion for all on-the-fly requests
+    while (onthefly.size() > 0)
+        [[maybe_unused]] auto [node, epoch_sum, rc] = CompleteOne();
 }
 
 
