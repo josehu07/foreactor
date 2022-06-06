@@ -53,7 +53,7 @@ SCGraph::SCGraph(unsigned graph_id, unsigned total_dims, IOEngine *engine,
           peekhead(nullptr), peekhead_edge(EDGE_BASE),
           peekhead_epoch(total_dims), peekhead_distance(-1),
           peekhead_hit_end(false),
-          weakedge_distance(-1),
+          weakedge_distance(-1), firstskip_epoch(total_dims),
           timer_get_frontier(TimerIdStr("get-frontier")),
           timer_check_args(TimerIdStr("check-args")),
           timer_peek_algo(TimerIdStr("peek-algo")),
@@ -107,6 +107,7 @@ void SCGraph::ResetToStart() {
     peekhead_hit_end = false;
 
     weakedge_distance = -1;
+    firstskip_epoch.Reset();
     
     for (auto&& [_, node] : nodes)
         node->ResetValuePools();

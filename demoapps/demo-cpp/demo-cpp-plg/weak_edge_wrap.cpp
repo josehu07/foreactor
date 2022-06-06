@@ -71,7 +71,7 @@ static void BuildSCGraph() {
 
     foreactor_SetSCGraphBuilt(graph_id);
 
-    // foreactor_DumpDotImg(graph_id, "weak_edges");
+    // foreactor_DumpDotImg(graph_id, "weak_edge");
 }
 
 

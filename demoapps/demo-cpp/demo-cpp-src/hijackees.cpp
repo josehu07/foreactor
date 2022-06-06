@@ -78,7 +78,7 @@ void exper_looping(void *args_) {
 
 void exper_weak_edge(void *args_) {
     ExperWeakEdgeArgs *args = reinterpret_cast<ExperWeakEdgeArgs *>(args_);
-    [[maybe_unused]]  ssize_t ret;
+    [[maybe_unused]] ssize_t ret;
 
     for (unsigned i = 0; i < args->nrepeats; ++i) {
         ret = pwrite(args->fd, args->wcontents[i].c_str(), args->len, 0);
@@ -86,6 +86,19 @@ void exper_weak_edge(void *args_) {
         if (i == 3)     // let's pretend this is some runtime-dependent condition,
             return;     // making the edge to next node a weak edge
         ret = pread(args->fd, args->rbuf1, args->len, 0);
+    }
+}
+
+
+void exper_crossing(void *args_) {
+    ExperCrossingArgs *args = reinterpret_cast<ExperCrossingArgs *>(args_);
+    [[maybe_unused]] ssize_t ret;
+
+    for (unsigned i = 0; i < args->nblocks; ++i) {
+        ret = pread(args->fd, args->rbuf, args->len, i * args->len);
+        for (unsigned j = 0; j < args->len; ++j)
+            args->rbuf[j] = '7';
+        ret = pwrite(args->fd, args->rbuf, args->len, i * args->len);
     }
 }
 

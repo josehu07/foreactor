@@ -199,6 +199,12 @@ long SyscallNode::Issue(const EpochList& epoch) {
         SCGraphNode *next = scgraph->peekhead;
         EdgeType edge = scgraph->peekhead_edge;
 
+        // extra state for remembering the first skipped node in this round
+        // if there is one
+        SCGraphNode *firstskip_node = nullptr;
+        EdgeType firstskip_edge = EDGE_BASE;
+        int firstskip_distance = -1;
+
         // peek and pre-issue the next few syscalls asynchronously; at most
         // peek as far as pre_issue_depth nodes beyond current frontier
         assert(scgraph->peekhead_distance >= 0);
@@ -233,9 +239,14 @@ long SyscallNode::Issue(const EpochList& epoch) {
                 DEBUG("picked branch %p in peeking\n", next);
             }
             if (next == nullptr && !decision_barrier) {
-                // hit end of graph, no need of peeking for future Issue()s
-                scgraph->peekhead_hit_end = true;
-                DEBUG("peeking hit the end of SCGraph\n");
+                if (firstskip_node == nullptr) {
+                    // hit end of graph, no need of peeking for future Issue()s
+                    scgraph->peekhead_hit_end = true;
+                    DEBUG("peeking hit end of SCGraph, no skipped nodes\n");
+                } else {
+                    // hit end of graph, but there are skipped nodes
+                    DEBUG("peeking hit end of SCGraph, has skipped node\n");
+                }
                 break;
             } else if (decision_barrier) {
                 DEBUG("peeking hit a decision barrier\n");
@@ -247,19 +258,19 @@ long SyscallNode::Issue(const EpochList& epoch) {
             // haven't been ready yet
             SyscallNode *syscall_node = static_cast<SyscallNode *>(next);
             if (!syscall_node->stage.Has(peek_epoch) ||
-                syscall_node->stage.Get(peek_epoch) != STAGE_ARGREADY) {
+                syscall_node->stage.Get(peek_epoch) == STAGE_NOTREADY) {
                 if (!syscall_node->GenerateArgs(peek_epoch)) {
                     DEBUG("arggen %s<%p>@%s not ready\n",
                           StreamStr(*syscall_node).c_str(), syscall_node,
                           StreamStr(peek_epoch).c_str());
-                    break;
+                    goto update_firstskip_and_continue;
                 } else {
                     DEBUG("arggen %s<%p>@%s successful\n",
                           StreamStr(*syscall_node).c_str(), syscall_node,
                           StreamStr(peek_epoch).c_str());
                 }
             }
-            assert(syscall_node->stage.Get(peek_epoch) == STAGE_ARGREADY);
+            assert(syscall_node->stage.Get(peek_epoch) != STAGE_NOTREADY);
 
             // decide if the next node is pre-issuable, and if so, prepare
             // for submission to engine
@@ -268,26 +279,55 @@ long SyscallNode::Issue(const EpochList& epoch) {
                 DEBUG("weakedge distance set to %d\n",
                       scgraph->weakedge_distance);
             }
-            if (IsForeactable(scgraph->weakedge_distance >= 0, syscall_node)) {
+            if (syscall_node->stage.Get(peek_epoch) != STAGE_ARGREADY) {
+                // the next node has been prepared in previous rounds, move on
+                goto peek_continue;
+            } else if (IsForeactable(scgraph->weakedge_distance >= 0,
+                                     syscall_node)) {
                 // prepare the submission entry, set node stage to be ONTHEFLY
                 syscall_node->PrepAsync(peek_epoch);
                 DEBUG("prepared %d %s<%p>@%s\n",
                       scgraph->num_prepared, StreamStr(*syscall_node).c_str(),
                       syscall_node, StreamStr(peek_epoch).c_str());
-                // distance of peekhead from frontier increments by 1
-                next = syscall_node->next_node;
-                edge = syscall_node->edge_type;
-                scgraph->peekhead = next;
-                scgraph->peekhead_edge = edge;
-                scgraph->peekhead_distance++;
                 // update prepared_distance if this is the earliest
                 if (scgraph->num_prepared == 0)
                     scgraph->prepared_distance = scgraph->peekhead_distance;
                 scgraph->num_prepared++;
+                goto peek_continue;
             } else {
                 DEBUG("peeking hit a non foreactable situation\n");
-                break;
+                goto update_firstskip_and_continue;
             }
+
+update_firstskip_and_continue:
+            if (firstskip_node == nullptr) {
+                // this is the first skipped node in this round
+                firstskip_node = syscall_node;
+                firstskip_edge = edge;
+                scgraph->firstskip_epoch.CopyFrom(peek_epoch);
+                firstskip_distance = scgraph->peekhead_distance;
+                DEBUG("firstskip node set to %s<%p>@%s\n",
+                      StreamStr(*firstskip_node).c_str(), firstskip_node,
+                      StreamStr(scgraph->firstskip_epoch).c_str());
+            }
+
+peek_continue:
+            // distance of peekhead from frontier increments by 1
+            next = syscall_node->next_node;
+            edge = syscall_node->edge_type;
+            scgraph->peekhead = next;
+            scgraph->peekhead_edge = edge;
+            scgraph->peekhead_distance++;
+        }
+
+        // if there's skipped node, reset peekhead to the first skipped node,
+        // so that the next pre-issuing algorithm starts there
+        if (firstskip_node != nullptr) {
+            scgraph->peekhead = firstskip_node;
+            scgraph->peekhead_edge = firstskip_edge;
+            scgraph->peekhead_epoch.CopyFrom(scgraph->firstskip_epoch);
+            scgraph->peekhead_distance = firstskip_distance;
+            DEBUG("reverted peekhead to firstskip in this round\n");
         }
         TIMER_PAUSE(scgraph->timer_peek_algo);
     }
@@ -298,7 +338,7 @@ long SyscallNode::Issue(const EpochList& epoch) {
     if (scgraph->num_prepared > 0) {
         // TODO: these conditions might be tunable
         if ((scgraph->num_prepared >= scgraph->pre_issue_depth / 2) ||
-            (scgraph->prepared_distance <= 1)) {
+            (scgraph->prepared_distance <= 0)) {
             // move all prepared requests to in_progress stage, actually
             // call the io_uring_prep_xxx()s
             TIMER_START(scgraph->timer_engine_submit);

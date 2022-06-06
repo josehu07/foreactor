@@ -126,6 +126,24 @@ struct ExperWeakEdgeArgs : ExperArgs {
 void exper_weak_edge(void *args);
 
 
+struct ExperCrossingArgs : ExperArgs {
+    const int fd;
+    const size_t len;
+    char * const rbuf;
+    const unsigned nblocks;
+
+    ExperCrossingArgs(int fd, size_t len, unsigned nblocks)
+        : fd(fd), len(len), rbuf(new char[len]), nblocks(nblocks) {
+        assert(rbuf != nullptr);
+    }
+    ~ExperCrossingArgs() {
+        delete[] rbuf;
+    }
+};
+
+void exper_crossing(void *args);
+
+
 struct ExperReadSeqArgs : ExperArgs {
     const int fd;
     std::vector<char *> rbufs;

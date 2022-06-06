@@ -73,6 +73,7 @@ class SCGraph {
 
         // Other states for correct bookkeeping.
         int weakedge_distance = -1;
+        EpochList firstskip_epoch;
 
     public:
         Timer timer_get_frontier;

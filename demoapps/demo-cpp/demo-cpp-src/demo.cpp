@@ -145,6 +145,30 @@ void run_exper(const char *self, std::string& dbdir, std::string& exper,
 
         close(fd);
 
+    } else if (exper == "crossing") {
+        int fd = open("crossing.dat", O_CREAT | O_RDWR, S_IRUSR | S_IWUSR);
+        unsigned nblocks = 16;
+        size_t len = 4096;
+        std::string wcontent = rand_string(len);
+        for (unsigned i = 0; i < nblocks; ++i) {
+            [[maybe_unused]] ssize_t ret =
+                pwrite(fd, wcontent.c_str(), len, i * len);
+        }
+        ExperCrossingArgs args(fd, len, nblocks);
+
+        run_iters(exper_crossing, &args, num_iters, drop_caches, !dump_result);
+
+        if (dump_result) {
+            char *rbuf = new char[len];
+            for (unsigned i = 0; i < nblocks; ++i) {
+                [[maybe_unused]] ssize_t ret = pread(fd, rbuf, len, i * len);
+                std::cout << std::string(rbuf, rbuf + len) << std::endl;
+            }
+            delete[] rbuf;
+        }
+
+        close(fd);
+
     } else if (exper == "read_seq") {
         int fd = open("read_seq.dat", O_CREAT | O_RDWR, S_IRUSR | S_IWUSR);
         unsigned nreads = 128;
