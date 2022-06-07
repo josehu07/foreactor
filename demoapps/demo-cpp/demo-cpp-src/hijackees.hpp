@@ -145,17 +145,21 @@ void exper_crossing(void *args);
 
 
 struct ExperReadSeqArgs : ExperArgs {
-    const int fd;
+    const std::vector<int> fds;
     std::vector<char *> rbufs;
     const size_t rlen;
     const unsigned nreads;
+    const bool same_buffer;
+    const bool multi_file;
     struct io_uring *manual_ring;
     ThreadPool *manual_pool;
 
-    ExperReadSeqArgs(int fd, size_t rlen, unsigned nreads)
-        : fd(fd), rlen(rlen), nreads(nreads) {
+    ExperReadSeqArgs(std::vector<int> fds, size_t rlen, unsigned nreads,
+                     bool same_buffer, bool multi_file)
+        : fds(fds), rlen(rlen), nreads(nreads), same_buffer(same_buffer),
+          multi_file(multi_file) {
         for (unsigned i = 0; i < nreads; ++i)
-            rbufs.push_back(new char[rlen]);
+            rbufs.push_back(new (std::align_val_t(512)) char[rlen]);
     }
     ~ExperReadSeqArgs() {
         for (auto buf : rbufs)
@@ -164,25 +168,32 @@ struct ExperReadSeqArgs : ExperArgs {
 };
 
 void exper_read_seq(void *args);
-void exper_read_seq_same_buffer(void *args);
 void exper_read_seq_manual_ring(void *args);
 void exper_read_seq_manual_pool(void *args);
 
 
 struct ExperWriteSeqArgs : ExperArgs {
-    const int fd;
-    std::vector<std::string> wcontents;
+    const std::vector<int> fds;
+    std::vector<char *> wbufs;
     const size_t wlen;
     const unsigned nwrites;
+    const bool multi_file;
     struct io_uring *manual_ring;
     ThreadPool *manual_pool;
 
-    ExperWriteSeqArgs(int fd, std::string wcontent, unsigned nwrites)
-        : fd(fd), wlen(wcontent.length()), nwrites(nwrites) {
-        for (unsigned i = 0; i < nwrites; ++i)
-            wcontents.push_back(wcontent);
+    ExperWriteSeqArgs(std::vector<int> fds, std::string wcontent,
+                      unsigned nwrites, bool multi_file)
+        : fds(fds), wlen(wcontent.length()), nwrites(nwrites),
+          multi_file(multi_file) {
+        for (unsigned i = 0; i < nwrites; ++i) {
+            wbufs.push_back(new (std::align_val_t(512)) char[wlen]);
+            memcpy(wbufs[i], wcontent.c_str(), wcontent.length());
+        }
     }
-    ~ExperWriteSeqArgs() {}
+    ~ExperWriteSeqArgs() {
+        for (auto buf : wbufs)
+            delete[] buf;
+    }
 };
 
 void exper_write_seq(void *args);

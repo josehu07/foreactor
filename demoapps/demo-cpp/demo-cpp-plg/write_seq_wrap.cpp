@@ -13,10 +13,10 @@ static constexpr unsigned graph_id = 6;
 static ExperWriteSeqArgs *curr_args = nullptr;
 
 static bool pwrite_arggen(const int *epoch, int *fd, const char **buf, size_t *count, off_t *offset) {
-    *fd = curr_args->fd;
-    *buf = curr_args->wcontents[epoch[0]].c_str();
+    *fd = curr_args->multi_file ? curr_args->fds[epoch[0]] : curr_args->fds[0];
+    *buf = curr_args->wbufs[epoch[0]];
     *count = curr_args->wlen;
-    *offset = epoch[0] * curr_args->wlen;
+    *offset = curr_args->multi_file ? 0 : epoch[0] * curr_args->wlen;
     return true;
 }
 

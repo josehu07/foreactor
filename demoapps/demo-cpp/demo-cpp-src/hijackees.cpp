@@ -107,16 +107,12 @@ void exper_read_seq(void *args_) {
     ExperReadSeqArgs *args = reinterpret_cast<ExperReadSeqArgs *>(args_);
     [[maybe_unused]] ssize_t ret;
 
-    for (unsigned i = 0; i < args->nreads; ++i)
-        ret = pread(args->fd, args->rbufs[i], args->rlen, i * args->rlen);
-}
-
-void exper_read_seq_same_buffer(void *args_) {
-    ExperReadSeqArgs *args = reinterpret_cast<ExperReadSeqArgs *>(args_);
-    [[maybe_unused]] ssize_t ret;
-
-    for (unsigned i = 0; i < args->nreads; ++i)
-        ret = pread(args->fd, args->rbufs[0], args->rlen, i * args->rlen);
+    for (unsigned i = 0; i < args->nreads; ++i) {
+        int fd = args->multi_file ? args->fds[i] : args->fds[0];
+        char *buf = args->same_buffer ? args->rbufs[0] : args->rbufs[i];
+        off_t offset = args->multi_file ? 0 : i * args->rlen;
+        ret = pread(fd, buf, args->rlen, offset);
+    }
 }
 
 void exper_read_seq_manual_ring(void *args_) {
@@ -127,9 +123,15 @@ void exper_read_seq_manual_ring(void *args_) {
         struct io_uring_sqe *sqe = io_uring_get_sqe(args->manual_ring);
         assert(sqe != nullptr);
         io_uring_sqe_set_data(sqe, reinterpret_cast<void *>(i));
-        io_uring_prep_read(sqe, args->fd, args->rbufs[i], args->rlen, i * args->rlen);
+
+        int fd = args->multi_file ? args->fds[i] : args->fds[0];
+        char *buf = args->same_buffer ? args->rbufs[0] : args->rbufs[i];
+        off_t offset = args->multi_file ? 0 : i * args->rlen;
+        io_uring_prep_read(sqe, fd, buf, args->rlen, offset);
+        
         sqe->flags |= IOSQE_ASYNC;
     }
+
     io_uring_submit(args->manual_ring);
 
     for (unsigned i = 0; i < args->nreads; ++i) {
@@ -146,16 +148,21 @@ void exper_read_seq_manual_pool(void *args_) {
 
     std::vector<ThreadPoolSQEntry> entries;
     entries.reserve(args->nreads);
+
     for (unsigned i = 0; i < args->nreads; ++i) {
+        int fd = args->multi_file ? args->fds[i] : args->fds[0];
+        char *buf = args->same_buffer ? args->rbufs[0] : args->rbufs[i];
+        off_t offset = args->multi_file ? 0 : i * args->rlen;
         entries.emplace_back(ThreadPoolSQEntry{
             .entry_id = i,
             .sc_type = SC_PREAD,
-            .fd = args->fd,
-            .offset = static_cast<off_t>(i * args->rlen),
-            .buf = reinterpret_cast<uint64_t>(args->rbufs[i]),
+            .fd = fd,
+            .offset = offset,
+            .buf = reinterpret_cast<uint64_t>(buf),
             .rw_len = args->rlen
         });
     }
+
     args->manual_pool->SubmitBulk(entries);
 
     for (unsigned i = 0; i < args->nreads; ++i)
@@ -167,8 +174,11 @@ void exper_write_seq(void *args_) {
     ExperWriteSeqArgs *args = reinterpret_cast<ExperWriteSeqArgs *>(args_);
     [[maybe_unused]] ssize_t ret;
 
-    for (unsigned i = 0; i < args->nwrites; ++i)
-        ret = pwrite(args->fd, args->wcontents[i].c_str(), args->wlen, i * args->wlen);
+    for (unsigned i = 0; i < args->nwrites; ++i) {
+        int fd = args->multi_file ? args->fds[i] : args->fds[0];
+        off_t offset = args->multi_file ? 0 : i * args->wlen;
+        ret = pwrite(fd, args->wbufs[i], args->wlen, offset);
+    }
 }
 
 void exper_write_seq_manual_ring(void *args_) {
@@ -179,9 +189,14 @@ void exper_write_seq_manual_ring(void *args_) {
         struct io_uring_sqe *sqe = io_uring_get_sqe(args->manual_ring);
         assert(sqe != nullptr);
         io_uring_sqe_set_data(sqe, reinterpret_cast<void *>(i));
-        io_uring_prep_write(sqe, args->fd, args->wcontents[i].c_str(), args->wlen, i * args->wlen);
+
+        int fd = args->multi_file ? args->fds[i] : args->fds[0];
+        off_t offset = args->multi_file ? 0 : i * args->wlen;
+        io_uring_prep_write(sqe, fd, args->wbufs[i], args->wlen, offset);
+        
         sqe->flags |= IOSQE_ASYNC;
     }
+
     io_uring_submit(args->manual_ring);
 
     for (unsigned i = 0; i < args->nwrites; ++i) {
@@ -198,16 +213,20 @@ void exper_write_seq_manual_pool(void *args_) {
 
     std::vector<ThreadPoolSQEntry> entries;
     entries.reserve(args->nwrites);
+
     for (unsigned i = 0; i < args->nwrites; ++i) {
+        int fd = args->multi_file ? args->fds[i] : args->fds[0];
+        off_t offset = args->multi_file ? 0 : i * args->wlen;
         entries.emplace_back(ThreadPoolSQEntry{
             .entry_id = i,
             .sc_type = SC_PWRITE,
-            .fd = args->fd,
-            .offset = static_cast<off_t>(i * args->wlen),
-            .buf = reinterpret_cast<uint64_t>(args->wcontents[i].c_str()),
+            .fd = fd,
+            .offset = offset,
+            .buf = reinterpret_cast<uint64_t>(args->wbufs[i]),
             .rw_len = args->wlen
         });
     }
+
     args->manual_pool->SubmitBulk(entries);
 
     for (unsigned i = 0; i < args->nwrites; ++i)

@@ -244,8 +244,12 @@ SyscallPread::SyscallPread(unsigned node_id, std::string name,
           arggen_func(arggen_func), rcsave_func(rcsave_func) {
     assert(arggen_func != nullptr);
     // TODO: may need fewer than these many pre-alloced buffers
-    for (int i = 0; i < scgraph->pre_issue_depth; ++i)
-        pre_alloced_bufs.insert(new char[pre_alloc_buf_size]);
+    for (int i = 0; i < scgraph->pre_issue_depth; ++i) {
+        // align allocation to hardware sector size, in case the file is
+        // open O_DIRECT
+        pre_alloced_bufs.insert(
+            new (std::align_val_t(512)) char[pre_alloc_buf_size]);
+    }
 }
 
 SyscallPread::~SyscallPread() {

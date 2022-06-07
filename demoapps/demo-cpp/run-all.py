@@ -117,10 +117,14 @@ def run_all(dbdir, libforeactor):
     run_dump("read_seq", dbdir, libforeactor,
              extra_configs=[{'use_foreactor': False, 'backend': None, 'extra_args': ['--manual_ring']},
                             {'use_foreactor': False, 'backend': None, 'extra_args': ['--manual_pool']}])
-    run_dump("read_seq", dbdir, libforeactor, args=['--same_buffer'],
+    run_dump("read_seq", dbdir, libforeactor, args=['--same_buffer'])
+    run_dump("read_seq", dbdir, libforeactor, args=['--multi_file'],
              extra_configs=[{'use_foreactor': False, 'backend': None, 'extra_args': ['--manual_ring']},
                             {'use_foreactor': False, 'backend': None, 'extra_args': ['--manual_pool']}])
     run_dump("write_seq", dbdir, libforeactor,
+             extra_configs=[{'use_foreactor': False, 'backend': None, 'extra_args': ['--manual_ring']},
+                            {'use_foreactor': False, 'backend': None, 'extra_args': ['--manual_pool']}])
+    run_dump("write_seq", dbdir, libforeactor, args=['--multi_file'],
              extra_configs=[{'use_foreactor': False, 'backend': None, 'extra_args': ['--manual_ring']},
                             {'use_foreactor': False, 'backend': None, 'extra_args': ['--manual_pool']}])
 
@@ -131,7 +135,25 @@ def run_all(dbdir, libforeactor):
     run_demo("read_seq", dbdir, libforeactor, args=['--same_buffer'],
              extra_configs=[{'use_foreactor': False, 'backend': None, 'extra_args': ['--manual_ring']},
                             {'use_foreactor': False, 'backend': None, 'extra_args': ['--manual_pool']}])
+    run_demo("read_seq", dbdir, libforeactor, args=['--o_direct'],
+             extra_configs=[{'use_foreactor': False, 'backend': None, 'extra_args': ['--manual_ring']},
+                            {'use_foreactor': False, 'backend': None, 'extra_args': ['--manual_pool']}])
+    run_demo("read_seq", dbdir, libforeactor, args=['--same_buffer', '--o_direct'],
+             extra_configs=[{'use_foreactor': False, 'backend': None, 'extra_args': ['--manual_ring']},
+                            {'use_foreactor': False, 'backend': None, 'extra_args': ['--manual_pool']}])
+    run_demo("read_seq", dbdir, libforeactor, args=['--multi_file'],
+             extra_configs=[{'use_foreactor': False, 'backend': None, 'extra_args': ['--manual_ring']},
+                            {'use_foreactor': False, 'backend': None, 'extra_args': ['--manual_pool']}])
+    run_demo("read_seq", dbdir, libforeactor, args=['--same_buffer', '--multi_file'],
+             extra_configs=[{'use_foreactor': False, 'backend': None, 'extra_args': ['--manual_ring']},
+                            {'use_foreactor': False, 'backend': None, 'extra_args': ['--manual_pool']}])
     run_demo("write_seq", dbdir, libforeactor,
+             extra_configs=[{'use_foreactor': False, 'backend': None, 'extra_args': ['--manual_ring']},
+                            {'use_foreactor': False, 'backend': None, 'extra_args': ['--manual_pool']}])
+    run_demo("write_seq", dbdir, libforeactor, args=['--o_direct'],
+             extra_configs=[{'use_foreactor': False, 'backend': None, 'extra_args': ['--manual_ring']},
+                            {'use_foreactor': False, 'backend': None, 'extra_args': ['--manual_pool']}])
+    run_demo("write_seq", dbdir, libforeactor, args=['--multi_file'],
              extra_configs=[{'use_foreactor': False, 'backend': None, 'extra_args': ['--manual_ring']},
                             {'use_foreactor': False, 'backend': None, 'extra_args': ['--manual_pool']}])
 
