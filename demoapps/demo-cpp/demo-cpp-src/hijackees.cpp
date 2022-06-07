@@ -149,7 +149,7 @@ void exper_read_seq_manual_pool(void *args_) {
     std::vector<ThreadPoolSQEntry> entries;
     entries.reserve(args->nreads);
 
-    for (unsigned i = 0; i < args->nreads; ++i) {
+    for (unsigned i = 1; i < args->nreads; ++i) {
         int fd = args->multi_file ? args->fds[i] : args->fds[0];
         char *buf = args->same_buffer ? args->rbufs[0] : args->rbufs[i];
         off_t offset = args->multi_file ? 0 : i * args->rlen;
@@ -165,7 +165,9 @@ void exper_read_seq_manual_pool(void *args_) {
 
     args->manual_pool->SubmitBulk(entries);
 
-    for (unsigned i = 0; i < args->nreads; ++i)
+    [[maybe_unused]] ssize_t ret = pread(args->fds[0], args->rbufs[0], args->rlen, 0);
+
+    for (unsigned i = 1; i < args->nreads; ++i)
         args->manual_pool->CompleteOne();
 }
 

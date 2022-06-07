@@ -87,12 +87,12 @@ void run_exper(const char *self, std::string& dbdir, std::string& exper,
     std::filesystem::current_path(dbdir);
 
     struct io_uring ring;
-    ThreadPool pool;
+    ThreadPool pool(8);
     if (manual_ring) {
         [[maybe_unused]] int ret = io_uring_queue_init(256, &ring, 0);
         assert(ret == 0);
     } else if (manual_pool)
-        pool.StartThreads(8);
+        pool.StartThreads();
 
     if (exper == "simple") {
         ExperSimpleArgs args("simple.dat", rand_string(8192));

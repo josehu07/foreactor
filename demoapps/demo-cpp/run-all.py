@@ -87,7 +87,7 @@ def run_dump(name, dbdir, libforeactor, args=[], extra_configs=[]):
             print(" CORRECT")
 
 def run_demo(name, dbdir, libforeactor, args=[], extra_configs=[]):
-    cmd = ['./demo', name, dbdir, '10']
+    cmd = ['./demo', name, dbdir, '100']
     cmd += args
 
     print(f" running {name}-original{args_str(True, args)}...")
@@ -154,6 +154,9 @@ def run_all(dbdir, libforeactor):
              extra_configs=[{'use_foreactor': False, 'backend': None, 'extra_args': ['--manual_ring']},
                             {'use_foreactor': False, 'backend': None, 'extra_args': ['--manual_pool']}])
     run_demo("write_seq", dbdir, libforeactor, args=['--multi_file'],
+             extra_configs=[{'use_foreactor': False, 'backend': None, 'extra_args': ['--manual_ring']},
+                            {'use_foreactor': False, 'backend': None, 'extra_args': ['--manual_pool']}])
+    run_demo("write_seq", dbdir, libforeactor, args=['--multi_file', '--o_direct'],
              extra_configs=[{'use_foreactor': False, 'backend': None, 'extra_args': ['--manual_ring']},
                             {'use_foreactor': False, 'backend': None, 'extra_args': ['--manual_pool']}])
 
