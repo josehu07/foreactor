@@ -247,9 +247,8 @@ SyscallPread::SyscallPread(unsigned node_id, std::string name,
     for (int i = 0; i < scgraph->pre_issue_depth; ++i) {
         // align allocation to hardware sector size, in case the file is
         // open O_DIRECT
-        // pre_alloced_bufs.insert(
-        //     new (std::align_val_t(512)) char[pre_alloc_buf_size]);
-        pre_alloced_bufs.insert(nullptr);
+        pre_alloced_bufs.insert(
+            new (std::align_val_t(512)) char[pre_alloc_buf_size]);
     }
 }
 

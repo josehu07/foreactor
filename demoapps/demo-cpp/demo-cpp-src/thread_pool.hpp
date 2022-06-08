@@ -1,11 +1,9 @@
-#include <iostream>
 #include <vector>
 #include <thread>
 #include <future>
 #include <assert.h>
 #include <fcntl.h>
 #include <unistd.h>
-#include <time.h>
 
 #include "concurrent_queue.hpp"
 
@@ -50,8 +48,6 @@ class ThreadPool {
 
     using SQEntry = ThreadPoolSQEntry;
     using CQEntry = ThreadPoolCQEntry;
-
-    std::vector<std::vector<uint64_t>> handle_nsecs;
 
     private:
         int nthreads = 0;
@@ -100,14 +96,7 @@ class ThreadPool {
                 // call the corresponding syscall handler based on entry type,
                 // fill in CQE struct
                 CQEntry cqe;
-                struct timespec start_ts;
-                struct timespec pause_ts;
-                [[maybe_unused]] int ret = clock_gettime(CLOCK_MONOTONIC, &start_ts);
                 HandleSQEntry(sqe, cqe);
-                ret = clock_gettime(CLOCK_MONOTONIC, &pause_ts);
-                uint64_t nsecs = (pause_ts.tv_sec - start_ts.tv_sec) * 1e9
-                                 + (pause_ts.tv_nsec - start_ts.tv_nsec);
-                handle_nsecs[id].push_back(nsecs);
 
                 // move CQE to enqueue completion queue
                 [[maybe_unused]] bool success =
@@ -144,9 +133,6 @@ class ThreadPool {
             // wait for everyone finishes initialization
             for (auto&& init_barrier : init_barriers)
                 init_barrier.wait();
-
-            for (int id = 0; id < nthreads; ++id)
-                handle_nsecs.emplace_back();
         }
 
         void JoinThreads() {
@@ -157,17 +143,6 @@ class ThreadPool {
             // wait and join all worker threads
             for (int id = 0; id < nthreads; ++id)
                 workers[id].join();
-
-            double sum = 0.;
-            size_t cnt = 0;
-            for (auto&& vec : handle_nsecs) {
-                for (auto time : vec) {
-                    sum += time / 1000.;
-                    cnt++;
-                }
-            }
-            double avg = sum / cnt;
-            std::cout << "??? sum " << sum << " avg " << avg << std::endl;
         }
 
         void SubmitBulk(std::vector<SQEntry>& entries) {

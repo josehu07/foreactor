@@ -62,14 +62,7 @@ void ThreadPool::WorkerThreadFunc(int id, std::promise<void> init_barrier) {
         // call the corresponding syscall handler based on entry type, fill
         // in CQE struct
         CQEntry cqe;
-        struct timespec start_ts;
-        struct timespec pause_ts;
-        [[maybe_unused]] int ret = clock_gettime(CLOCK_MONOTONIC, &start_ts);
         HandleSQEntry(sqe, cqe);
-        ret = clock_gettime(CLOCK_MONOTONIC, &pause_ts);
-        uint64_t nsecs = (pause_ts.tv_sec - start_ts.tv_sec) * 1e9
-                         + (pause_ts.tv_nsec - start_ts.tv_nsec);
-        handle_nsecs[id].push_back(nsecs);
 
         // move CQE to enqueue completion queue
         [[maybe_unused]] bool success =
@@ -110,9 +103,6 @@ ThreadPool::ThreadPool(int nthreads)
         init_barrier.wait();
 
     DEBUG("inited ThreadPool with %d worker threads\n", nthreads);
-
-    for (int id = 0; id < nthreads; ++id)
-        handle_nsecs.emplace_back();
 }
 
 ThreadPool::~ThreadPool() {
@@ -125,17 +115,6 @@ ThreadPool::~ThreadPool() {
         workers[id].join();
 
     DEBUG("destroyed ThreadPool\n");
-
-    double sum = 0.;
-    size_t cnt = 0;
-    for (auto&& vec : handle_nsecs) {
-        for (auto time : vec) {
-            sum += time / 1000.;
-            cnt++;
-        }
-    }
-    double avg = sum / cnt;
-    std::cout << "??? sum " << sum << " avg " << avg << std::endl;
 }
 
 

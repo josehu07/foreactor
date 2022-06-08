@@ -51,8 +51,6 @@ class ThreadPool : public IOEngine {
     using SQEntry = ThreadPoolSQEntry;
     using CQEntry = ThreadPoolCQEntry;
 
-    std::vector<std::vector<uint64_t>> handle_nsecs;
-
     private:
         int nthreads = 0;
         std::vector<std::thread> workers;
