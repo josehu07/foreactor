@@ -234,3 +234,24 @@ void exper_write_seq_manual_pool(void *args_) {
     for (unsigned i = 0; i < args->nwrites; ++i)
         args->manual_pool->CompleteOne();
 }
+
+
+void exper_streaming(void *args_) {
+    ExperStreamingArgs *args = reinterpret_cast<ExperStreamingArgs *>(args_);
+
+    for (unsigned i = 0; i < args->num_blocks; ++i) {
+        char *buf = args->single_buf ? args->bufs[0] : args->bufs[i];
+        size_t count = args->block_size;
+        off_t offset = i * args->block_size;
+        
+        [[maybe_unused]] ssize_t ret = pread(args->fd_in, buf, count, offset);
+        assert(ret == count);
+
+        // simulate a simple computation workload over the block
+        for (size_t j = 0; j < count; ++j)
+            buf[j] += 1;
+
+        ret = pwrite(args->fd_out, buf, count, offset);
+        assert(ret == count);
+    }
+}

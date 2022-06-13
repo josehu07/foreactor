@@ -6,7 +6,7 @@ import subprocess
 
 
 def gen_env(libforeactor, use_foreactor, backend):
-    DEPTHS = [8, 8, 32, 2, 16, 128, 128]
+    DEPTHS = [8, 8, 32, 2, 16, 128, 128, 16]
     QUEUE = 256
     UTHREADS = 8
 
@@ -75,19 +75,24 @@ def run_dump(name, dbdir, libforeactor, args=[], extra_configs=[]):
         print(f" dumping {name}-config{args_str(False, args, config)}...", end='')
         this_cmd = cmd + config['extra_args']
         env = gen_env(libforeactor, config['use_foreactor'], config['backend'])
-        output_async = run_cmd(this_cmd, env)
 
-        if output_original != output_async:
-            print(" FAILED")
-            print("  original:")
-            print(output_original)
-            print("  config:")
-            print(output_async)
-        else:
+        all_correct = True
+        for i in range(10):
+            output_async = run_cmd(this_cmd, env)
+            if output_original != output_async:
+                print(" FAILED")
+                print("  original:")
+                print(output_original)
+                print("  config:")
+                print(output_async)
+                all_correct = False
+                break
+        if all_correct:
             print(" CORRECT")
 
-def run_demo(name, dbdir, libforeactor, args=[], extra_configs=[]):
-    cmd = ['./demo', name, dbdir, '100']
+def run_stat(name, dbdir, libforeactor, args=[], extra_configs=[]):
+    num_iters = 100
+    cmd = ['./demo', name, dbdir, str(num_iters)]
     cmd += args
 
     print(f" running {name}-original{args_str(True, args)}...")
@@ -127,38 +132,44 @@ def run_all(dbdir, libforeactor):
     run_dump("write_seq", dbdir, libforeactor, args=['--multi_file'],
              extra_configs=[{'use_foreactor': False, 'backend': None, 'extra_args': ['--manual_ring']},
                             {'use_foreactor': False, 'backend': None, 'extra_args': ['--manual_pool']}])
+    run_dump("streaming", dbdir, libforeactor)
+    run_dump("streaming", dbdir, libforeactor, args=['--same_buffer'])
 
     print("\nRunning timed experiments ---")
-    run_demo("read_seq", dbdir, libforeactor,
+    run_stat("read_seq", dbdir, libforeactor,
              extra_configs=[{'use_foreactor': False, 'backend': None, 'extra_args': ['--manual_ring']},
                             {'use_foreactor': False, 'backend': None, 'extra_args': ['--manual_pool']}])
-    run_demo("read_seq", dbdir, libforeactor, args=['--same_buffer'],
+    run_stat("read_seq", dbdir, libforeactor, args=['--same_buffer'],
              extra_configs=[{'use_foreactor': False, 'backend': None, 'extra_args': ['--manual_ring']},
                             {'use_foreactor': False, 'backend': None, 'extra_args': ['--manual_pool']}])
-    run_demo("read_seq", dbdir, libforeactor, args=['--o_direct'],
+    run_stat("read_seq", dbdir, libforeactor, args=['--o_direct'],
              extra_configs=[{'use_foreactor': False, 'backend': None, 'extra_args': ['--manual_ring']},
                             {'use_foreactor': False, 'backend': None, 'extra_args': ['--manual_pool']}])
-    run_demo("read_seq", dbdir, libforeactor, args=['--same_buffer', '--o_direct'],
+    run_stat("read_seq", dbdir, libforeactor, args=['--same_buffer', '--o_direct'],
              extra_configs=[{'use_foreactor': False, 'backend': None, 'extra_args': ['--manual_ring']},
                             {'use_foreactor': False, 'backend': None, 'extra_args': ['--manual_pool']}])
-    run_demo("read_seq", dbdir, libforeactor, args=['--multi_file'],
+    run_stat("read_seq", dbdir, libforeactor, args=['--multi_file'],
              extra_configs=[{'use_foreactor': False, 'backend': None, 'extra_args': ['--manual_ring']},
                             {'use_foreactor': False, 'backend': None, 'extra_args': ['--manual_pool']}])
-    run_demo("read_seq", dbdir, libforeactor, args=['--same_buffer', '--multi_file'],
+    run_stat("read_seq", dbdir, libforeactor, args=['--same_buffer', '--multi_file'],
              extra_configs=[{'use_foreactor': False, 'backend': None, 'extra_args': ['--manual_ring']},
                             {'use_foreactor': False, 'backend': None, 'extra_args': ['--manual_pool']}])
-    run_demo("write_seq", dbdir, libforeactor,
+    run_stat("write_seq", dbdir, libforeactor,
              extra_configs=[{'use_foreactor': False, 'backend': None, 'extra_args': ['--manual_ring']},
                             {'use_foreactor': False, 'backend': None, 'extra_args': ['--manual_pool']}])
-    run_demo("write_seq", dbdir, libforeactor, args=['--o_direct'],
+    run_stat("write_seq", dbdir, libforeactor, args=['--o_direct'],
              extra_configs=[{'use_foreactor': False, 'backend': None, 'extra_args': ['--manual_ring']},
                             {'use_foreactor': False, 'backend': None, 'extra_args': ['--manual_pool']}])
-    run_demo("write_seq", dbdir, libforeactor, args=['--multi_file'],
+    run_stat("write_seq", dbdir, libforeactor, args=['--multi_file'],
              extra_configs=[{'use_foreactor': False, 'backend': None, 'extra_args': ['--manual_ring']},
                             {'use_foreactor': False, 'backend': None, 'extra_args': ['--manual_pool']}])
-    run_demo("write_seq", dbdir, libforeactor, args=['--multi_file', '--o_direct'],
+    run_stat("write_seq", dbdir, libforeactor, args=['--multi_file', '--o_direct'],
              extra_configs=[{'use_foreactor': False, 'backend': None, 'extra_args': ['--manual_ring']},
                             {'use_foreactor': False, 'backend': None, 'extra_args': ['--manual_pool']}])
+    run_stat("streaming", dbdir, libforeactor)
+    run_stat("streaming", dbdir, libforeactor, args=['--same_buffer'])
+    run_stat("streaming", dbdir, libforeactor, args=['--o_direct'])
+    run_stat("streaming", dbdir, libforeactor, args=['--same_buffer', '--o_direct'])
 
 
 if __name__ == "__main__":

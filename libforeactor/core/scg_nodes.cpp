@@ -201,9 +201,9 @@ long SyscallNode::Issue(const EpochList& epoch) {
 
         // extra state for remembering the first skipped node in this round
         // if there is one
-        SCGraphNode *firstskip_node = nullptr;
-        EdgeType firstskip_edge = EDGE_BASE;
-        int firstskip_distance = -1;
+        [[maybe_unused]] SCGraphNode *firstskip_node = nullptr;
+        [[maybe_unused]] EdgeType firstskip_edge = EDGE_BASE;
+        [[maybe_unused]] int firstskip_distance = -1;
 
         // peek and pre-issue the next few syscalls asynchronously; at most
         // peek as far as pre_issue_depth nodes beyond current frontier
@@ -220,6 +220,14 @@ long SyscallNode::Issue(const EpochList& epoch) {
             DEBUG("peeking hit the end of SCGraph\n");
         }
         while (depth-- > 0 && next != nullptr) {
+            // update furthest weak edge distance between current frontier
+            // node and current peekhead node
+            if (edge == EDGE_WEAK) {
+                scgraph->weakedge_distance = scgraph->peekhead_distance;
+                DEBUG("weakedge distance set to %d\n",
+                      scgraph->weakedge_distance);
+            }
+
             // while next node is a branching node, pick up the correct
             // branch if the branching has been decided
             bool decision_barrier = false;
@@ -274,11 +282,6 @@ long SyscallNode::Issue(const EpochList& epoch) {
 
             // decide if the next node is pre-issuable, and if so, prepare
             // for submission to engine
-            if (edge == EDGE_WEAK) {
-                scgraph->weakedge_distance = scgraph->peekhead_distance;
-                DEBUG("weakedge distance set to %d\n",
-                      scgraph->weakedge_distance);
-            }
             if (syscall_node->stage.Get(peek_epoch) != STAGE_ARGREADY) {
                 // the next node has been prepared in previous rounds, move on
                 goto peek_continue;
@@ -320,15 +323,16 @@ peek_continue:
             scgraph->peekhead_distance++;
         }
 
+        // TODO: allow resetting to firstskip or not
         // if there's skipped node, reset peekhead to the first skipped node,
         // so that the next pre-issuing algorithm starts there
-        if (firstskip_node != nullptr) {
-            scgraph->peekhead = firstskip_node;
-            scgraph->peekhead_edge = firstskip_edge;
-            scgraph->peekhead_epoch.CopyFrom(scgraph->firstskip_epoch);
-            scgraph->peekhead_distance = firstskip_distance;
-            DEBUG("reverted peekhead to firstskip in this round\n");
-        }
+        // if (firstskip_node != nullptr) {
+        //     scgraph->peekhead = firstskip_node;
+        //     scgraph->peekhead_edge = firstskip_edge;
+        //     scgraph->peekhead_epoch.CopyFrom(scgraph->firstskip_epoch);
+        //     scgraph->peekhead_distance = firstskip_distance;
+        //     DEBUG("reverted peekhead to firstskip in this round\n");
+        // }
         TIMER_PAUSE(scgraph->timer_peek_algo);
     }
 

@@ -167,7 +167,7 @@ void run_exper(const char *self, std::string& dbdir, std::string& exper,
 
     } else if (exper == "read_seq") {
         unsigned nreads = 128;
-        size_t rlen = (1 << 20);
+        size_t rlen = 64 * 1024;
         
         int open_flags = O_CREAT | O_RDWR;
         if (o_direct)
@@ -216,7 +216,7 @@ void run_exper(const char *self, std::string& dbdir, std::string& exper,
 
     } else if (exper == "write_seq") {
         unsigned nwrites = 128;
-        size_t wlen = (1 << 20);
+        size_t wlen = 64 * 1024;
 
         int open_flags = O_CREAT | O_RDWR;
         if (o_direct)
@@ -256,6 +256,42 @@ void run_exper(const char *self, std::string& dbdir, std::string& exper,
         for (int fd : fds)
             close(fd);
 
+    } else if (exper == "streaming") {
+        size_t block_size = 64 * 1024;
+        unsigned num_blocks = 256;
+
+        int open_flags = O_CREAT | O_RDWR;
+        if (o_direct)
+            open_flags |= O_DIRECT;
+
+        int fd_in = open("streaming_in.dat", open_flags, S_IRUSR | S_IWUSR);
+        int fd_out = open("streaming_out.dat", open_flags, S_IRUSR | S_IWUSR);
+
+        std::string wcontent = rand_string(block_size);
+        char *wbuf = new (std::align_val_t(512)) char[block_size];
+        memcpy(wbuf, wcontent.c_str(), wcontent.length());
+        for (unsigned i = 0; i < num_blocks; ++i) {
+            [[maybe_unused]] ssize_t ret = pwrite(fd_in, wbuf, block_size, i * block_size);
+            assert(ret == block_size);
+        }
+        delete[] wbuf;
+
+        ExperStreamingArgs args(fd_in, fd_out, block_size, num_blocks, same_buffer);
+
+        run_iters(exper_streaming, &args, num_iters, drop_caches, !dump_result);
+
+        if (dump_result) {
+            char *rbuf = new (std::align_val_t(512)) char[block_size];
+            for (unsigned i = 0; i < num_blocks; ++i) {
+                [[maybe_unused]] ssize_t ret = pread(fd_out, rbuf, block_size, i * block_size);
+                std::cout << std::string(rbuf, rbuf + block_size) << std::endl;
+            }
+            delete[] rbuf;
+        }
+
+        close(fd_in);
+        close(fd_out);
+
     } else {
         std::cerr << "Error: unrecognized experiment " << exper << std::endl;
         print_usage_exit(self);
@@ -271,7 +307,7 @@ void run_exper(const char *self, std::string& dbdir, std::string& exper,
 static void print_usage_exit(const char *self) {
     std::cerr << "Usage: " << self << " EXPER_NAME DBDIR_PATH NUM_ITERS"
               << " [--drop_caches] [--dump_result] [--manual_ring|pool]"
-              << " [--o_direct] [--multi_file]" << std::endl;
+              << " [--same_buffer] [--o_direct] [--multi_file]" << std::endl;
     exit(1);
 }
 

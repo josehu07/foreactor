@@ -201,4 +201,28 @@ void exper_write_seq_manual_ring(void *args);
 void exper_write_seq_manual_pool(void *args);
 
 
+struct ExperStreamingArgs : ExperArgs {
+    const int fd_in;
+    const int fd_out;
+    const size_t block_size;
+    const unsigned num_blocks;
+    std::vector<char *> bufs;
+    const bool single_buf;
+
+    ExperStreamingArgs(int fd_in, int fd_out, size_t block_size,
+                       unsigned num_blocks, bool single_buf)
+        : fd_in(fd_in), fd_out(fd_out), block_size(block_size),
+          num_blocks(num_blocks), single_buf(single_buf) {
+        for (unsigned i = 0; i < num_blocks; ++i)
+            bufs.push_back(new (std::align_val_t(512)) char[block_size]);
+    }
+    ~ExperStreamingArgs() {
+        for (auto buf : bufs)
+            delete[] buf;
+    }
+};
+
+void exper_streaming(void *args);
+
+
 #endif

@@ -4,9 +4,9 @@
 ![top-lang](https://img.shields.io/github/languages/top/josehu07/foreactor)
 ![license](https://img.shields.io/github/license/josehu07/foreactor)
 
-Foreactor is a library framework that enables asynchronous I/O (or more generally, asynchronous syscalls) with Linux `io_uring` in any C/C++ application. Foreactor is transparent -- it allows the integration of `io_uring` into any (perhaps serial) application with no modification to application code.
+Foreactor is a library framework that enables asynchronous I/O (or more generally, asynchronous syscalls) transparently in C/C++ applications. Foreactor allows the integration of an asynchronous execution backend, e.g. the kernel `io_uring` or a user-level thread pool, into an application with no modification to application code.
 
-This is done by describing the application's critical functions (e.g., LevelDB's `Version::Get`) as **syscall graphs**, a formal abstraction we propose, in plugins. Such graph abstraction captures the original execution order of syscalls to be issued by the function and their dependencies. If the `foreactor` library gets `LD_PRELOAD`ed when running the application, it automatically hijacks those wrapped functions specified in plugins as well as POSIX syscalls, and pre-issues some syscalls ahead of time if the syscall graph says it is safe and benefitial to do so.
+This is done by describing the application's critical functions (e.g., LevelDB's `Version::Get`) as **syscall graphs**, a formal abstraction we propose. Such graph abstraction captures the original execution order of syscalls to be issued by the function and their dependencies. If the `foreactor` library gets `LD_PRELOAD`ed when running the application, it automatically intercepts those wrapped functions as well as POSIX syscalls, and pre-issues proper syscalls ahead of time if the syscall graph says it is safe and beneficial to do so.
 
 TODO paper cite info? =)
 
@@ -90,8 +90,9 @@ cd ..
 <summary>Build and try the demo application...</summary>
 
 ```bash
-cd demoapp
-./demo.sh
+cd demoapps/demo-cpp
+make clean && make
+python3 run-all.py -h
 cd ..
 ```
 </details>
