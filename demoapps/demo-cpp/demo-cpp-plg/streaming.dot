@@ -1,0 +1,14 @@
+digraph SCGraph {
+  graph [fontname="helvetica"];
+  node  [fontname="helvetica"];
+  edge  [fontname="helvetica"];
+  start [shape=plaintext];
+  start -> pread;
+  end [shape=plaintext];
+  pread -> pwrite;
+  pwrite [shape=box,style=bold];
+  pwrite -> branch;
+  branch [shape=diamond,label="branch?"];
+  branch:e -> pread:e [arrowhead=empty,dir=both,arrowtail=odot];
+  branch -> end [arrowhead=empty];
+}
