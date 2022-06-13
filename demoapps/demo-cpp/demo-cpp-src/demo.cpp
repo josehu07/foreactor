@@ -22,7 +22,7 @@ static const std::string rand_string(size_t length) {
         "ABCDEFGHIJKLMNOPQRSTUVWXYZ"
         "abcdefghijklmnopqrstuvwxyz";
     std::string str;
-    str.reserve(length + 1);
+    str.reserve(length);
     for (size_t i = 0; i < length; ++i)
         str += alphanum[rand() % (sizeof(alphanum) - 1)];
     return str;
@@ -314,7 +314,7 @@ static void print_usage_exit(const char *self) {
 int main(int argc, char *argv[]) {
     srand(time(NULL));
 
-    if ((argc < 4) || (argc > 8))
+    if ((argc < 4) || (argc > 10))
         print_usage_exit(argv[0]);
 
     std::string exper(argv[1]);

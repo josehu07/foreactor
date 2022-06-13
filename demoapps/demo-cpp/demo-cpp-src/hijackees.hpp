@@ -10,8 +10,7 @@
 #include "thread_pool.hpp"
 
 
-#ifndef __DEMO_HIJACKEES_H__
-#define __DEMO_HIJACKEES_H__
+#pragma once
 
 
 struct ExperArgs {};
@@ -223,6 +222,3 @@ struct ExperStreamingArgs : ExperArgs {
 };
 
 void exper_streaming(void *args);
-
-
-#endif

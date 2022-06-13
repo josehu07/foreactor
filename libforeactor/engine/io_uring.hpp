@@ -1,6 +1,7 @@
 #include <tuple>
 #include <unordered_set>
 #include <assert.h>
+#include <signal.h>
 #include <liburing.h>
 
 #include "debug.hpp"
