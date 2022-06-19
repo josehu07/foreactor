@@ -1,5 +1,6 @@
 #include <vector>
 #include <string>
+#include <span>
 #include <string.h>
 #include <fcntl.h>
 #include <unistd.h>
@@ -253,5 +254,51 @@ void exper_streaming(void *args_) {
 
         ret = pwrite(args->fd_out, buf, count, offset);
         assert(ret == count);
+    }
+}
+
+
+off_t ldb_get_calculate_offset(const char *index_block,
+                               const std::string& key,
+                               size_t file_size, size_t value_size) {
+    unsigned rand_num = 0;
+    for (size_t i = 0; i < 5; ++i)
+        rand_num += static_cast<unsigned>(index_block[i]);
+    for (unsigned char c : key)
+        rand_num += c;
+    unsigned num_choices = (file_size - 4096) / value_size;
+    unsigned choice = rand_num % num_choices;
+    return choice * value_size;
+}
+
+void exper_ldb_get(void *args_) {
+    ExperLdbGetArgs *args = reinterpret_cast<ExperLdbGetArgs *>(args_);
+    [[maybe_unused]] ssize_t ret;
+
+    for (unsigned i = 0; i < args->fds.size(); ++i) {
+        // if file not open yet, do open and read in the index block
+        int fd = args->fds[i];
+        if (fd < 0) {
+            fd = open(args->filenames[i].c_str(), args->open_flags,
+                      S_IRUSR | S_IWUSR);
+            ret = pread(fd, args->index_blocks[i], 4096, args->file_size - 4096);
+            assert(ret == 4096);
+        }
+
+        // simulate the searching in index block for data offset
+        off_t data_offset = ldb_get_calculate_offset(args->index_blocks[i],
+                                                     args->key,
+                                                     args->file_size,
+                                                     args->value_size);
+
+        char *buf = args->single_buf ? args->bufs[0] : args->bufs[i];
+        ret = pread(fd, buf, args->value_size, data_offset);
+        assert(ret == args->value_size);
+
+        // simulate whether key is found in this table file or not
+        if (i == args->key_match_at) {
+            memcpy(args->result, buf, args->value_size);
+            break;
+        }
     }
 }

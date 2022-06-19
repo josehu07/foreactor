@@ -79,7 +79,9 @@ def plot_exper_results(results, output_prefix):
         print(f"{exper}: {times}")
 
         plt.bar(xs[:1], ys[:1], zorder=3, width=width, color='darkorange')
-        plt.bar(xs[1:], ys[1:], zorder=3, width=width, color='steelblue')
+        plt.bar(xs[1:4], ys[1:4], zorder=3, width=width, color='steelblue')
+        if len(xs) > 4:
+            plt.bar(xs[4:], ys[4:], zorder=3, width=width, color='lightblue')
         
         plt.xlabel("Configs")
         plt.ylabel("Time (ms)")

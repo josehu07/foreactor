@@ -74,8 +74,8 @@ void run_iters(ExperFunc exper_func, void *exper_args, unsigned num_iters,
         fprintf(stderr, "] ");
 
         if (cnt > 0)
-            fprintf(stderr, "avg %.3lf", sum_us / cnt);
-        fprintf(stderr, " us\n");
+            fprintf(stderr, "avg %.3lf ", sum_us / cnt);
+        fprintf(stderr, "us\n");
     }
 }
 
@@ -107,7 +107,8 @@ void run_exper(const char *self, const char *dbdir, const char *exper,
 
 
 static void print_usage_exit(const char *self) {
-    fprintf(stderr, "Usage: %s EXPER_NAME DBDIR_PATH NUM_ITERS\n", self);
+    fprintf(stderr, "Usage: %s EXPER_NAME DBDIR_PATH NUM_ITERS "
+                    "[--drop_caches] [--dump_result]\n", self);
     exit(1);
 }
 
@@ -127,8 +128,12 @@ int main(int argc, char *argv[]) {
         if (strcmp(argv[i], "--dump_result") == 0) {
             dump_result = true;
             srand(1234567);     // use fixed seed for result comparison
-        } else if (strcmp(argv[i], "--drop_caches") == 0)
+        } else if (strcmp(argv[i], "--drop_caches") == 0) {
             drop_caches = true;
+        } else {
+            fprintf(stderr, "Error: unrecognized option %s\n", argv[i]);
+            print_usage_exit(argv[0]);
+        }
     }
 
     run_exper(argv[0], dbdir, exper, num_iters, drop_caches, dump_result);

@@ -1,0 +1,18 @@
+digraph SCGraph {
+  graph [fontname="helvetica"];
+  node  [fontname="helvetica"];
+  edge  [fontname="helvetica"];
+  start [shape=plaintext];
+  start -> table_open;
+  end [shape=plaintext];
+  table_open [shape=diamond,label="table_open?"];
+  table_open -> open [arrowhead=empty];
+  table_open -> pread_data [arrowhead=empty];
+  pread_data -> has_more [style=dashed];
+  has_more [shape=diamond,label="has_more?"];
+  has_more:e -> table_open:e [arrowhead=empty,dir=both,arrowtail=odot];
+  has_more -> end [arrowhead=empty];
+  open [shape=box,style=bold];
+  open -> pread_index;
+  pread_index -> pread_data;
+}

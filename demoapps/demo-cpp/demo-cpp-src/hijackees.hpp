@@ -222,3 +222,47 @@ struct ExperStreamingArgs : ExperArgs {
 };
 
 void exper_streaming(void *args);
+
+
+struct ExperLdbGetArgs : ExperArgs {
+    std::vector<std::string> filenames;
+    std::vector<int> fds;
+    std::vector<char *> index_blocks;
+    const size_t file_size;
+    std::vector<char *> bufs;
+    char *result;
+    const bool single_buf;
+    const std::string key;
+    const size_t value_size;
+    const unsigned key_match_at;
+    const int open_flags;
+
+    ExperLdbGetArgs(std::vector<std::string> filenames, std::vector<int> fds,
+                    std::vector<char *> index_blocks, size_t file_size,
+                    bool single_buf, std::string key, size_t value_size,
+                    unsigned key_match_at, int open_flags)
+        : filenames(filenames), fds(fds), index_blocks(index_blocks),
+          file_size(file_size), single_buf(single_buf), key(key),
+          value_size(value_size), key_match_at(key_match_at),
+          open_flags(open_flags) {
+        assert(fds.size() > 0);
+        assert(fds.size() == index_blocks.size());
+        assert(fds.size() == filenames.size());
+        assert(value_size > 0);
+        assert(file_size >= value_size + 4096);
+        assert((file_size - 4096) % value_size == 0);
+        assert(key_match_at >= 0 && key_match_at < fds.size());
+        for (unsigned i = 0; i < fds.size(); ++i)
+            bufs.push_back(new (std::align_val_t(512)) char[value_size]);
+        result = new char[value_size];
+    }
+    ~ExperLdbGetArgs() {
+        for (auto buf : bufs)
+            delete[] buf;
+        delete[] result;
+    }
+};
+
+off_t ldb_get_calculate_offset(const char *index_block, const std::string& key,
+                               size_t file_size, size_t value_size);
+void exper_ldb_get(void *args);

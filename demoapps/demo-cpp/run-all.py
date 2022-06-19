@@ -6,7 +6,7 @@ import subprocess
 
 
 def gen_env(libforeactor, use_foreactor, backend):
-    DEPTHS = [8, 8, 32, 2, 16, 128, 128, 16]
+    DEPTHS = [8, 8, 32, 2, 16, 128, 128, 16, 16]
     QUEUE = 256
     UTHREADS = 8
 
@@ -61,8 +61,9 @@ def args_str(original, args, config=None):
         return args_str.rstrip()
 
 
-def run_dump(name, dbdir, libforeactor, args=[], extra_configs=[]):
-    cmd = ['./demo', name, dbdir, '1', '--dump_result']
+def run_dump(name, dbdir, libforeactor, req_size, args=[], extra_configs=[]):
+    cmd = ['./demo', '--exper', name, '--dbdir', dbdir, '--iters', '1', '--dump_result',
+           '--req_size', str(req_size)]
     cmd += args
 
     print(f" dumping {name}-original{args_str(True, args)}...")
@@ -90,9 +91,9 @@ def run_dump(name, dbdir, libforeactor, args=[], extra_configs=[]):
         if all_correct:
             print(" CORRECT")
 
-def run_stat(name, dbdir, libforeactor, args=[], extra_configs=[]):
-    num_iters = 100
-    cmd = ['./demo', name, dbdir, str(num_iters)]
+def run_stat(name, dbdir, libforeactor, timing_iters, req_size, args=[], extra_configs=[]):
+    cmd = ['./demo', '--exper', name, '--dbdir', dbdir, '--iters', str(timing_iters),
+           '--req_size', str(req_size)]
     cmd += args
 
     print(f" running {name}-original{args_str(True, args)}...")
@@ -112,69 +113,101 @@ def run_stat(name, dbdir, libforeactor, args=[], extra_configs=[]):
             print(output_foreactor)
 
 
-def run_all(dbdir, libforeactor):
-    print("Checking correctness ---")
-    run_dump("simple", dbdir, libforeactor)
-    run_dump("branching", dbdir, libforeactor)
-    run_dump("looping", dbdir, libforeactor)
-    run_dump("weak_edge", dbdir, libforeactor)
-    run_dump("crossing", dbdir, libforeactor)
-    run_dump("read_seq", dbdir, libforeactor,
-             extra_configs=[{'use_foreactor': False, 'backend': None, 'extra_args': ['--manual_ring']},
-                            {'use_foreactor': False, 'backend': None, 'extra_args': ['--manual_pool']}])
-    run_dump("read_seq", dbdir, libforeactor, args=['--same_buffer'])
-    run_dump("read_seq", dbdir, libforeactor, args=['--multi_file'],
-             extra_configs=[{'use_foreactor': False, 'backend': None, 'extra_args': ['--manual_ring']},
-                            {'use_foreactor': False, 'backend': None, 'extra_args': ['--manual_pool']}])
-    run_dump("write_seq", dbdir, libforeactor,
-             extra_configs=[{'use_foreactor': False, 'backend': None, 'extra_args': ['--manual_ring']},
-                            {'use_foreactor': False, 'backend': None, 'extra_args': ['--manual_pool']}])
-    run_dump("write_seq", dbdir, libforeactor, args=['--multi_file'],
-             extra_configs=[{'use_foreactor': False, 'backend': None, 'extra_args': ['--manual_ring']},
-                            {'use_foreactor': False, 'backend': None, 'extra_args': ['--manual_pool']}])
-    run_dump("streaming", dbdir, libforeactor)
-    run_dump("streaming", dbdir, libforeactor, args=['--same_buffer'])
+def run_all(dbdir, libforeactor, timing_iters, req_size, skip_dump):
+    if not skip_dump:
+        print("Checking correctness ---")
+        run_dump("simple", dbdir, libforeactor, req_size)
+        run_dump("branching", dbdir, libforeactor, req_size)
+        run_dump("looping", dbdir, libforeactor, req_size)
+        run_dump("weak_edge", dbdir, libforeactor, req_size)
+        run_dump("crossing", dbdir, libforeactor, req_size)
+        run_dump("read_seq", dbdir, libforeactor, req_size,
+                 extra_configs=[{'use_foreactor': False, 'backend': None, 'extra_args': ['--manual_ring']},
+                                {'use_foreactor': False, 'backend': None, 'extra_args': ['--manual_pool']}])
+        run_dump("read_seq", dbdir, libforeactor, req_size,
+                 args=['--same_buffer'])
+        run_dump("read_seq", dbdir, libforeactor, req_size,
+                 args=['--multi_file'],
+                 extra_configs=[{'use_foreactor': False, 'backend': None, 'extra_args': ['--manual_ring']},
+                                {'use_foreactor': False, 'backend': None, 'extra_args': ['--manual_pool']}])
+        run_dump("write_seq", dbdir, libforeactor, req_size,
+                 extra_configs=[{'use_foreactor': False, 'backend': None, 'extra_args': ['--manual_ring']},
+                                {'use_foreactor': False, 'backend': None, 'extra_args': ['--manual_pool']}])
+        run_dump("write_seq", dbdir, libforeactor, req_size,
+                 args=['--multi_file'],
+                 extra_configs=[{'use_foreactor': False, 'backend': None, 'extra_args': ['--manual_ring']},
+                                {'use_foreactor': False, 'backend': None, 'extra_args': ['--manual_pool']}])
+        run_dump("streaming", dbdir, libforeactor, req_size)
+        run_dump("streaming", dbdir, libforeactor, req_size,
+                 args=['--same_buffer'])
+        run_dump("ldb_get", dbdir, libforeactor, req_size)
+        run_dump("ldb_get", dbdir, libforeactor, req_size,
+                 args=['--same_buffer'])
+        run_dump("ldb_get", dbdir, libforeactor, req_size,
+                 args=['--key_match_at', '7'])
+        run_dump("ldb_get", dbdir, libforeactor, req_size,
+                 args=['--open_barrier'])
+        run_dump("ldb_get", dbdir, libforeactor, req_size,
+                 args=['--open_barrier', '--key_match_at', '7'])
+        print()
 
-    print("\nRunning timed experiments ---")
-    run_stat("read_seq", dbdir, libforeactor,
+    print("Running timed experiments ---")
+    run_stat("read_seq", dbdir, libforeactor, timing_iters, req_size,
              extra_configs=[{'use_foreactor': False, 'backend': None, 'extra_args': ['--manual_ring']},
                             {'use_foreactor': False, 'backend': None, 'extra_args': ['--manual_pool']}])
-    run_stat("read_seq", dbdir, libforeactor, args=['--same_buffer'],
+    run_stat("read_seq", dbdir, libforeactor, timing_iters, req_size,
+             args=['--same_buffer'],
              extra_configs=[{'use_foreactor': False, 'backend': None, 'extra_args': ['--manual_ring']},
                             {'use_foreactor': False, 'backend': None, 'extra_args': ['--manual_pool']}])
-    run_stat("read_seq", dbdir, libforeactor, args=['--o_direct'],
+    run_stat("read_seq", dbdir, libforeactor, timing_iters, req_size,
+             args=['--o_direct'],
              extra_configs=[{'use_foreactor': False, 'backend': None, 'extra_args': ['--manual_ring']},
                             {'use_foreactor': False, 'backend': None, 'extra_args': ['--manual_pool']}])
-    run_stat("read_seq", dbdir, libforeactor, args=['--same_buffer', '--o_direct'],
+    run_stat("read_seq", dbdir, libforeactor, timing_iters, req_size,
+             args=['--same_buffer', '--o_direct'],
              extra_configs=[{'use_foreactor': False, 'backend': None, 'extra_args': ['--manual_ring']},
                             {'use_foreactor': False, 'backend': None, 'extra_args': ['--manual_pool']}])
-    run_stat("read_seq", dbdir, libforeactor, args=['--multi_file'],
+    run_stat("write_seq", dbdir, libforeactor, timing_iters, req_size,
              extra_configs=[{'use_foreactor': False, 'backend': None, 'extra_args': ['--manual_ring']},
                             {'use_foreactor': False, 'backend': None, 'extra_args': ['--manual_pool']}])
-    run_stat("read_seq", dbdir, libforeactor, args=['--same_buffer', '--multi_file'],
+    run_stat("write_seq", dbdir, libforeactor, timing_iters, req_size,
+             args=['--o_direct'],
              extra_configs=[{'use_foreactor': False, 'backend': None, 'extra_args': ['--manual_ring']},
                             {'use_foreactor': False, 'backend': None, 'extra_args': ['--manual_pool']}])
-    run_stat("write_seq", dbdir, libforeactor,
+    run_stat("write_seq", dbdir, libforeactor, timing_iters, req_size,
+             args=['--multi_file'],
              extra_configs=[{'use_foreactor': False, 'backend': None, 'extra_args': ['--manual_ring']},
                             {'use_foreactor': False, 'backend': None, 'extra_args': ['--manual_pool']}])
-    run_stat("write_seq", dbdir, libforeactor, args=['--o_direct'],
+    run_stat("write_seq", dbdir, libforeactor, timing_iters, req_size,
+             args=['--multi_file', '--o_direct'],
              extra_configs=[{'use_foreactor': False, 'backend': None, 'extra_args': ['--manual_ring']},
                             {'use_foreactor': False, 'backend': None, 'extra_args': ['--manual_pool']}])
-    run_stat("write_seq", dbdir, libforeactor, args=['--multi_file'],
-             extra_configs=[{'use_foreactor': False, 'backend': None, 'extra_args': ['--manual_ring']},
-                            {'use_foreactor': False, 'backend': None, 'extra_args': ['--manual_pool']}])
-    run_stat("write_seq", dbdir, libforeactor, args=['--multi_file', '--o_direct'],
-             extra_configs=[{'use_foreactor': False, 'backend': None, 'extra_args': ['--manual_ring']},
-                            {'use_foreactor': False, 'backend': None, 'extra_args': ['--manual_pool']}])
-    run_stat("streaming", dbdir, libforeactor)
-    run_stat("streaming", dbdir, libforeactor, args=['--same_buffer'])
-    run_stat("streaming", dbdir, libforeactor, args=['--o_direct'])
-    run_stat("streaming", dbdir, libforeactor, args=['--same_buffer', '--o_direct'])
+    run_stat("streaming", dbdir, libforeactor, timing_iters, req_size)
+    run_stat("streaming", dbdir, libforeactor, timing_iters, req_size,
+             args=['--same_buffer'])
+    run_stat("streaming", dbdir, libforeactor, timing_iters, req_size,
+             args=['--o_direct'])
+    run_stat("streaming", dbdir, libforeactor, timing_iters, req_size,
+             args=['--same_buffer', '--o_direct'])
+    run_stat("ldb_get", dbdir, libforeactor, timing_iters, req_size)
+    run_stat("ldb_get", dbdir, libforeactor, timing_iters, req_size,
+             args=['--same_buffer'])
+    run_stat("ldb_get", dbdir, libforeactor, timing_iters, req_size,
+             args=['--o_direct'])
+    run_stat("ldb_get", dbdir, libforeactor, timing_iters, req_size,
+             args=['--o_direct', '--open_barrier'])
+    run_stat("ldb_get", dbdir, libforeactor, timing_iters, req_size,
+             args=['--o_direct', '--key_match_at', '7'])
+    run_stat("ldb_get", dbdir, libforeactor, timing_iters, req_size,
+             args=['--o_direct', '--open_barrier', '--key_match_at', '7'])
 
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Run all demo workloads")
     parser.add_argument('--dbdir', type=str, required=True)
+    parser.add_argument('--timing_iters', type=int, required=True)
+    parser.add_argument('--req_size', type=int, default=65536)
+    parser.add_argument('--skip_dump', action='store_true', default=False)
     args = parser.parse_args()
 
     mydir = os.path.dirname(os.path.realpath(__file__))
@@ -182,8 +215,12 @@ if __name__ == "__main__":
     libforeactor = os.path.realpath(os.path.join(
         mydir, "../../libforeactor/libforeactor.so"))
 
+    if args.timing_iters <= 3:
+        print(f"Error: num of timing iters {args.timing_iters} too small")
+        exit(1)
+
     if not os.path.isfile(libforeactor):
         print(f"Error: {libforeactor} not found")
         exit(1)
 
-    run_all(dbdir, libforeactor)
+    run_all(dbdir, libforeactor, args.timing_iters, args.req_size, args.skip_dump)
