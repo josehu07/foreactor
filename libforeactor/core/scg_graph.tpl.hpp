@@ -34,7 +34,7 @@ std::tuple<NodeT *, const EpochList *> SCGraph::GetFrontier() {
         }
         // pick a branch and progress frontier_epoch
         frontier = branch_node->PickBranch(frontier_epoch, /*do_remove*/ true);
-        DEBUG("picked branch %p in frontier\n", frontier);
+        DEBUG("picked branch '%s' in frontier\n", frontier->name.c_str());
     }
     TIMER_PAUSE(timer_get_frontier);
 

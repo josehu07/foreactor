@@ -271,12 +271,12 @@ endif(HAVE_CLANG_THREAD_SAFETY)
 # [foreactor] involve plugin
 target_sources(leveldb
   PRIVATE
-    "${PROJECT_SOURCE_DIR}/../leveldb-plugin/version_get_wrap.cc")
+    "${PROJECT_SOURCE_DIR}/../leveldb-plg/version_get_wrap.cc")
 
 # [foreactor] link foreactor library
 add_library(foreactor SHARED IMPORTED)
 get_filename_component(FOREACTOR_DIR
-  "../../foreactor" REALPATH
+  "../../../libforeactor" REALPATH
   BASE_DIR "${PROJECT_SOURCE_DIR}")
 set_target_properties(foreactor
   PROPERTIES IMPORTED_LOCATION

@@ -17,7 +17,7 @@
 #include "leveldb/slice.h"
 
 
-static void drop_caches(void) {
+static void cmd_drop_caches(void) {
     int rc __attribute__((unused)) =
         system("sudo sync; sudo sh -c 'echo 3 > /proc/sys/vm/drop_caches'");
     assert(rc == 0);
@@ -50,22 +50,11 @@ leveldb_open(const std::string db_location, size_t memtable_limit,
              size_t filesize_limit, bool bg_compact_off)
 {
     leveldb::DB *db;
-    db_options.create_if_missing = true;
-
-    // Use unusually small mem buffer size and max file size.
-    // Must comment out `ClipToRange()` sanitizers @ db_impl.cc:102.
-    db_options.write_buffer_size = memtable_limit;
-    db_options.max_file_size = filesize_limit;
-
-    // When benchmarking Gets we want to turn off the automatic bg thread.
-    db_options.bg_compact_off = bg_compact_off;
-
     leveldb::Status status = leveldb::DB::Open(db_options, db_location, &db);
     if (!status.ok()) {
         std::cerr << status.ToString() << std::endl;
         exit(1);
     }
-
     return db;
 }
 
@@ -121,7 +110,7 @@ leveldb_stats(leveldb::DB *db)
 /** Run/load YCSB workload on a leveldb instance. */
 static uint
 do_ycsb(leveldb::DB *db, const std::vector<ycsb_req_t>& reqs,
-        const std::string value, bool do_drop_caches, bool print_block_info,
+        const std::string value, bool drop_caches, bool print_block_info,
         std::vector<double>& microsecs)
 {
     leveldb::Status status;
@@ -177,8 +166,8 @@ do_ycsb(leveldb::DB *db, const std::vector<ycsb_req_t>& reqs,
                       << std::endl;
         }
 
-        if (do_drop_caches)
-            drop_caches();
+        if (drop_caches)
+            cmd_drop_caches();
     }
 
     return cnt;
@@ -190,44 +179,39 @@ main(int argc, char *argv[])
 {
     std::string db_location, ycsb_filename;
     size_t value_size, memtable_limit, filesize_limit;
-    bool do_drop_caches = false, bg_compact_off = false, print_block_info = false;
+    bool help, write_sync, bg_compact_off, no_fill_cache, drop_caches, print_block_info;
 
     cxxopts::Options cmd_args("leveldb ycsb trace exec client");
     cmd_args.add_options()
-            ("h,help", "print help message", cxxopts::value<bool>()->default_value("false"))
+            ("h,help", "print help message", cxxopts::value<bool>(help)->default_value("false"))
             ("d,directory", "directory of db", cxxopts::value<std::string>(db_location)->default_value("./dbdir"))
             ("v,value_size", "size of value", cxxopts::value<size_t>(value_size)->default_value("64"))
             ("f,ycsb", "YCSB trace filename", cxxopts::value<std::string>(ycsb_filename)->default_value(""))
             ("mlim", "memtable size limit", cxxopts::value<size_t>(memtable_limit)->default_value("4194304"))
             ("flim", "sstable filesize limit", cxxopts::value<size_t>(filesize_limit)->default_value("2097152"))
-            ("write_sync", "force write sync", cxxopts::value<bool>()->default_value("false"))
-            ("bg_compact_off", "turn off background compaction", cxxopts::value<bool>()->default_value("false"))
-            ("no_fill_cache", "no block cache for gets", cxxopts::value<bool>()->default_value("false"))
-            ("drop_caches", "do drop_caches between ops", cxxopts::value<bool>()->default_value("false"))
-            ("print_block_info", "for distribution accounting", cxxopts::value<bool>()->default_value("false"));
+            ("write_sync", "force write sync", cxxopts::value<bool>(write_sync)->default_value("false"))
+            ("bg_compact_off", "turn off background compaction", cxxopts::value<bool>(bg_compact_off)->default_value("false"))
+            ("no_fill_cache", "no block cache for gets", cxxopts::value<bool>(no_fill_cache)->default_value("false"))
+            ("drop_caches", "do drop_caches between ops", cxxopts::value<bool>(drop_caches)->default_value("false"))
+            ("print_block_info", "for distribution accounting", cxxopts::value<bool>(print_block_info)->default_value("false"));
     auto result = cmd_args.parse(argc, argv);
 
-    if (result.count("help")) {
+    if (help) {
         printf("%s", cmd_args.help().c_str());
         exit(0);
     }
 
-    if (result.count("sync"))
-        write_options.sync = true;
+    // Use unusually small mem buffer size and max file size.
+    // Must comment out `ClipToRange()` sanitizers @ db_impl.cc:102.
+    db_options.write_buffer_size = memtable_limit;
+    db_options.max_file_size = filesize_limit;
+    // When benchmarking Gets we want to turn off the automatic bg thread.
+    db_options.bg_compact_off = bg_compact_off;
+    db_options.create_if_missing = true;
 
-    if (result.count("bg_compact_off"))
-        bg_compact_off = true;
-
-    if (result.count("no_fill_cache"))
-        read_options.fill_cache = false;
-
-    if (result.count("drop_caches"))
-        do_drop_caches = true;
-
-    if (result.count("print_block_info")) {
-        print_block_info = true;
-        read_options.print_block_info = true;
-    }
+    write_options.sync = write_sync;
+    read_options.fill_cache = !no_fill_cache;
+    read_options.print_block_info = print_block_info;
 
     // Read in YCSB workload trace.
     std::vector<ycsb_req_t> ycsb_reqs;
@@ -250,7 +234,6 @@ main(int argc, char *argv[])
         printf("%s", cmd_args.help().c_str());
         exit(1);
     }
-
     if (ycsb_reqs.size() == 0) {
         std::cerr << "Error: given YCSB trace file has not valid lines" << std::endl;
         exit(1);
@@ -259,12 +242,13 @@ main(int argc, char *argv[])
     // Generate value.
     std::string value(value_size, '0');
 
+    // Open database instance.
     leveldb::DB *db = leveldb_open(db_location, memtable_limit, filesize_limit,
                                    bg_compact_off);
 
     // Execute the actions of the YCSB trace.
     std::vector<double> microsecs;
-    uint cnt = do_ycsb(db, ycsb_reqs, value, do_drop_caches, print_block_info, microsecs);
+    uint cnt = do_ycsb(db, ycsb_reqs, value, drop_caches, print_block_info, microsecs);
     std::cout << "Finished " << cnt << " requests." << std::endl << std::endl;
 
     // Print timing info.

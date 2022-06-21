@@ -70,7 +70,8 @@ std::ostream& operator<<(std::ostream& s, const SCGraphNode& n) {
         s << StreamStr(static_cast<const BranchNode&>(n));
         break;
     default:
-        s << "SCGraphNode{" << n.node_id << "}";
+        s << "SCGraphNode{" << n.node_id
+          << ",name='" << n.name << "''}";
     }
     return s;
 }
@@ -97,7 +98,8 @@ SyscallNode::SyscallNode(unsigned node_id, std::string name,
 
 
 void SyscallNode::PrintCommonInfo(std::ostream& s) const {
-    s << node_id << ",next=" << next_node << ",edge=" << edge_type
+    s << node_id << ",name='" << name << "'"
+      << ",next=" << next_node << ",edge=" << edge_type
       << ",stage=" << stage << ",rc=" << rc;
 }
 
@@ -235,7 +237,7 @@ long SyscallNode::Issue(const EpochList& epoch) {
                 BranchNode *branch_node = static_cast<BranchNode *>(next);
                 DEBUG("branch %s<%p>@%s in peeking\n",
                       StreamStr(*branch_node).c_str(), branch_node,
-                      StreamStr(epoch).c_str());
+                      StreamStr(peek_epoch).c_str());
                 // if decision not ready, see if it can be generated now
                 if (!branch_node->decision.Has(peek_epoch)) {
                     if (!branch_node->GenerateDecision(peek_epoch)) {
@@ -244,7 +246,7 @@ long SyscallNode::Issue(const EpochList& epoch) {
                     }
                 }
                 next = branch_node->PickBranch(peek_epoch);
-                DEBUG("picked branch %p in peeking\n", next);
+                DEBUG("picked branch '%s' in peeking\n", next->name.c_str());
             }
             if (next == nullptr && !decision_barrier) {
                 if (firstskip_node == nullptr) {
@@ -422,6 +424,7 @@ BranchNode::BranchNode(unsigned node_id, std::string name, size_t num_children,
 
 std::ostream& operator<<(std::ostream& s, const BranchNode& n) {
     s << "BranchNode{" << n.node_id
+      << ",name='" << n.name << "'"
       << ",decision=" << n.decision
       << ",children=[";
     for (size_t i = 0; i < n.children.size(); ++i) {
