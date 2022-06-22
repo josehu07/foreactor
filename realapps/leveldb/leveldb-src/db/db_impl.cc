@@ -693,6 +693,11 @@ void DBImpl::BackgroundCall() {
     // to automatically compact and mess up the database image setup.
     if (!options_.bg_compact_off) {
       BackgroundCompaction();
+    } else {
+      mutex_.AssertHeld();
+      if (imm_ != nullptr) {
+        CompactMemTable();
+      }
     }
   }
 

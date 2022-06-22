@@ -243,8 +243,9 @@ SyscallPread::SyscallPread(unsigned node_id, std::string name,
           offset(assoc_dims), internal_buf(assoc_dims),
           arggen_func(arggen_func), rcsave_func(rcsave_func) {
     assert(arggen_func != nullptr);
-    // TODO: may need fewer than these many pre-alloced buffers
-    for (int i = 0; i < scgraph->pre_issue_depth; ++i) {
+    // at most can have pre_issue_depth + 1 internal buffers simultaneously
+    // in use
+    for (int i = 0; i < scgraph->pre_issue_depth + 1; ++i) {
         // align allocation to hardware sector size, in case the file is
         // open O_DIRECT
         pre_alloced_bufs.insert(

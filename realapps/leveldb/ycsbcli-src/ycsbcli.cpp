@@ -2,7 +2,7 @@
 #include <iostream>
 #include <fstream>
 #include <random>
-#include <chrono>
+#include <thread>
 #include <limits>
 #include <algorithm>
 #include <unistd.h>
@@ -179,7 +179,7 @@ main(int argc, char *argv[])
 {
     std::string db_location, ycsb_filename;
     size_t value_size, memtable_limit, filesize_limit;
-    bool help, write_sync, bg_compact_off, no_fill_cache, drop_caches, print_block_info;
+    bool help, write_sync, bg_compact_off, no_fill_cache, drop_caches, print_block_info, wait_before_close;
 
     cxxopts::Options cmd_args("leveldb ycsb trace exec client");
     cmd_args.add_options()
@@ -193,7 +193,8 @@ main(int argc, char *argv[])
             ("bg_compact_off", "turn off background compaction", cxxopts::value<bool>(bg_compact_off)->default_value("false"))
             ("no_fill_cache", "no block cache for gets", cxxopts::value<bool>(no_fill_cache)->default_value("false"))
             ("drop_caches", "do drop_caches between ops", cxxopts::value<bool>(drop_caches)->default_value("false"))
-            ("print_block_info", "for distribution accounting", cxxopts::value<bool>(print_block_info)->default_value("false"));
+            ("print_block_info", "for distribution accounting", cxxopts::value<bool>(print_block_info)->default_value("false"))
+            ("wait_before_close", "ensure memtable compacted", cxxopts::value<bool>(wait_before_close)->default_value("false"));
     auto result = cmd_args.parse(argc, argv);
 
     if (help) {
@@ -274,10 +275,9 @@ main(int argc, char *argv[])
                   << "  max  " << max_us << " us" << std::endl
                   << "  min  " << min_us << " us" << std::endl << std::endl;
 
-        if (microsecs.size() > 10) {
-            std::cout << "Removing top/bottom-5:" << std::endl;
-            microsecs.erase(microsecs.begin(), microsecs.begin() + 5);
-            microsecs.erase(microsecs.end() - 5, microsecs.end());
+        if (microsecs.size() > 1) {
+            std::cout << "Removing top-1 outlier:" << std::endl;
+            microsecs.erase(microsecs.end() - 1, microsecs.end());
 
             sum_us = 0.;
             for (double& us : microsecs)
@@ -291,11 +291,12 @@ main(int argc, char *argv[])
                       << "  max  " << max_us << " us" << std::endl
                       << "  min  " << min_us << " us" << std::endl;
         }
-
     }
 
     // Force compaction of everything in memory.
     // leveldb_compact(db);
+    if (wait_before_close)
+        std::this_thread::sleep_for(std::chrono::milliseconds(500));
 
     leveldb_stats(db);
     leveldb_close(db);

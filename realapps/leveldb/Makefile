@@ -1,5 +1,6 @@
 CC=g++
-CXXFLAGS=-Wall -Werror -std=c++20 -O3 -DNDEBUG
+CXXFLAGS=-Wall -Werror -std=c++20 -D_GNU_SOURCE
+CXXLIBS=-luring -ldl -pthread
 
 LDB_DIR:=leveldb-src
 LDB_INCL:=-I./$(LDB_DIR)/include
@@ -12,22 +13,33 @@ FA_DLIB:=-L../../libforeactor -lforeactor -Wl,-rpath=../../libforeactor
 
 
 .PHONY: all
-all: leveldb ycsbcli
+all: release
+
+
+.PHONY: release
+release: CXXFLAGS+=-O3 -DNDEBUG
+release: CMAKE_TYPE=Release
+release: leveldb ycsbcli
+
+.PHONY: debug
+debug: CXXFLAGS+=-Og -g -ggdb
+debug: CMAKE_TYPE=Debug
+debug: leveldb ycsbcli
 
 
 .PHONY: leveldb
 leveldb:
 	mkdir -p $(LDB_DIR)/build
 	cd $(LDB_DIR)/build && \
-		cmake -DCMAKE_BUILD_TYPE=Release -DCMAKE_CXX_STANDARD=20 .. && \
+		cmake -DCMAKE_BUILD_TYPE=$(CMAKE_TYPE) -DCMAKE_CXX_STANDARD=20 .. && \
 		make -j$(shell nproc)
 
 
 $(CLI_OBJS): %.o: %.cpp
-	$(CC) $(CXXFLAGS) -c $(LDB_INCL) $< -o $@ -lpthread $(LDB_DLIB) $(FA_DLIB)
+	$(CC) $(CXXFLAGS) -c $(LDB_INCL) $< -o $@ $(CXXLIBS) $(LDB_DLIB) $(FA_DLIB)
 
 ycsbcli: leveldb $(CLI_OBJS)
-	$(CC) $(CXXFLAGS) $(CLI_OBJS) -o $@ -lpthread $(LDB_DLIB) $(FA_DLIB)
+	$(CC) $(CXXFLAGS) $(CLI_OBJS) -o $@ $(CXXLIBS) $(LDB_DLIB) $(FA_DLIB)
 
 
 .PHONY: clean
