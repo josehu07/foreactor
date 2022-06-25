@@ -236,7 +236,7 @@ main(int argc, char *argv[])
         exit(1);
     }
     if (ycsb_reqs.size() == 0) {
-        std::cerr << "Error: given YCSB trace file has not valid lines" << std::endl;
+        std::cerr << "Error: given YCSB trace file has no valid lines" << std::endl;
         exit(1);
     }
 
@@ -296,7 +296,7 @@ main(int argc, char *argv[])
     // Force compaction of everything in memory.
     // leveldb_compact(db);
     if (wait_before_close)
-        std::this_thread::sleep_for(std::chrono::milliseconds(500));
+        std::this_thread::sleep_for(std::chrono::milliseconds(2000));
 
     leveldb_stats(db);
     leveldb_close(db);

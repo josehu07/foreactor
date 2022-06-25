@@ -216,8 +216,11 @@ def get_level_workload_key(stats, dbdir, level, last_l0_key):
                assert key is not None
                return key
 
-    assert last_key_max_seen is not None
-    return last_key_max_seen
+    if last_key_max_seen is None:
+        # corner case where one level in the middle is completely empty
+        return last_l0_key
+    else:
+        return last_key_max_seen
 
 def generate_workloads(stats, dbdir, ycsb_bin, ycsb_workload, num_records,
                        num_l0_tables, output_prefix):
