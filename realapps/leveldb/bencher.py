@@ -5,8 +5,12 @@ import os
 import argparse
 
 
-URING_QUEUE = 16
+YCSBCLI_BIN = "./ycsbcli"
+URING_QUEUE = 32
 CGROUP_NAME = "leveldb_group"
+
+CACHED_ITERS = 3
+DROP_CACHES_ITERS = 1
 
 
 def set_cgroup_mem_limit(mem_limit):
@@ -49,8 +53,8 @@ def run_ycsbcli_single(libforeactor, dbdir, trace, mem_limit, drop_caches,
             num_uthreads = 1
         envs["UTHREADS_0"] = str(num_uthreads)
 
-    cmd = ["./ycsbcli", "-d", dbdir, "-f", trace,
-           "--bg_compact_off", "--no_fill_cache"]
+    cmd = [YCSBCLI_BIN, "-d", dbdir, "-f", trace, "--bg_compact_off",
+           "--no_fill_cache"]
     if drop_caches:
         cmd.append("--drop_caches")
     if mem_limit != "none":
@@ -61,49 +65,65 @@ def run_ycsbcli_single(libforeactor, dbdir, trace, mem_limit, drop_caches,
     output = result.stdout.decode('ascii')
     return output
 
-def get_avg_us_from_output(output):
+def get_us_result_from_output(output):
     in_timing_section = False
+    sum_us, avg_us = None, None
+
     for line in output.split('\n'):
         line = line.strip()
         if line.startswith("Removing top-1"):
             in_timing_section = True
+        elif in_timing_section and line.startswith("sum"):
+            sum_us = float(line.split()[1])
         elif in_timing_section and line.startswith("avg"):
-            return float(line.split()[1])
-    return None
+            avg_us = float(line.split()[1])
+            break
+
+    return (sum_us, avg_us)
 
 def run_ycsbcli_iters(num_iters, libforeactor, dbdir, trace, mem_limit,
                       drop_caches, use_foreactor, backend=None,
                       pre_issue_depth=0):
-    result_us = 0
+    result_sum_us, result_avg_us = 0, 0
     for i in range(num_iters):
         output = run_ycsbcli_single(libforeactor, dbdir, trace, mem_limit,
                                     drop_caches, use_foreactor, backend,
                                     pre_issue_depth)
-        avg_us = get_avg_us_from_output(output)
+        sum_us, avg_us = get_us_result_from_output(output)
+        assert sum_us is not None
         assert avg_us is not None
-        result_us += avg_us
-    return result_us / num_iters
+        result_sum_us += sum_us
+        result_avg_us += avg_us
+
+    result_sum_us /= num_iters
+    result_avg_us /= num_iters
+    return result_sum_us, result_avg_us
 
 
 def run_exprs(libforeactor, dbdir, trace, mem_limit, drop_caches,
               output_log, backend, pre_issue_depth_list):
-    num_iters = 5 if not drop_caches else 1
+    num_iters = CACHED_ITERS if not drop_caches else DROP_CACHES_ITERS
 
     with open(output_log, 'w') as fout:
-        result_us = run_ycsbcli_iters(num_iters, libforeactor, dbdir, trace,
-                                      mem_limit, drop_caches, False)
-        result = f" orig: {result_us:.3f} us"
+        sum_us, avg_us = run_ycsbcli_iters(num_iters, libforeactor, dbdir, trace,
+                                           mem_limit, drop_caches, False)
+        result = f" orig: sum {sum_us:.3f} avg {avg_us:.3f} us"
         fout.write(result + '\n')
         print(result)
 
         for pre_issue_depth in pre_issue_depth_list:
-            result_us = run_ycsbcli_iters(num_iters, libforeactor, dbdir, trace,
-                                          mem_limit, drop_caches, True, backend,
-                                          pre_issue_depth)
-            result = f" {pre_issue_depth:4d}: {result_us:.3f} us"
+            sum_us, avg_us = run_ycsbcli_iters(num_iters, libforeactor, dbdir, trace,
+                                               mem_limit, drop_caches, True, backend,
+                                               pre_issue_depth)
+            result = f" {pre_issue_depth:4d}: sum {sum_us:.3f} avg {avg_us:.3f} us"
             fout.write(result + '\n')
             print(result)
 
+
+def check_file_exists(path):
+    if not os.path.isfile(path):
+        print(f"Error: {path} does not exist")
+        exit(1)
 
 def main():
     parser = argparse.ArgumentParser(description="LevelDB benchmark driver")
@@ -136,6 +156,10 @@ def main():
         except:
             print("Error: mem_limit must be an integer in bytes")
             exit(1)
+
+    check_file_exists(args.libforeactor)
+    check_file_exists(args.trace)
+    check_file_exists(YCSBCLI_BIN)
 
     run_exprs(args.libforeactor, args.dbdir, args.trace, args.mem_limit,
               args.drop_caches, args.output_log, args.backend, args.pre_issue_depths)

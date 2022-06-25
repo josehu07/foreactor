@@ -17,7 +17,7 @@ def read_samekey_us(input_logs_dir, value_size, num_l0_tables, approx_num_preads
         while True:
             line = flog.readline().strip()
             if line[:line.index(':')] == pre_issue_depth_str:
-                avg_us = float(line.split()[1])
+                avg_us = float(line.split()[4])
                 return avg_us
 
 def plot_samekey_setup(results, approx_nums_preads, output_prefix, db_setup):
@@ -54,7 +54,7 @@ def plot_samekey_setup(results, approx_nums_preads, output_prefix, db_setup):
                          zorder=1)
 
     plt.xlabel("Approx. #preads")
-    plt.ylabel("Completion Time (us)")
+    plt.ylabel("Time per Get (us)")
 
     plt.title(f"Database image: {db_setup}")
 
@@ -69,7 +69,8 @@ def plot_samekey_setup(results, approx_nums_preads, output_prefix, db_setup):
     print(f"PLOT {db_setup}")
 
 def handle_samekey(input_logs_dir, output_prefix):
-    value_sizes = ["256B", "1K", "4K", "16K", "64K", "128K", "256K", "512K", "1M"]
+    value_sizes = ["256B", "512B", "1K", "2K", "4K", "8K", "16K", "32K", "64K", "128K",
+                   "256K", "512K", "1M"]
     nums_l0_tables = [8, 12]
     backends = ["io_uring_sqe_async", "thread_pool"]
     pre_issue_depth_list = [4, 8, 12, 15]
@@ -110,7 +111,7 @@ def read_ycsbrun_us(input_logs_dir, value_size, num_l0_tables, backend, drop_cac
         while True:
             line = flog.readline().strip()
             if line[:line.index(':')] == pre_issue_depth_str:
-                avg_us = float(line.split()[1])
+                avg_us = float(line.split()[4])
                 return avg_us
 
 def plot_ycsbrun_bars(results, db_setups, output_prefix, title):
@@ -138,7 +139,7 @@ def plot_ycsbrun_bars(results, db_setups, output_prefix, title):
         plt.bar(xs, ys, width=1, label=config, color=color, zorder=1)
 
     plt.xlabel("Database Image")
-    plt.ylabel("Completion Time (us)")
+    plt.ylabel("Avg. Time per Get (us)")
 
     plt.title(f"{title}")
 
@@ -156,7 +157,8 @@ def plot_ycsbrun_bars(results, db_setups, output_prefix, title):
     print(f"PLOT ycsbrun-{title}")
 
 def handle_ycsbrun(input_logs_dir, output_prefix):
-    value_sizes = ["256B", "1K", "4K", "16K", "64K", "128K", "256K", "512K", "1M"]
+    value_sizes = ["256B", "512B", "1K", "2K", "4K", "8K", "16K", "32K", "64K", "128K",
+                   "256K", "512K", "1M"]
     nums_l0_tables = [8, 12]
     backends = ["io_uring_sqe_async"]
     pre_issue_depth_list = [4, 8, 12]
@@ -190,7 +192,7 @@ def handle_ycsbrun(input_logs_dir, output_prefix):
 def main():
     parser = argparse.ArgumentParser(description="LevelDB result plotting")
     parser.add_argument('-m', dest='mode', required=True,
-                        help="which figures to plot: samekey")
+                        help="which figures to plot: samekey|ycsbrun")
     parser.add_argument('-i', dest='input_logs_dir', required=True,
                         help="input logs directory")
     parser.add_argument('-o', dest='output_prefix', required=True,
