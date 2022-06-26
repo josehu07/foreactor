@@ -10,7 +10,7 @@ YCSBCLI_BIN = "./ycsbcli"
 LEVELDBUTIL_BIN = "./leveldb-src/build/leveldbutil"
 
 SAMEKEY_NUMOPS_PER_RUN = 100
-YCSBRUN_NUMOPS_SCALE = 10
+YCSBRUN_NUMOPS_SCALE = 1
 
 
 def run_ycsbcli(dbdir, trace, value_size, memtable_limit, filesize_limit,

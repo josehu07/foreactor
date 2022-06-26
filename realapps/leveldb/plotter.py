@@ -20,7 +20,7 @@ def read_samekey_us(input_logs_dir, value_size, num_l0_tables, approx_num_preads
                 avg_us = float(line.split()[4])
                 return avg_us
 
-def plot_samekey_setup(results, approx_nums_preads, output_prefix, db_setup):
+def plot_samekey_setup(results, approx_nums_preads, output_prefix, db_setup, drop_caches):
     plt.rcParams.update({'font.size': 16})
     plt.rcParams.update({'figure.figsize': (12, 7)})
 
@@ -56,7 +56,10 @@ def plot_samekey_setup(results, approx_nums_preads, output_prefix, db_setup):
     plt.xlabel("Approx. #preads")
     plt.ylabel("Time per Get (us)")
 
-    plt.title(f"Database image: {db_setup}")
+    plt.xticks(list(range(1, max(approx_nums_preads) + 1)))
+
+    cache_str = "drop_caches" if drop_caches else "cached"
+    plt.title(f"Database image: {db_setup} {cache_str}")
 
     plt.grid(axis='y')
 
@@ -64,9 +67,9 @@ def plot_samekey_setup(results, approx_nums_preads, output_prefix, db_setup):
 
     plt.tight_layout()
 
-    plt.savefig(f"{output_prefix}-{db_setup}.png", dpi=120)
+    plt.savefig(f"{output_prefix}-{db_setup}-{cache_str}.png", dpi=120)
     plt.close()
-    print(f"PLOT {db_setup}")
+    print(f"PLOT {db_setup}-{cache_str}")
 
 def handle_samekey(input_logs_dir, output_prefix):
     value_sizes = ["256B", "512B", "1K", "2K", "4K", "8K", "16K", "32K", "64K", "128K",
@@ -75,7 +78,9 @@ def handle_samekey(input_logs_dir, output_prefix):
     backends = ["io_uring_sqe_async", "thread_pool"]
     pre_issue_depth_list = [4, 8, 12, 15]
     
-    for drop_caches in (False, True):
+    valid_points = dict()
+
+    for drop_caches in (True, False):   # plot drop_caches first to filter out invalid points
         for value_size in value_sizes:
             for num_l0_tables in nums_l0_tables:
                 approx_nums_preads = list(range(1, num_l0_tables+2+1))      # FIXME
@@ -98,9 +103,29 @@ def handle_samekey(input_logs_dir, output_prefix):
                                                      str(pre_issue_depth))
                             results[config].append(avg_us)
 
+                db_setup = f"{value_size}-{num_l0_tables}"
+
+                # filter out invalid points where the number of preads is incorrect
+                if drop_caches:
+                    assert db_setup not in valid_points
+                    valid_points[db_setup] = []
+                    last_us = 0.
+                    for idx in range(len(approx_nums_preads)):
+                        avg_us = results["original"][idx]
+                        if avg_us >= last_us:
+                            valid_points[db_setup].append(idx)
+                            last_us = avg_us
+                else:
+                    assert db_setup in valid_points
+
+                approx_nums_preads = [n for i, n in enumerate(approx_nums_preads) \
+                                      if i in valid_points[db_setup]]
+                for k in results:
+                    results[k] = [us for i, us in enumerate(results[k]) \
+                                  if i in valid_points[db_setup]]
+
                 plot_samekey_setup(results, approx_nums_preads, output_prefix,
-                                   f"{value_size}-{num_l0_tables}-"
-                                   f"{'drop_caches' if drop_caches else 'cached'}")
+                                   db_setup, drop_caches)
 
 
 def read_ycsbrun_us(input_logs_dir, value_size, num_l0_tables, backend, drop_caches,
