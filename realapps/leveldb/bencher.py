@@ -32,6 +32,22 @@ def set_cgroup_mem_limit(mem_limit):
            CGROUP_NAME]
     subprocess.run(cmd, check=True)
 
+def get_iostat_bio_mb_read():
+    # TODO: currently reads stat of the first device
+    cmd = ["sudo", "iostat", "-d", "-m", "1", "1"]
+    result = subprocess.run(cmd, check=True, capture_output=True)
+    output = result.stdout.decode('ascii')
+    in_dev_line, mb_read_idx = False, -1
+    for line in output.split('\n'):
+        line = line.strip()
+        if "MB_read" in line:
+            in_dev_line = True
+            mb_read_idx = line.split().index("MB_read")
+        elif in_dev_line:
+            assert mb_read_idx > 0
+            return float(line.split()[mb_read_idx])
+    return None
+
 
 def run_ycsbcli_single(libforeactor, dbdir, trace, mem_limit, drop_caches,
                        use_foreactor, backend=None, pre_issue_depth=0):
@@ -61,9 +77,11 @@ def run_ycsbcli_single(libforeactor, dbdir, trace, mem_limit, drop_caches,
         set_cgroup_mem_limit(int(mem_limit))
         cmd = ["sudo", "cgexec", "-g", "memory:"+CGROUP_NAME] + cmd
 
+    mb_read_before = get_iostat_bio_mb_read()
     result = subprocess.run(cmd, check=True, capture_output=True, env=envs)
+    mb_read_after = get_iostat_bio_mb_read()
     output = result.stdout.decode('ascii')
-    return output
+    return output, mb_read_after - mb_read_before
 
 def get_us_result_from_output(output):
     in_timing_section = False
@@ -84,20 +102,24 @@ def get_us_result_from_output(output):
 def run_ycsbcli_iters(num_iters, libforeactor, dbdir, trace, mem_limit,
                       drop_caches, use_foreactor, backend=None,
                       pre_issue_depth=0):
-    result_sum_us, result_avg_us = 0, 0
+    result_sum_us, result_avg_us = 0., 0.
+    result_mb_read = 0.
     for i in range(num_iters):
-        output = run_ycsbcli_single(libforeactor, dbdir, trace, mem_limit,
-                                    drop_caches, use_foreactor, backend,
-                                    pre_issue_depth)
+        output, mb_read = run_ycsbcli_single(libforeactor, dbdir, trace, mem_limit,
+                                             drop_caches, use_foreactor, backend,
+                                             pre_issue_depth)
         sum_us, avg_us = get_us_result_from_output(output)
+        assert mb_read >= 0
         assert sum_us is not None
         assert avg_us is not None
         result_sum_us += sum_us
         result_avg_us += avg_us
+        result_mb_read += mb_read
 
     result_sum_us /= num_iters
     result_avg_us /= num_iters
-    return result_sum_us, result_avg_us
+    result_mb_read /= num_iters
+    return result_sum_us, result_avg_us, result_mb_read
 
 
 def run_exprs(libforeactor, dbdir, trace, mem_limit, drop_caches,
@@ -105,17 +127,19 @@ def run_exprs(libforeactor, dbdir, trace, mem_limit, drop_caches,
     num_iters = CACHED_ITERS if not drop_caches else DROP_CACHES_ITERS
 
     with open(output_log, 'w') as fout:
-        sum_us, avg_us = run_ycsbcli_iters(num_iters, libforeactor, dbdir, trace,
-                                           mem_limit, drop_caches, False)
-        result = f" orig: sum {sum_us:.3f} avg {avg_us:.3f} us"
+        sum_us, avg_us, mb_read = run_ycsbcli_iters(num_iters, libforeactor, dbdir,
+                                                    trace, mem_limit, drop_caches,
+                                                    False)
+        result = f" orig: sum {sum_us:.3f} avg {avg_us:.3f} us {mb_read:.3f} MB_read"
         fout.write(result + '\n')
         print(result)
 
         for pre_issue_depth in pre_issue_depth_list:
-            sum_us, avg_us = run_ycsbcli_iters(num_iters, libforeactor, dbdir, trace,
-                                               mem_limit, drop_caches, True, backend,
-                                               pre_issue_depth)
-            result = f" {pre_issue_depth:4d}: sum {sum_us:.3f} avg {avg_us:.3f} us"
+            sum_us, avg_us, mb_read = run_ycsbcli_iters(num_iters, libforeactor, dbdir,
+                                                        trace, mem_limit, drop_caches,
+                                                        True, backend, pre_issue_depth)
+            result = f" {pre_issue_depth:4d}: sum {sum_us:.3f} avg {avg_us:.3f} us" + \
+                     f" {mb_read:.3f} MB_read"
             fout.write(result + '\n')
             print(result)
 

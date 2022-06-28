@@ -246,7 +246,8 @@ long SyscallNode::Issue(const EpochList& epoch) {
                     }
                 }
                 next = branch_node->PickBranch(peek_epoch);
-                DEBUG("picked branch '%s' in peeking\n", next->name.c_str());
+                DEBUG("picked branch '%s' in peeking\n",
+                      next == nullptr ? "end" : next->name.c_str());
             }
             if (next == nullptr && !decision_barrier) {
                 if (firstskip_node == nullptr) {

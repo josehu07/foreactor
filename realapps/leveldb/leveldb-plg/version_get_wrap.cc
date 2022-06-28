@@ -95,6 +95,7 @@ static bool SearchBlockHandle(Table *t, const Slice& k, BlockHandle& handle) {
     return false;
   Slice index_value = iiter->value();
   Status s = handle.DecodeFrom(&index_value);
+  delete iiter;
   return s.ok();
 }
 

@@ -11,22 +11,24 @@ BENCHER_PY = "./bencher.py"
 
 VALUE_SIZES = {
     "256B": 256,
-    "512B": 512,
+    # "512B": 512,
     "1K":   1024,
-    "2K":   2 * 1024,
+    # "2K":   2 * 1024,
     "4K":   4 * 1024,
-    "8K":   8 * 1024,
+    # "8K":   8 * 1024,
     "16K":  16 * 1024,
-    "32K":  32 * 1024,
+    # "32K":  32 * 1024,
     "64K":  64 * 1024,
-    "128K": 128 * 1024,
+    # "128K": 128 * 1024,
     "256K": 256 * 1024,
-    "512K": 512 * 1024,
+    # "512K": 512 * 1024,
     "1M":   1024 * 1024,
 }
 NUMS_L0_TABLES = [8, 12]
-BACKENDS = ["io_uring_default", "io_uring_sqe_async", "thread_pool"]
-PRE_ISSUE_DEPTH_LIST = [0, 4, 8, 12, 15]
+# BACKENDS = ["io_uring_default", "io_uring_sqe_async", "thread_pool"]
+BACKENDS = ["io_uring_sqe_async", "io_uring_sqe_async"]
+PRE_ISSUE_DEPTH_LIST = [4, 8, 12, 15]
+MEM_PERCENTAGES = [100, 80, 60, 40, 20]
 
 
 def run_makedb(dbdir_prefix, value_size, value_size_abbr, ycsb_bin, ycsb_workload,
@@ -51,17 +53,30 @@ def make_db_images(dbdir_prefix, ycsb_bin, ycsb_workload, value_sizes,
             print(f"MADE {value_size_abbr} {num_l0_tables}")
 
 
+def get_dbdir_bytes(dbdir):
+    cmd = ["du", "-s", "-b", dbdir]
+    result = subprocess.run(cmd, check=True, capture_output=True)
+    output = result.stdout.decode('ascii')
+    size_bytes = int(output.strip().split()[0])
+    return size_bytes
+
 def run_bench(libforeactor, dbdir, workload, output_log, backend,
-              pre_issue_depth_list, drop_caches):
+              pre_issue_depth_list, drop_caches, mem_percentage=100):
     cmd = ["python3", BENCHER_PY, "-l", libforeactor, "-d", dbdir,
            "-f", workload, "-o", output_log, "-b", backend]
-    cmd += list(map(lambda d: str(d), pre_issue_depth_list))
     if drop_caches:
         cmd.append("--drop_caches")
+    
+    assert mem_percentage > 0 and mem_percentage <= 100
+    mem_bytes = int(get_dbdir_bytes(dbdir) * mem_percentage / 100)
+    cmd += ["--mem_limit", str(mem_bytes)]
+
+    cmd += list(map(lambda d: str(d), pre_issue_depth_list))
 
     result = subprocess.run(cmd, check=True, capture_output=True)
     output = result.stdout.decode('ascii')
     return output
+
 
 def run_bench_samekey(libforeactor, dbdir_prefix, value_size_abbr, num_l0_tables,
                       approx_num_preads, backend, pre_issue_depth_list, drop_caches):
@@ -70,17 +85,6 @@ def run_bench_samekey(libforeactor, dbdir_prefix, value_size_abbr, num_l0_tables
                f"{approx_num_preads}.txt"
     output_log = f"results/result-{value_size_abbr}-{num_l0_tables}-samekey-" + \
                  f"{approx_num_preads}-{backend}-" + \
-                 f"{'drop_caches' if drop_caches else 'cached'}.log"
-    return run_bench(libforeactor, dbdir, workload, output_log, backend,
-                     pre_issue_depth_list, drop_caches)
-
-def run_bench_specific(libforeactor, dbdir_prefix, value_size_abbr, num_l0_tables,
-                       workload_abbr, backend, pre_issue_depth_list, drop_caches):
-    dbdir = f"{dbdir_prefix}/leveldb_{value_size_abbr}_{num_l0_tables}"
-    workload = f"workloads/trace-{value_size_abbr}-{num_l0_tables}-" + \
-               f"{workload_abbr}.txt"
-    output_log = f"results/result-{value_size_abbr}-{num_l0_tables}-" + \
-                 f"{workload_abbr}-{backend}-" + \
                  f"{'drop_caches' if drop_caches else 'cached'}.log"
     return run_bench(libforeactor, dbdir, workload, output_log, backend,
                      pre_issue_depth_list, drop_caches)
@@ -100,18 +104,29 @@ def run_all_samekey(libforeactor, dbdir_prefix, value_sizes, nums_l0_tables,
                               f"{approx_num_preads} {backend} {drop_caches}")
                         print(output.rstrip())
 
+
+def run_bench_ycsbrun(libforeactor, dbdir_prefix, value_size_abbr, num_l0_tables,
+                      workload_abbr, backend, pre_issue_depth_list, mem_percentage):
+    dbdir = f"{dbdir_prefix}/leveldb_{value_size_abbr}_{num_l0_tables}"
+    workload = f"workloads/trace-{value_size_abbr}-{num_l0_tables}-" + \
+               f"{workload_abbr}.txt"
+    output_log = f"results/result-{value_size_abbr}-{num_l0_tables}-" + \
+                 f"{workload_abbr}-{backend}-mem_{mem_percentage}.log"
+    return run_bench(libforeactor, dbdir, workload, output_log, backend,
+                     pre_issue_depth_list, False, mem_percentage)
+
 def run_all_ycsbrun(libforeactor, dbdir_prefix, value_sizes, nums_l0_tables,
-                   backends, pre_issue_depth_list):
+                    backends, pre_issue_depth_list, mem_percentages):
     for value_size_abbr, value_size in value_sizes.items():
         for num_l0_tables in nums_l0_tables:
             for backend in backends:
-                for drop_caches in (False, True):
-                    output = run_bench_specific(libforeactor, dbdir_prefix,
-                                                value_size_abbr, num_l0_tables,
-                                                "ycsbrun", backend,
-                                                pre_issue_depth_list, drop_caches)
+                for mem_percentage in mem_percentages:
+                    output = run_bench_ycsbrun(libforeactor, dbdir_prefix,
+                                               value_size_abbr, num_l0_tables,
+                                               "ycsbrun", backend,
+                                               pre_issue_depth_list, mem_percentage)
                     print(f"RUN {value_size_abbr} {num_l0_tables} " + \
-                          f"ycsbrun {backend} {drop_caches}")
+                          f"ycsbrun {backend} mem_{mem_percentage}")
                     print(output.rstrip())
 
 
@@ -165,10 +180,10 @@ def main():
 
         assert args.libforeactor is not None
 
-        run_all_samekey(args.libforeactor, args.dbdir_prefix, VALUE_SIZES,
-                        NUMS_L0_TABLES, BACKENDS, PRE_ISSUE_DEPTH_LIST)
+        # run_all_samekey(args.libforeactor, args.dbdir_prefix, VALUE_SIZES,
+        #                 NUMS_L0_TABLES, BACKENDS, PRE_ISSUE_DEPTH_LIST)
         run_all_ycsbrun(args.libforeactor, args.dbdir_prefix, VALUE_SIZES,
-                        NUMS_L0_TABLES, BACKENDS, PRE_ISSUE_DEPTH_LIST)
+                        NUMS_L0_TABLES, BACKENDS, PRE_ISSUE_DEPTH_LIST, MEM_PERCENTAGES)
 
     else:
         print(f"Error: unrecognized mode {args.mode}")

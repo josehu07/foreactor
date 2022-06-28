@@ -128,11 +128,10 @@ def handle_samekey(input_logs_dir, output_prefix):
                                    db_setup, drop_caches)
 
 
-def read_ycsbrun_us(input_logs_dir, value_size, num_l0_tables, backend, drop_caches,
+def read_ycsbrun_us(input_logs_dir, value_size, num_l0_tables, backend, mem_percentage,
                     pre_issue_depth_str):
     with open(f"{input_logs_dir}/result-{value_size}-{num_l0_tables}-ycsbrun-"
-              f"{backend}-"
-              f"{'drop_caches' if drop_caches else 'cached'}.log") as flog:
+              f"{backend}-mem_{mem_percentage}.log") as flog:
         while True:
             line = flog.readline().strip()
             if line[:line.index(':')] == pre_issue_depth_str:
@@ -182,21 +181,20 @@ def plot_ycsbrun_bars(results, db_setups, output_prefix, title):
     print(f"PLOT ycsbrun-{title}")
 
 def handle_ycsbrun(input_logs_dir, output_prefix):
-    value_sizes = ["256B", "512B", "1K", "2K", "4K", "8K", "16K", "32K", "64K", "128K",
-                   "256K", "512K", "1M"]
+    value_sizes = ["256B", "1K", "4K", "16K", "64K", "256K", "1M"]
     nums_l0_tables = [8, 12]
     backends = ["io_uring_sqe_async"]
     pre_issue_depth_list = [4, 8, 12]
+    mem_percentages = [100, 75, 50, 25]
 
-    for drop_caches in (False, True):
+    for mem_percentage in mem_percentages:
         db_setups = []
         results = {"original": []}
 
         for value_size in value_sizes:
             for num_l0_tables in nums_l0_tables:
-                avg_us = read_ycsbrun_us(input_logs_dir, value_size,
-                                         num_l0_tables, backends[0], drop_caches,
-                                         "orig")
+                avg_us = read_ycsbrun_us(input_logs_dir, value_size, num_l0_tables,
+                                         backends[0], mem_percentage, "orig")
                 results["original"].append(avg_us)
                 db_setups.append(f"{value_size}-{num_l0_tables}")
 
@@ -205,13 +203,11 @@ def handle_ycsbrun(input_logs_dir, output_prefix):
                         config = f"{backend}-{pre_issue_depth}"
                         if config not in results:
                             results[config] = []
-                        avg_us = read_ycsbrun_us(input_logs_dir, value_size,
-                                                 num_l0_tables, backend, drop_caches,
-                                                 str(pre_issue_depth))
+                        avg_us = read_ycsbrun_us(input_logs_dir, value_size, num_l0_tables,
+                                                 backend, mem_percentage, str(pre_issue_depth))
                         results[config].append(avg_us)
 
-        plot_ycsbrun_bars(results, db_setups, output_prefix,
-                          f"{'drop_caches' if drop_caches else 'cached'}")
+        plot_ycsbrun_bars(results, db_setups, output_prefix, f"mem_{mem_percentage}")
 
 
 def main():

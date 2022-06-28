@@ -71,6 +71,7 @@ def get_full_stat_section(output):
 def run_ycsb_bin(ycsb_bin, ycsb_action, ycsb_workload, extra_args=[]):
     cmd = [ycsb_bin, ycsb_action, "basic", "-P", ycsb_workload]
     cmd += extra_args
+    cmd += ["-p", "fieldlength=1"]
 
     result = subprocess.run(cmd, check=True, capture_output=True)
     output = result.stdout.decode('ascii')
@@ -114,7 +115,7 @@ def make_db_image(dbdir, ycsb_bin, ycsb_workload, value_size, memtable_limit,
     approx_num_records_per_l0_table = memtable_limit // value_size
 
     # generate the mega YCSB load trace
-    max_num_records = approx_num_records_per_l0_table * num_l0_tables * 3
+    max_num_records = approx_num_records_per_l0_table * num_l0_tables * 25
     ycsb_output = run_ycsb_bin(ycsb_bin, "load", ycsb_workload,
                                ["-p", f"recordcount={max_num_records}"])
     mega_trace = f"{output_prefix}-{num_l0_tables}-mega.txt"
@@ -125,7 +126,7 @@ def make_db_image(dbdir, ycsb_bin, ycsb_workload, value_size, memtable_limit,
         tmpfile = "/tmp/makedb.tmp.txt"
 
         # load sufficient number of records to form the base image
-        num_base_records = approx_num_records_per_l0_table * num_l0_tables * 2
+        num_base_records = approx_num_records_per_l0_table * num_l0_tables * 20
         take_trace_records(ftrace, tmpfile, num_base_records)
         output = run_ycsbcli(dbdir, tmpfile, value_size, memtable_limit,
                              filesize_limit, False)
