@@ -111,6 +111,15 @@ src_cksum_LDADD = $(LDADD)
 src_comm_LDADD = $(LDADD)
 src_nproc_LDADD = $(LDADD)
 src_cp_LDADD = $(LDADD)
+
+# [foreactor] link with libforeactor.so for cp
+libforeactor_path = ../../../libforeactor
+src_cp_LDADD += -L$(libforeactor_path) -l:libforeactor.so
+src_cp_CFLAGS = -I$(libforeactor_path)/include
+
+# [foreactor] linker wrap option for cp
+src_cp_LDFLAGS = --wrap=copy
+
 if !SINGLE_BINARY
 src_coreutils_LDADD = $(LDADD)
 endif
@@ -362,6 +371,10 @@ nodist_src_coreutils_SOURCES = src/coreutils.h
 src_coreutils_SOURCES = src/coreutils.c
 
 src_cp_SOURCES = src/cp.c $(copy_sources) $(selinux_sources)
+
+# [foreactor] involve plugin for cp
+src_cp_SOURCES += ../coreutils-plg/copy_wrap.c
+
 src_dir_SOURCES = src/ls.c src/ls-dir.c
 src_env_SOURCES = src/env.c src/operand2sig.c
 src_vdir_SOURCES = src/ls.c src/ls-vdir.c
