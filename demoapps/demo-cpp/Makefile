@@ -1,6 +1,6 @@
 CC=g++
 CXXFLAGS=-Wall -Werror -std=c++20
-CXXLIBS=-luring -pthread
+CXXLIBS=-luring -ldl -pthread
 
 APP_SRCS:=$(wildcard ./demo-cpp-src/*.cpp)
 APP_OBJS:=$(patsubst %.cpp,%.o,$(APP_SRCS))

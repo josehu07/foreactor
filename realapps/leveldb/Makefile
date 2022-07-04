@@ -9,7 +9,8 @@ LDB_DLIB:=-L./$(LDB_DIR)/build -lleveldb -Wl,-rpath=./$(LDB_DIR)/build
 CLI_SRCS:=$(wildcard ./ycsbcli-src/*.cpp)
 CLI_OBJS:=$(patsubst %.cpp,%.o,$(CLI_SRCS))
 
-FA_DLIB:=-L../../libforeactor -lforeactor -Wl,-rpath=../../libforeactor
+FA_PATH:=../../libforeactor
+FA_DLIB:=-L$(FA_PATH) -lforeactor -Wl,-rpath=$(FA_PATH)
 
 
 .PHONY: all

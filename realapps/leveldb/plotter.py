@@ -51,7 +51,7 @@ def plot_samekey_setup(results, approx_nums_preads, output_prefix, db_setup, dro
             marker = markers[backend]
         
         plt.plot(xs, ys, label=config, marker=marker, markersize=6, color=color,
-                         zorder=1)
+                         zorder=3)
 
     plt.xlabel("Approx. #preads")
     plt.ylabel("Time per Get (us)")
@@ -61,7 +61,7 @@ def plot_samekey_setup(results, approx_nums_preads, output_prefix, db_setup, dro
     cache_str = "drop_caches" if drop_caches else "cached"
     plt.title(f"Database image: {db_setup} {cache_str}")
 
-    plt.grid(axis='y')
+    plt.grid(axis='y', zorder=1)
 
     plt.legend(loc="center left", bbox_to_anchor=(1.1, 0.5))
 
@@ -140,7 +140,8 @@ def read_ycsbrun_us(input_logs_dir, value_size, num_l0_tables, backend, mem_perc
 
 def plot_ycsbrun_bars(results, db_setups, output_prefix, title):
     plt.rcParams.update({'font.size': 16})
-    plt.rcParams.update({'figure.figsize': (20, 7)})
+    # plt.rcParams.update({'figure.figsize': (20, 7)})
+    plt.rcParams.update({'figure.figsize': (12, 7)})
 
     norm = Normalize(vmin=-5, vmax=20)
     orig_color = "steelblue"
@@ -160,7 +161,7 @@ def plot_ycsbrun_bars(results, db_setups, output_prefix, title):
             backend, pre_issue_depth = segs[0], int(segs[1])
             color = cmaps[backend](norm(pre_issue_depth))
         
-        plt.bar(xs, ys, width=1, label=config, color=color, zorder=1)
+        plt.bar(xs, ys, width=0.7, label=config, color=color, zorder=3)
 
     plt.xlabel("Database Image")
     plt.ylabel("Avg. Time per Get (us)")
@@ -170,7 +171,7 @@ def plot_ycsbrun_bars(results, db_setups, output_prefix, title):
     xticks = list(map(lambda x: x * (len(results)+2) + (len(results)/2), range(len(db_setups))))
     plt.xticks(xticks, db_setups)
 
-    plt.grid(axis='y')
+    plt.grid(axis='y', zorder=1)
 
     plt.legend(loc="center left", bbox_to_anchor=(1.02, 0.5))
 
@@ -181,11 +182,15 @@ def plot_ycsbrun_bars(results, db_setups, output_prefix, title):
     print(f"PLOT ycsbrun-{title}")
 
 def handle_ycsbrun(input_logs_dir, output_prefix):
-    value_sizes = ["256B", "1K", "4K", "16K", "64K", "256K", "1M"]
-    nums_l0_tables = [8, 12]
-    backends = ["io_uring_sqe_async"]
-    pre_issue_depth_list = [4, 8, 12]
-    mem_percentages = [100, 75, 50, 25]
+    # value_sizes = ["256B", "1K", "4K", "16K", "64K", "256K", "1M"]
+    value_sizes = ["64K"]
+    # nums_l0_tables = [8, 12]
+    nums_l0_tables = [8]
+    backends = ["thread_pool"]
+    # pre_issue_depth_list = [1, 2, 4, 8, 12, 15]
+    pre_issue_depth_list = [1, 2, 4, 8, 12]
+    # mem_percentages = [100, 75, 50, 25]
+    mem_percentages = [30]
 
     for mem_percentage in mem_percentages:
         db_setups = []

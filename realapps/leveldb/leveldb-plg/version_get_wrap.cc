@@ -1,6 +1,8 @@
 #include <vector>
 #include <unordered_set>
 #include <iostream>
+#include <sys/stat.h>
+#include <unistd.h>
 #include <foreactor.h>
 
 // Dirty trick to allow access to private members because we need them
@@ -194,7 +196,13 @@ static bool open_arggen(const int *epoch, const char **pathname, int *flags, mod
 }
 
 static void open_rcsave(const int *epoch, int fd) {
-    return;
+    // turn off page cache readahead since they're guaranteed useless for
+    // Get requests
+    struct stat st;
+    int ret = fstat(fd, &st);
+    assert(ret == 0);
+    ret = posix_fadvise(fd, 0, st.st_size, POSIX_FADV_RANDOM);
+    assert(ret == 0);
 }
 
 static bool pread_footer_arggen(const int *epoch, int *fd, char **buf, size_t *count, off_t *offset, bool *buf_ready) {

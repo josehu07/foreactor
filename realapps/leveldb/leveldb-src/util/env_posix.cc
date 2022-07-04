@@ -160,12 +160,6 @@ class PosixRandomAccessFile final : public RandomAccessFile {
       assert(fd_ == -1);
       ::close(fd);  // The file will be opened on every read.
     }
-    // [foreactor] used in debugging...
-    // struct stat st;
-    // int ret = fstat(fd, &st);
-    // assert(ret == 0);
-    // ret = posix_fadvise(fd, 0, st.st_size, POSIX_FADV_RANDOM);
-    // assert(ret == 0);
   }
 
   ~PosixRandomAccessFile() override {

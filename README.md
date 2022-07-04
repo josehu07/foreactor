@@ -4,9 +4,9 @@
 ![top-lang](https://img.shields.io/github/languages/top/josehu07/foreactor)
 ![license](https://img.shields.io/github/license/josehu07/foreactor)
 
-Foreactor is a library framework that enables asynchronous I/O (or more generally, asynchronous syscalls) transparently in C/C++ applications. Foreactor allows the integration of an asynchronous execution backend, e.g. the kernel `io_uring` or a user-level thread pool, into an application with no modification to application code.
+Foreactor is a library that enables asynchronous I/O (or more generally, asynchronous syscalls) in C/C++ applications transparently. Foreactor allows the integration of an asynchronous execution backend, e.g. the recent Linux kernel `io_uring` or a user-level thread pool, into an application with no modification to the application's original source code.
 
-This is done by describing the application's critical functions (e.g., LevelDB's `Version::Get`) as **syscall graphs**, a formal abstraction we propose. Such graph abstraction captures the original execution order of syscalls to be issued by the function and their dependencies. If the `foreactor` library gets `LD_PRELOAD`ed when running the application, it automatically intercepts those wrapped functions as well as POSIX syscalls, and pre-issues proper syscalls ahead of time if the syscall graph says it is safe and beneficial to do so.
+This is done by describing the application's critical functions (e.g., LevelDB's `Version::Get`) as **syscall graphs** (SCGraphs), a formal abstraction we propose. Such graph abstraction captures the original execution order of syscalls to be issued by the function and their mutual dependencies. If the library gets `LD_PRELOAD`ed when running the application, it automatically intercepts those wrapped functions as well as POSIX syscalls, and pre-issues proper syscalls ahead of time if the syscall graph says it is safe and beneficial to do so.
 
 TODO paper cite info? =)
 
@@ -70,9 +70,10 @@ cd ..
 
 To enable foreactor for an application function, we need the following components:
 
-- The core foreactor library under `foreactor/`
-- An application plugin describing the function's syscall graph, to be put alongside application code
-- Some minor modifications to the applications build system
+- The core foreactor library `libforeactor.so`
+- A code file (called a plugin) describing the chosen function's syscall graph, to be put alongside application source code
+- Minor modifications to the application's build system to include compilation of the plugin and some linker wrapper options
+- Build, then run the application with proper environment variables to turn on foreactor pre-issuing
 
 **Instructions**:
 
@@ -80,7 +81,7 @@ To enable foreactor for an application function, we need the following component
 <summary>Build the core foreactor library...</summary>
 
 ```bash
-cd foreactor
+cd libforeactor
 make clean && make
 cd ..
 ```
@@ -92,34 +93,68 @@ cd ..
 ```bash
 cd demoapps/demo-cpp
 make clean && make
-python3 run-all.py -h
-cd ..
+mkdir /tmp/demo_dbdir
+
+# Run the `simple` function without foreactor:
+./demo --exper simple --dbdir /tmp/demo_dbdir --dump_result
+
+# Run it with foreactor with io_uring backend sqe_async mode,
+# with syscall pre-issuing depth of 2
+LD_PRELOAD=/path/to/libforeactor/libforeactor.so USE_FOREACTOR=yes \
+DEPTH_0=2 QUEUE_0=32 SQE_ASYNC_FLAG_0=yes \
+./demo --exper simple --dbdir /tmp/demo_dbdir --dump_result
 ```
+
+See `demo-cpp-src/hijackees.cpp` and `demo-cpp-plg/` for all the example functions and their corresponding plugins.
+</details>
+
+<details>
+<summary>Explanation of environment variables...</summary>
+
+- `LD_PRELOAD`: absolute path to the `libforeactor.so` dynamic library
+- `USE_FOREACTOR`: string `yes` means using foreactor, otherwise not
+- `DEPTH_{SCGRAPH_ID}`: non-negative number specifying how many syscalls should foreactor try to pre-issue ahead of time; each SCGraph has its separate depth configuration
+- Backend configuration variables:
+    - To use io_uring, set `QUEUE_{SCGRAPH_ID}` to the io_uring queue-pair capacity (must be greater than depth) and `SQE_ASYNC_FLAG_{SCGRAPH_ID}` to `yes` if forcing multiple kernel io_wq threads (i.e., setting `IOSQE_ASYNC` flag for each syscall handed off to io_uring)
+    - To use user-level thread pool, set `UTHREADS_{SCGRAPH_ID}` to the number of worker threads of the thread pool for this SCGraph
+
+An application can have multiple wrapped functions, each corresponding to a separate SCGraph plugin file with its unique SCGraph ID. The ID is set by the plugin file when `foreactor_CreateSCGraph()` is called.
 </details>
 
 
 ## Listed Applications
 
-This repository contains a collection of applications that involve functions suitable to be wrapped by foreactor and benefit from asynchrony. We have written plugins for some of them. The plugins code can be found under `appname/appname-plugin/`.
+This repository contains a collection of applications that involve functions suitable to be wrapped by foreactor and benefit from asynchrony. We have written plugins for some of them. The plugins code can be found under `realapps/appname/appname-plg/`.
 
 <details>
 <summary>LevelDB v1.23</summary>
 
 | Function | Note |
 | :-: | :- |
-| `Version::Get` | Chained `pread`s with early exits |
+| `Version::Get` | Chained `pread`s with possible `open`s and early exits |
 
-Build:
+Build and run:
 
 ```bash
-cd leveldb
+cd realapps/leveldb
 make clean && make
+python3 run-all.py -h   # TODO better instructions
 ```
+</details>
 
-Run with foreactor:
+<details>
+<summary>GNU Coreutils v9.1</summary>
+
+| Function | Note |
+| :-: | :- |
+| `TODO` | TODO |
+
+Build and run:
 
 ```bash
-TODO
+cd realapps/coreutils
+make clean && make
+# TODO something
 ```
 </details>
 
@@ -130,18 +165,13 @@ TODO
 | :-: | :- |
 | `TODO` | TODO |
 
-Build:
+Build and run:
 
 ```bash
 sudo apt install libcurl4-openssl-dev
-cd git
+cd realapps/git
 make clean && make
-```
-
-Run with foreactor:
-
-```bash
-TODO
+# TODO something
 ```
 </details>
 
@@ -165,21 +195,10 @@ TODO complete tutorial
 
 ## TODO List
 
-- [ ] microbench page cache thrashing
-- [ ] microbench thread_pool
-- [ ] microbench synth script
-- [ ] re-work ValuePool abstraction
-- [ ] apply to git status case
 - [ ] smarter pre_issue_depth
-- [ ] io_uring fixed buffers
-- [ ] io_uring SQ polling
 - [ ] internal buffer GC
 - [ ] serious related work study
 - [ ] current async I/O study
-- [ ] unstable arguments
-- [ ] control point inject logic
-- [ ] config & options on/off
-- [ ] show io_wq concurrency
 - [ ] readme & website doc
 - [ ] compiler CFG mapping
 - [ ] support other static langs

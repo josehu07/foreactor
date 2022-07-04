@@ -12,20 +12,20 @@
 //   
 //     required for foreactor to hijack POSIX library calls
 // 
-//   USE_FOREACTOR=yes          (any other string means no)
+//   USE_FOREACTOR=yes               (any other string means no)
 //
 //     if USE_FOREACTOR is not present in env, or if its value is not the
 //     string yes, then foreactor will not be active; in this case, the
 //     following two sets of env variables will have no effect
 //   
-//   DEPTH_{SCGRAPH_ID}=num     (>= 0)
+//   DEPTH_{SCGRAPH_ID}=num          (>= 0)
 //   
 //     the pre-issuing depth of corresponding SCGraph; setting 0 means no
 //     pre-issuing for this graph (i.e., wrapped app function); otherwise,
 //     one of the following async I/O backend must be active
 //   
-//   QUEUE_{SCGRAPH_ID}=num     (> 0, >= DEPTH, <= 1024)
-//   SQE_ASYNC_FLAG=yes         (any other string means no)
+//   QUEUE_{SCGRAPH_ID}=num          (> 0, >= DEPTH, <= 1024)
+//   SQE_ASYNC_FLAG_{SCGRAPH_ID}=yes (any other string means no)
 //   
 //     if QUEUE_xxx env var is given for an SCGraph, it means to use the
 //     io_uring backend for pre-issuing syscalls in this graph, and the
@@ -33,7 +33,7 @@
 //     SQE_ASYNC_FLAG env var controls whether to force IOSQE_ASYNC flag
 //     in submissions
 //   
-//   UTHREADS_{SCGRAPH_ID}=num  (> 0, < # CPU cores)
+//   UTHREADS_{SCGRAPH_ID}=num       (> 0, < # CPU cores)
 //   
 //     alternatively, one can use a user-level thread pool backend engine
 //     for pre-issuing syscalls instead of io_uring, and the value specifies

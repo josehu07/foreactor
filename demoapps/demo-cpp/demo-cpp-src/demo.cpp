@@ -376,7 +376,7 @@ int main(int argc, char *argv[]) {
             ("h,help", "print help message", cxxopts::value<bool>(help)->default_value("false"))
             ("exper", "experiment name", cxxopts::value<std::string>(exper))
             ("dbdir", "data directory path", cxxopts::value<std::string>(dbdir))
-            ("iters", "num of iterations", cxxopts::value<unsigned>(num_iters))
+            ("iters", "num of iterations", cxxopts::value<unsigned>(num_iters)->default_value("3"))
             ("drop_caches", "drop caches before each iter", cxxopts::value<bool>(drop_caches)->default_value("false"))
             ("dump_result", "dump result for verification", cxxopts::value<bool>(dump_result)->default_value("false"))
             ("manual_ring", "use manual io_uring variant", cxxopts::value<bool>(manual_ring)->default_value("false"))
@@ -392,6 +392,11 @@ int main(int argc, char *argv[]) {
     help_str = options.help();
     if (help)
         print_usage_exit();
+
+    if (exper.length() == 0 || dbdir.length() == 0) {
+        std::cerr << "Error: required option --exper and --dbdir not given" << std::endl;
+        print_usage_exit();
+    }
 
     if (dump_result)
         srand(1234567);     // use fixed seed for result comparison
