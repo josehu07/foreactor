@@ -28,9 +28,13 @@ void exper_simple(void *args_) {
 void exper_simple2(void *args_) {
     ExperSimple2Args *args = reinterpret_cast<ExperSimple2Args *>(args_);
     [[maybe_unused]] int ret;
+    [[maybe_unused]] ssize_t ret2;
 
     int filefd = openat(args->dirfd, args->filename.c_str(), O_CREAT | O_RDWR,
                         S_IRUSR | S_IWUSR);
+    ret2 = write(filefd, args->wcontent.c_str(), args->wlen);
+    ret2 = lseek(filefd, 0, SEEK_SET);
+    ret2 = read(filefd, args->rbuf, args->wlen);
     ret = fstat(args->dirfd, &args->sbuf0);
     ret = fstatat(args->dirfd, args->filename.c_str(), &args->sbuf1,
                   AT_SYMLINK_NOFOLLOW);
@@ -261,14 +265,14 @@ void exper_streaming(void *args_) {
         off_t offset = i * args->block_size;
         
         [[maybe_unused]] ssize_t ret = pread(args->fd_in, buf, count, offset);
-        assert(ret == count);
+        assert(ret == static_cast<ssize_t>(count));
 
         // simulate a simple computation workload over the block
         for (size_t j = 0; j < count; ++j)
             buf[j] += 1;
 
         ret = pwrite(args->fd_out, buf, count, offset);
-        assert(ret == count);
+        assert(ret == static_cast<ssize_t>(count));
     }
 }
 
@@ -308,7 +312,7 @@ void exper_ldb_get(void *args_) {
 
         char *buf = args->single_buf ? args->bufs[0] : args->bufs[i];
         ret = pread(fd, buf, args->value_size, data_offset);
-        assert(ret == args->value_size);
+        assert(ret == static_cast<ssize_t>(args->value_size));
 
         // simulate whether key is found in this table file or not
         if (i == args->key_match_at) {

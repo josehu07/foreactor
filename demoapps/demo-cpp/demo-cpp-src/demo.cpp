@@ -120,7 +120,7 @@ void run_exper(std::string& dbdir, std::string& exper, unsigned num_iters,
             dirfd = open("simple2dir", O_DIRECTORY | O_RDONLY);
             assert(dirfd > 0);
         }
-        ExperSimple2Args args(dirfd, "simple2.dat");
+        ExperSimple2Args args(dirfd, "simple2.dat", rand_string(128));
 
         run_iters(exper_simple2, &args, num_iters, drop_caches, !dump_result);
 
@@ -141,6 +141,7 @@ void run_exper(std::string& dbdir, std::string& exper, unsigned num_iters,
                       << " size " << args.sbuf1.st_size
                       << " blksize " << args.sbuf1.st_blksize
                       << " blocks " << args.sbuf1.st_blocks << std::endl;
+            std::cout << "rbuf: " << std::string(args.rbuf, args.rbuf + args.wlen) << std::endl;
         }
 
         close(dirfd);
@@ -313,7 +314,7 @@ void run_exper(std::string& dbdir, std::string& exper, unsigned num_iters,
         memcpy(wbuf, wcontent.c_str(), wcontent.length());
         for (unsigned i = 0; i < num_blocks; ++i) {
             [[maybe_unused]] ssize_t ret = pwrite(fd_in, wbuf, block_size, i * block_size);
-            assert(ret == block_size);
+            assert(ret == static_cast<ssize_t>(block_size));
         }
         delete[] wbuf;
 
@@ -361,7 +362,7 @@ void run_exper(std::string& dbdir, std::string& exper, unsigned num_iters,
                 std::string content = rand_string(file_size);
                 memcpy(wbuf, content.c_str(), file_size);
                 [[maybe_unused]] ssize_t ret = pwrite(fds.back(), wbuf, file_size, 0);
-                assert(ret == file_size);
+                assert(ret == static_cast<ssize_t>(file_size));
                 memcpy(index_blocks.back(), content.substr(file_size - 4096).c_str(), 4096);
                 index_blocks.back()[4095] = '\0';
             } else {

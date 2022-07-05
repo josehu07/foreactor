@@ -13,6 +13,9 @@ static constexpr unsigned graph_id = 1;
 static ExperSimple2Args *curr_args = nullptr;
 static int curr_filefd = -1;
 static bool curr_fstatat_done = false;
+static bool curr_write_done = false;
+static bool curr_lseek_done = false;
+static bool curr_read_done = false;
 
 static bool openat_arggen(const int *epoch, int *dirfd, const char **pathname, int *flags, mode_t *mode) {
     *dirfd = curr_args->dirfd;
@@ -26,6 +29,43 @@ static void openat_rcsave(const int *epoch, int fd) {
     curr_filefd = fd;
 }
 
+static bool write_arggen(const int *epoch, int *fd, const char **buf, size_t *count, off_t *offset) {
+    if (curr_filefd <= 0)
+        return false;
+    *fd = curr_filefd;
+    *buf = curr_args->wcontent.c_str();
+    *count = curr_args->wlen;
+    *offset = 0;
+    return true;
+}
+
+static void write_rcsave(const int *epoch, ssize_t res) {
+    curr_write_done = true;
+}
+
+static bool lseek_arggen(const int *epoch, int *fd, off_t *offset, int *whence) {
+    return false;
+}
+
+static void lseek_rcsave(const int *epoch, off_t res) {
+    curr_lseek_done = true;
+}
+
+static bool read_arggen(const int *epoch, int *fd, char **buf, size_t *count, off_t *offset, bool *buf_ready) {
+    if (!curr_lseek_done)
+        return false;
+    *fd = curr_filefd;
+    *buf = curr_args->rbuf;
+    *count = curr_args->wlen;
+    *offset = 0;
+    *buf_ready = true;
+    return true;
+}
+
+static void read_rcsave(const int *epoch, ssize_t res) {
+    curr_read_done = true;
+}
+
 static bool fstat_arggen(const int *epoch, int *fd, struct stat **buf) {
     *fd = curr_args->dirfd;
     *buf = &curr_args->sbuf0;
@@ -33,6 +73,8 @@ static bool fstat_arggen(const int *epoch, int *fd, struct stat **buf) {
 }
 
 static bool fstatat_arggen(const int *epoch, int *dirfd, const char **pathname, struct stat **buf, int *flags) {
+    if (!curr_read_done)
+        return false;
     *dirfd = curr_args->dirfd;
     *pathname = curr_args->filename.c_str();
     *buf = &curr_args->sbuf1;
@@ -56,17 +98,23 @@ static void BuildSCGraph() {
     foreactor_CreateSCGraph(graph_id, 0);
 
     foreactor_AddSyscallOpenat(graph_id, 0, "openat", nullptr, 0, openat_arggen, openat_rcsave, /*is_start*/ true);
-    foreactor_AddSyscallFstat(graph_id, 1, "fstat", nullptr, 0, fstat_arggen, nullptr, false);
-    foreactor_AddSyscallFstatat(graph_id, 2, "fstatat", nullptr, 0, fstatat_arggen, fstatat_rcsave, false);
-    foreactor_AddSyscallClose(graph_id, 3, "close", nullptr, 0, close_arggen, nullptr, false);
+    foreactor_AddSyscallPwrite(graph_id, 1, "write", nullptr, 0, write_arggen, write_rcsave, false);
+    foreactor_AddSyscallLseek(graph_id, 2, "lseek", nullptr, 0, lseek_arggen, lseek_rcsave, false);
+    foreactor_AddSyscallPread(graph_id, 3, "read", nullptr, 0, read_arggen, read_rcsave, 0, false);
+    foreactor_AddSyscallFstat(graph_id, 4, "fstat", nullptr, 0, fstat_arggen, nullptr, false);
+    foreactor_AddSyscallFstatat(graph_id, 5, "fstatat", nullptr, 0, fstatat_arggen, fstatat_rcsave, false);
+    foreactor_AddSyscallClose(graph_id, 6, "close", nullptr, 0, close_arggen, nullptr, false);
 
     foreactor_SyscallSetNext(graph_id, 0, 1, /*weak_edge*/ false);
     foreactor_SyscallSetNext(graph_id, 1, 2, false);
     foreactor_SyscallSetNext(graph_id, 2, 3, false);
+    foreactor_SyscallSetNext(graph_id, 3, 4, false);
+    foreactor_SyscallSetNext(graph_id, 4, 5, false);
+    foreactor_SyscallSetNext(graph_id, 5, 6, false);
 
     foreactor_SetSCGraphBuilt(graph_id);
 
-    // foreactor_DumpDotImg(graph_id, "simple2");
+    foreactor_DumpDotImg(graph_id, "simple2");
 }
 
 
@@ -106,6 +154,9 @@ void __wrap__Z13exper_simple2Pv(void *args) {
         foreactor_LeaveSCGraph(graph_id);
         curr_args = nullptr;
         curr_filefd = -1;
+        curr_write_done = false;
+        curr_lseek_done = false;
+        curr_read_done = false;
         curr_fstatat_done = false;
     }
 }

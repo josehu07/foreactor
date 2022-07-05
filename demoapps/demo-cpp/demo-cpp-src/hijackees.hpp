@@ -48,11 +48,16 @@ struct ExperSimple2Args : ExperArgs {
     const std::string filename;
     struct stat sbuf0;
     struct stat sbuf1;
+    const std::string wcontent;
+    const size_t wlen;
+    char * const rbuf;
 
-    ExperSimple2Args(int dirfd, std::string filename)
-        : dirfd(dirfd), filename(filename) {
+    ExperSimple2Args(int dirfd, std::string filename, std::string wcontent)
+        : dirfd(dirfd), filename(filename), wcontent(wcontent),
+          wlen(wcontent.length()), rbuf(new char[wlen]) {
         memset(&sbuf0, 0, sizeof(struct stat));
         memset(&sbuf1, 0, sizeof(struct stat));
+        assert(rbuf != nullptr);
     }
     ~ExperSimple2Args() {}
 };

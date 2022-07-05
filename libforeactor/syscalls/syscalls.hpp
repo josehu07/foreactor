@@ -29,6 +29,7 @@ typedef enum SyscallType : unsigned {
     SC_CLOSE,   // close
     SC_PREAD,   // pread
     SC_PWRITE,  // pwrite
+    SC_LSEEK,   // lseek
     SC_FSTAT,   // fstat
     SC_FSTATAT, // fstatat
 } SyscallType;
@@ -271,6 +272,47 @@ class SyscallPwrite final : public SyscallNode {
                        const void *buf_,
                        size_t count_,
                        off_t offset_);
+};
+
+
+// lseek
+// Note that lseek is never offloaded async since io_uring does not support
+// this opcode.
+class SyscallLseek final : public SyscallNode {
+    typedef std::function<bool(const int *, int *, off_t *, int *)> ArggenFunc;
+    typedef std::function<void(const int *, off_t)> RcsaveFunc;
+
+    private:
+        ValuePool<int> fd;
+        ValuePool<off_t> offset;
+        ValuePool<int> whence;
+
+        ArggenFunc arggen_func;
+        RcsaveFunc rcsave_func;
+
+        long SyscallSync(const EpochList& epoch);
+        void PrepUringSqe(int epoch_sum, struct io_uring_sqe *sqe);
+        void PrepUpoolSqe(int epoch_sum, ThreadPoolSQEntry *sqe);
+        void ReflectResult(const EpochList& epoch);
+
+        bool GenerateArgs(const EpochList& epoch);
+        void RemoveOneEpoch(const EpochList& epoch);
+        void ResetValuePools();
+
+    public:
+        SyscallLseek() = delete;
+        SyscallLseek(unsigned node_id, std::string name, SCGraph *scgraph,
+                     const std::unordered_set<int>& assoc_dims,
+                     ArggenFunc arggen_func, RcsaveFunc rcsave_func);
+        ~SyscallLseek() {}
+
+        friend std::ostream& operator<<(std::ostream& s,
+                                        const SyscallLseek& n);
+
+        void CheckArgs(const EpochList& epoch,
+                       int fd_,
+                       off_t offset_,
+                       int whence_);
 };
 
 

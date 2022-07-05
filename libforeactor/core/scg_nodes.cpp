@@ -120,6 +120,9 @@ std::ostream& operator<<(std::ostream& s, const SyscallNode& n) {
     case SC_PWRITE:
         s << StreamStr(static_cast<const SyscallPwrite&>(n));
         break;
+    case SC_LSEEK:
+        s << StreamStr(static_cast<const SyscallLseek&>(n));
+        break;
     case SC_FSTAT:
         s << StreamStr(static_cast<const SyscallFstat&>(n));
         break;

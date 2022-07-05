@@ -282,6 +282,28 @@ void foreactor_AddSyscallFstat(unsigned graph_id,
     scgraph->AddNode(node, is_start);
 }
 
+void foreactor_AddSyscallLseek(unsigned graph_id,
+                               unsigned node_id,
+                               const char *name,
+                               const int *assoc_dims,
+                               size_t assoc_dims_len,
+                               bool (*arggen_func)(const int *,  // not used
+                                                   int *,
+                                                   off_t *,
+                                                   int *),
+                               void (*rcsave_func)(const int *, off_t),
+                               bool is_start) {
+    SCGraph *scgraph = GetSCGraphFromId(graph_id);
+    std::unordered_set<int> assoc_dims_set =
+        MakeAssocDimsSet(assoc_dims, assoc_dims_len);
+
+    PanicIfNodeExists(scgraph, graph_id, node_id);
+    SyscallLseek *node = new SyscallLseek(node_id, std::string(name), scgraph,
+                                          assoc_dims_set, arggen_func,
+                                          rcsave_func);
+    scgraph->AddNode(node, is_start);
+}
+
 void foreactor_AddSyscallFstatat(unsigned graph_id,
                                  unsigned node_id,
                                  const char *name,
@@ -372,7 +394,6 @@ void foreactor_EnterSCGraph(unsigned graph_id) {
         assert(scgraph->IsBuilt());
         SCGraph::RegisterSCGraph(scgraph);
     }
-
 }
 
 void foreactor_LeaveSCGraph(unsigned graph_id) {

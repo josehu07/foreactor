@@ -658,6 +658,95 @@ void SyscallPwrite::CheckArgs(const EpochList& epoch,
 
 
 ///////////
+// lseek //
+///////////
+
+SyscallLseek::SyscallLseek(unsigned node_id, std::string name,
+                           SCGraph *scgraph,
+                           const std::unordered_set<int>& assoc_dims,
+                           ArggenFunc arggen_func, RcsaveFunc rcsave_func)
+        : SyscallNode(node_id, name, SC_LSEEK, /*pure_sc*/ false,
+                      scgraph, assoc_dims),
+          fd(assoc_dims), offset(assoc_dims), whence(assoc_dims),
+          arggen_func(arggen_func), rcsave_func(rcsave_func) {
+    assert(arggen_func != nullptr);
+}
+
+
+std::ostream& operator<<(std::ostream& s, const SyscallLseek& n) {
+    s << "SyscallLseek{";
+    n.PrintCommonInfo(s);
+    s << ",fd=" << StreamStr(n.fd) << ","
+      << "offset=" << StreamStr(n.offset) << ","
+      << "whence=" << StreamStr(n.whence) << "}";
+    return s;
+}
+
+
+long SyscallLseek::SyscallSync(const EpochList& epoch) {
+    return posix::lseek(fd.Get(epoch), offset.Get(epoch), whence.Get(epoch));
+}
+
+void SyscallLseek::PrepUringSqe(int epoch_sum, struct io_uring_sqe *sqe) {
+    // lseek is never offloaded async
+    return;
+}
+
+void SyscallLseek::PrepUpoolSqe(int epoch_sum, ThreadPoolSQEntry *sqe) {
+    // lseek is never offloaded async
+    return;
+}
+
+void SyscallLseek::ReflectResult([[maybe_unused]] const EpochList& epoch) {
+    return;
+}
+
+
+bool SyscallLseek::GenerateArgs(const EpochList& epoch) {
+    assert(!stage.Has(epoch) || stage.Get(epoch) == STAGE_NOTREADY);
+    return false;
+}
+
+void SyscallLseek::RemoveOneEpoch(const EpochList& epoch) {
+    if (rcsave_func != nullptr)
+        rcsave_func(epoch.RawArray(), static_cast<off_t>(rc.Get(epoch)));
+
+    RemoveOneFromCommonPools(epoch);
+    fd.Remove(epoch);
+    offset.Remove(epoch);
+    whence.Remove(epoch);
+}
+
+void SyscallLseek::ResetValuePools() {
+    ResetCommonPools();
+    fd.Reset();
+    offset.Reset();
+    whence.Reset();
+}
+
+
+void SyscallLseek::CheckArgs(const EpochList& epoch,
+                             int fd_,
+                             off_t offset_,
+                             int whence_) {
+    TIMER_START(scgraph->timer_check_args);
+    if (!stage.Has(epoch) || stage.Get(epoch) == STAGE_NOTREADY) {
+        if (!fd.Has(epoch))
+            fd.Set(epoch, fd_);
+        if (!offset.Has(epoch))
+            offset.Set(epoch, offset_);
+        if (!whence.Has(epoch))
+            whence.Set(epoch, whence_);
+        stage.Set(epoch, STAGE_ARGREADY);
+    }
+    assert(fd_ == fd.Get(epoch));
+    assert(offset_ == offset.Get(epoch));
+    assert(whence_ == whence.Get(epoch));
+    TIMER_PAUSE(scgraph->timer_check_args);
+}
+
+
+///////////
 // fstat //
 ///////////
 

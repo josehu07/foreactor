@@ -35,6 +35,7 @@ FIND_POSIX_FN(openat);
 FIND_POSIX_FN(close);
 FIND_POSIX_FN(pread);
 FIND_POSIX_FN(pwrite);
+FIND_POSIX_FN(lseek);
 FIND_POSIX_FN(__fxstat);
 FIND_POSIX_FN(__fxstatat);
 
@@ -44,9 +45,9 @@ FIND_POSIX_FN(__fxstatat);
 }
 
 
-/////////////////////////////////////////////
-// Libc call hijacker implementation below //
-/////////////////////////////////////////////
+//////////////////////////////////////////////
+// Libc call hijackers implementation below //
+//////////////////////////////////////////////
 
 namespace foreactor {
 
@@ -166,6 +167,14 @@ ssize_t pread64(int fd, void *buf, size_t count, off_t offset) {
     return pread(fd, buf, count, offset);
 }
 
+ssize_t read(int fd, void *buf, size_t count) {
+    off_t offset = posix::lseek(fd, 0, SEEK_CUR);
+    ssize_t ret = pread(fd, buf, count, offset);
+    if (ret > 0)
+        offset = posix::lseek(fd, static_cast<size_t>(ret), SEEK_CUR);
+    return ret;
+}
+
 
 ssize_t pwrite(int fd, const void *buf, size_t count, off_t offset) {
     if (active_scgraph == nullptr) {
@@ -185,6 +194,35 @@ ssize_t pwrite(int fd, const void *buf, size_t count, off_t offset) {
 
 ssize_t pwrite64(int fd, const void *buf, size_t count, off_t offset) {
     return pwrite(fd, buf, count, offset);
+}
+
+ssize_t write(int fd, const void *buf, size_t count) {
+    off_t offset = posix::lseek(fd, 0, SEEK_CUR);
+    ssize_t ret = pwrite(fd, buf, count, offset);
+    if (ret > 0)
+        offset = posix::lseek(fd, static_cast<size_t>(ret), SEEK_CUR);
+    return ret;
+}
+
+
+off_t lseek(int fd, off_t offset, int whence) {
+    if (active_scgraph == nullptr) {
+        DEBUG("posix::lseek(%d, %ld, %d)\n", fd, offset, whence);
+        return posix::lseek(fd, offset, whence);
+    } else {
+        DEBUG("foreactor::lseek(%d, %ld, %d)\n", fd, offset, whence);
+        auto [node, epoch] = active_scgraph->GetFrontier<SyscallLseek>();
+        assert(node != nullptr);
+        assert(node->sc_type == SC_LSEEK);
+        node->CheckArgs(*epoch, fd, offset, whence);
+        DEBUG("lseek<%p>->Issue(%s)\n",
+              node, StreamStr(*epoch).c_str());
+        return static_cast<off_t>(node->Issue(*epoch));
+    }
+}
+
+off64_t lseek64(int fd, off64_t offset, int whence) {
+    return lseek(fd, static_cast<off_t>(offset), whence);
 }
 
 
@@ -228,8 +266,9 @@ int __fxstatat([[maybe_unused]] int ver, int dirfd, const char *pathname,
 }
 
 int __fxstatat64([[maybe_unused]] int ver, int dirfd, const char *pathname,
-                 struct stat *buf, int flags) {
-    return __fxstatat(ver, dirfd, pathname, buf, flags);
+                 struct stat64 *buf, int flags) {
+    return __fxstatat(ver, dirfd, pathname,
+                      reinterpret_cast<struct stat *>(buf), flags);
 }
 
 

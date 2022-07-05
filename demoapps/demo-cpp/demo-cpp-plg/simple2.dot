@@ -6,7 +6,12 @@ digraph SCGraph {
   start -> openat;
   end [shape=plaintext];
   openat [shape=box,style=bold];
-  openat -> fstat;
+  openat -> write;
+  write [shape=box,style=bold];
+  write -> lseek;
+  lseek [shape=box,style=bold];
+  lseek -> read;
+  read -> fstat;
   fstat -> fstatat;
   fstatat -> close;
   close [shape=box,style=bold];

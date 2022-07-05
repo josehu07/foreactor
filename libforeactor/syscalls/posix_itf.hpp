@@ -23,6 +23,7 @@ DECL_POSIX_FN(openat);
 DECL_POSIX_FN(close);
 DECL_POSIX_FN(pread);
 DECL_POSIX_FN(pwrite);
+DECL_POSIX_FN(lseek);
 DECL_POSIX_FN(__fxstat);
 DECL_POSIX_FN(__fxstatat);
 
@@ -33,12 +34,12 @@ DECL_POSIX_FN(__fxstatat);
 // `__fxstat()`, and `fstat` is just the name of a macro defined over the
 // `__fxstat()` function. Here, we make `fstat` a function name w/o ver arg.
 static int fstat(int fd, struct stat *buf) {
-    return posix::__fxstat(_STAT_VER, fd, buf);
+    return __fxstat(_STAT_VER, fd, buf);
 }
 
 static int fstatat(int dirfd, const char *pathname, struct stat *buf,
                    int flags) {
-    return posix::__fxstatat(_STAT_VER, dirfd, pathname, buf, flags);
+    return __fxstatat(_STAT_VER, dirfd, pathname, buf, flags);
 }
 
 
