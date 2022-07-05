@@ -7,9 +7,12 @@
 #include <sched.h>
 #include <fcntl.h>
 #include <unistd.h>
+#include <sys/types.h>
+#include <sys/stat.h>
 
 #include "debug.hpp"
 #include "timer.hpp"
+#include "posix_itf.hpp"
 #include "io_engine.hpp"
 #include "thread_pool.hpp"
 #include "scg_nodes.hpp"
@@ -26,19 +29,40 @@ void ThreadPool::HandleSQEntry(const SQEntry& sqe, CQEntry& cqe) {
 
     switch (sqe.sc_type) {
     case SC_OPEN:
-        cqe.rc = open(reinterpret_cast<const char *>(sqe.buf), sqe.open_flags,
-                      sqe.open_mode);
+        cqe.rc = posix::open(reinterpret_cast<const char *>(sqe.buf),
+                             sqe.open_flags,
+                             sqe.open_mode);
+        break;
+    case SC_OPENAT:
+        cqe.rc = posix::openat(sqe.fd,
+                               reinterpret_cast<const char *>(sqe.buf),
+                               sqe.open_flags,
+                               sqe.open_mode);
         break;
     case SC_CLOSE:
-        cqe.rc = close(sqe.fd);
+        cqe.rc = posix::close(sqe.fd);
         break;
     case SC_PREAD:
-        cqe.rc = pread(sqe.fd, reinterpret_cast<char *>(sqe.buf), sqe.rw_len,
-                       sqe.offset);
+        cqe.rc = posix::pread(sqe.fd,
+                              reinterpret_cast<char *>(sqe.buf),
+                              sqe.rw_len,
+                              sqe.offset);
         break;
     case SC_PWRITE:
-        cqe.rc = pwrite(sqe.fd, reinterpret_cast<const char *>(sqe.buf),
-                        sqe.rw_len, sqe.offset);
+        cqe.rc = posix::pwrite(sqe.fd,
+                               reinterpret_cast<const char *>(sqe.buf),
+                               sqe.rw_len,
+                               sqe.offset);
+        break;
+    case SC_FSTAT:
+        cqe.rc = posix::fstat(sqe.fd,
+                              reinterpret_cast<struct stat *>(sqe.buf));
+        break;
+    case SC_FSTATAT:
+        cqe.rc = posix::fstatat(sqe.fd,
+                                reinterpret_cast<const char *>(sqe.stat_path),
+                                reinterpret_cast<struct stat*>(sqe.buf),
+                                sqe.stat_flags);
         break;
     default:
         DEBUG("unknown syscall type %u in SQEntry\n", sqe.sc_type);

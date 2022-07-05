@@ -4,6 +4,8 @@
 #include <string.h>
 #include <fcntl.h>
 #include <unistd.h>
+#include <sys/types.h>
+#include <sys/stat.h>
 #include <assert.h>
 #include <liburing.h>
 
@@ -39,6 +41,23 @@ struct ExperSimpleArgs : ExperArgs {
 };
 
 void exper_simple(void *args);
+
+
+struct ExperSimple2Args : ExperArgs {
+    const int dirfd;
+    const std::string filename;
+    struct stat sbuf0;
+    struct stat sbuf1;
+
+    ExperSimple2Args(int dirfd, std::string filename)
+        : dirfd(dirfd), filename(filename) {
+        memset(&sbuf0, 0, sizeof(struct stat));
+        memset(&sbuf1, 0, sizeof(struct stat));
+    }
+    ~ExperSimple2Args() {}
+};
+
+void exper_simple2(void *args);
 
 
 struct ExperBranchingArgs : ExperArgs {

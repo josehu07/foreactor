@@ -113,12 +113,15 @@ src_nproc_LDADD = $(LDADD)
 src_cp_LDADD = $(LDADD)
 
 # [foreactor] link with libforeactor.so for cp
-libforeactor_path = ../../../libforeactor
+libforeactor_path = $(shell realpath ../../../libforeactor)
 src_cp_LDADD += -L$(libforeactor_path) -l:libforeactor.so
-src_cp_CFLAGS = -I$(libforeactor_path)/include
+
+# [foreactor] explicit search path and include paths
+src_cp_LDFLAGS = $(LDFLAGS) -Wl,-rpath=$(libforeactor_path)
+src_cp_CFLAGS = $(CFLAGS) -I$(libforeactor_path)/include -Isrc -Ilib
 
 # [foreactor] linker wrap option for cp
-src_cp_LDFLAGS = --wrap=copy
+src_cp_LDFLAGS += -Wl,--wrap=copy
 
 if !SINGLE_BINARY
 src_coreutils_LDADD = $(LDADD)

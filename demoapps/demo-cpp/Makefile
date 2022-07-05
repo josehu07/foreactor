@@ -13,7 +13,8 @@ FA_PATH:=../../libforeactor
 FA_INCL:=-I$(FA_PATH)/include
 FA_DLIB:=-L$(FA_PATH) -lforeactor -Wl,-rpath=$(FA_PATH)
 
-WRAPS:=-Wl,--wrap=_Z12exper_simplePv -Wl,--wrap=_Z15exper_branchingPv -Wl,--wrap=_Z13exper_loopingPv
+WRAPS:=-Wl,--wrap=_Z12exper_simplePv -Wl,--wrap=_Z13exper_simple2Pv
+WRAPS+=-Wl,--wrap=_Z15exper_branchingPv -Wl,--wrap=_Z13exper_loopingPv
 WRAPS+=-Wl,--wrap=_Z15exper_weak_edgePv -Wl,--wrap=_Z14exper_crossingPv
 WRAPS+=-Wl,--wrap=_Z14exper_read_seqPv -Wl,--wrap=_Z15exper_write_seqPv
 WRAPS+=-Wl,--wrap=_Z15exper_streamingPv -Wl,--wrap=_Z13exper_ldb_getPv

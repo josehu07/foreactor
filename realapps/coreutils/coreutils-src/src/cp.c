@@ -717,8 +717,15 @@ do_copy (int n_files, char **file, char const *target_directory,
           else
             {
               bool copy_into_self;
+#ifndef NDEBUG
+              /* [foreactor] just for learning & debugging... */
+              printf("COPY FUNC enter\n");
+#endif
               ok &= copy (arg, dst_name, target_dirfd, arg_in_concat,
                           new_dst, x, &copy_into_self, NULL);
+#ifndef NDEBUG
+              printf("COPY FUNC leave\n");
+#endif
 
               if (parents_option)
                 ok &= re_protect (dst_name, target_dirfd, arg_in_concat,
@@ -776,7 +783,14 @@ do_copy (int n_files, char **file, char const *target_directory,
           x = &x_tmp;
         }
 
+#ifndef NDEBUG
+      /* [foreactor] just for learning & debugging... */
+      printf("COPY FUNC enter\n");
+#endif
       ok = copy (source, dest, AT_FDCWD, dest, -new_dst, x, &unused, NULL);
+#ifndef NDEBUG
+      printf("COPY FUNC leave\n");
+#endif
     }
 
   return ok;

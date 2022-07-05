@@ -8,6 +8,8 @@
 #include <string.h>
 #include <fcntl.h>
 #include <unistd.h>
+#include <sys/types.h>
+#include <sys/stat.h>
 #include <time.h>
 #include <assert.h>
 #include <liburing.h>
@@ -110,6 +112,38 @@ void run_exper(std::string& dbdir, std::string& exper, unsigned num_iters,
             std::cout << std::string(args.rbuf0, args.rbuf0 + args.rlen) << std::endl
                       << std::string(args.rbuf1, args.rbuf1 + args.rlen) << std::endl;
         }
+
+    } else if (exper == "simple2") {
+        int dirfd = open("simple2dir", O_DIRECTORY | O_RDONLY);
+        if (dirfd <= 0) {
+            mkdir("simple2dir", S_IRUSR | S_IWUSR | S_IXUSR);
+            dirfd = open("simple2dir", O_DIRECTORY | O_RDONLY);
+            assert(dirfd > 0);
+        }
+        ExperSimple2Args args(dirfd, "simple2.dat");
+
+        run_iters(exper_simple2, &args, num_iters, drop_caches, !dump_result);
+
+        if (dump_result) {
+            std::cout << "Stat of dir: dev " << args.sbuf0.st_dev
+                      << " mode " << args.sbuf0.st_mode
+                      << " nlink " << args.sbuf0.st_nlink
+                      << " uid " << args.sbuf0.st_uid
+                      << " gid " << args.sbuf0.st_gid
+                      << " size " << args.sbuf0.st_size
+                      << " blksize " << args.sbuf0.st_blksize
+                      << " blocks " << args.sbuf0.st_blocks << std::endl;
+            std::cout << "Stat of file: dev " << args.sbuf1.st_dev
+                      << " mode " << args.sbuf1.st_mode
+                      << " nlink " << args.sbuf1.st_nlink
+                      << " uid " << args.sbuf1.st_uid
+                      << " gid " << args.sbuf1.st_gid
+                      << " size " << args.sbuf1.st_size
+                      << " blksize " << args.sbuf1.st_blksize
+                      << " blocks " << args.sbuf1.st_blocks << std::endl;
+        }
+
+        close(dirfd);
 
     } else if (exper == "branching") {
         ExperBranchingArgs args("branching.dat", rand_string(4096),
@@ -309,6 +343,8 @@ void run_exper(std::string& dbdir, std::string& exper, unsigned num_iters,
         if (o_direct)
             open_flags |= O_DIRECT;
 
+        std::string key = rand_string(key_size);
+
         std::vector<std::string> filenames;
         std::vector<int> fds;
         std::vector<char *> index_blocks;
@@ -317,19 +353,24 @@ void run_exper(std::string& dbdir, std::string& exper, unsigned num_iters,
             std::ostringstream oss;
             oss << "ldb_table_" << i << ".dat";
             filenames.push_back(oss.str());
+            bool exists = std::filesystem::exists(oss.str());
             fds.push_back(open(oss.str().c_str(), open_flags, S_IRUSR | S_IWUSR));
-
-            std::string content = rand_string(file_size);
-            memcpy(wbuf, content.c_str(), file_size);
-            [[maybe_unused]] ssize_t ret = pwrite(fds.back(), wbuf, file_size, 0);
-            assert(ret == file_size);
-            
             index_blocks.push_back(new (std::align_val_t(512)) char[4096]);
-            memcpy(index_blocks.back(), content.substr(file_size - 4096).c_str(), 4096);
+
+            if (!exists) {
+                std::string content = rand_string(file_size);
+                memcpy(wbuf, content.c_str(), file_size);
+                [[maybe_unused]] ssize_t ret = pwrite(fds.back(), wbuf, file_size, 0);
+                assert(ret == file_size);
+                memcpy(index_blocks.back(), content.substr(file_size - 4096).c_str(), 4096);
+                index_blocks.back()[4095] = '\0';
+            } else {
+                [[maybe_unused]] ssize_t ret = pread(fds.back(), index_blocks.back(), 4096,
+                                                     file_size - 4096);
+                index_blocks.back()[4095] = '\0';
+            }
         }
         delete[] wbuf;
-
-        std::string key = rand_string(key_size);
 
         if (open_barrier) {
             close(fds[3]);

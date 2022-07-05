@@ -29,6 +29,7 @@ wget https://raw.githubusercontent.com/pimlie/ubuntu-mainline-kernel.sh/master/u
 sudo chmod +x ubuntu-mainline-kernel.sh
 ./ubuntu-mainline-kernel.sh -r v5.10     # search for 5.10 versions available
 sudo ./ubuntu-mainline-kernel.sh -i v5.10.60
+sudo reboot
 sudo apt --fix-broken install
 ```
 </details>
@@ -96,13 +97,13 @@ make clean && make
 mkdir /tmp/demo_dbdir
 
 # Run the `simple` function without foreactor:
-./demo --exper simple --dbdir /tmp/demo_dbdir --dump_result
+./demo --exper simple2 --dbdir /tmp/demo_dbdir --dump_result
 
 # Run it with foreactor with io_uring backend sqe_async mode,
 # with syscall pre-issuing depth of 2
 LD_PRELOAD=/path/to/libforeactor/libforeactor.so USE_FOREACTOR=yes \
 DEPTH_0=2 QUEUE_0=32 SQE_ASYNC_FLAG_0=yes \
-./demo --exper simple --dbdir /tmp/demo_dbdir --dump_result
+./demo --exper simple2 --dbdir /tmp/demo_dbdir --dump_result
 ```
 
 See `demo-cpp-src/hijackees.cpp` and `demo-cpp-plg/` for all the example functions and their corresponding plugins.

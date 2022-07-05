@@ -5,6 +5,8 @@
 #include <assert.h>
 #include <stdarg.h>
 #include <sys/file.h>
+#include <sys/types.h>
+#include <sys/stat.h>
 
 #include "debug.hpp"
 #include "posix_itf.hpp"
@@ -29,9 +31,12 @@ namespace foreactor::posix {
     }()
 
 FIND_POSIX_FN(open);
+FIND_POSIX_FN(openat);
 FIND_POSIX_FN(close);
 FIND_POSIX_FN(pread);
 FIND_POSIX_FN(pwrite);
+FIND_POSIX_FN(__fxstat);
+FIND_POSIX_FN(__fxstatat);
 
 #undef FIND_POSIX_FN
 
@@ -72,6 +77,58 @@ int open(const char *pathname, int flags, ...) {
     }
 }
 
+int open64(const char *pathname, int flags, ...) {
+    mode_t mode = 0;
+    if (__OPEN_NEEDS_MODE(flags)) {
+        va_list arg;
+        va_start(arg, flags);
+        mode = va_arg(arg, mode_t);
+        va_end(arg);
+    }
+
+    return open(pathname, flags, mode);
+}
+
+
+int openat(int dirfd, const char *pathname, int flags, ...) {
+    mode_t mode = 0;
+    if (__OPEN_NEEDS_MODE(flags)) {
+        va_list arg;
+        va_start(arg, flags);
+        mode = va_arg(arg, mode_t);
+        va_end(arg);
+    }
+
+    if (active_scgraph == nullptr) {
+        DEBUG("posix::openat(%d, \"%s\", %d, %u)\n",
+              dirfd, pathname, flags, mode);
+        return posix::openat(dirfd, pathname, flags, mode);
+    } else {
+        DEBUG("foreactor::openat(%d, \"%s\", %d, %u)\n",
+              dirfd, pathname, flags, mode);
+        auto [node, epoch] = active_scgraph->GetFrontier<SyscallOpenat>();
+        assert(node != nullptr);
+        assert(node->sc_type == SC_OPENAT);
+        node->CheckArgs(*epoch, dirfd, pathname, flags, mode);
+        DEBUG("openat<%p>->Issue(%s)\n",
+              node, StreamStr(*epoch).c_str());
+        return static_cast<int>(node->Issue(*epoch));
+    }
+}
+
+int openat64(int dirfd, const char *pathname, int flags, ...) {
+    mode_t mode = 0;
+    if (__OPEN_NEEDS_MODE(flags)) {
+        va_list arg;
+        va_start(arg, flags);
+        mode = va_arg(arg, mode_t);
+        va_end(arg);
+    }
+
+    return openat(dirfd, pathname, flags, mode);
+}
+
+
 int close(int fd) {
     if (active_scgraph == nullptr) {
         DEBUG("posix::close(%d)\n", fd);
@@ -87,6 +144,7 @@ int close(int fd) {
         return static_cast<int>(node->Issue(*epoch));
     }
 }
+
 
 ssize_t pread(int fd, void *buf, size_t count, off_t offset) {
     if (active_scgraph == nullptr) {
@@ -104,6 +162,11 @@ ssize_t pread(int fd, void *buf, size_t count, off_t offset) {
     }
 }
 
+ssize_t pread64(int fd, void *buf, size_t count, off_t offset) {
+    return pread(fd, buf, count, offset);
+}
+
+
 ssize_t pwrite(int fd, const void *buf, size_t count, off_t offset) {
     if (active_scgraph == nullptr) {
         DEBUG("posix::pwrite(%d, %p, %lu, %ld)\n", fd, buf, count, offset);
@@ -118,6 +181,55 @@ ssize_t pwrite(int fd, const void *buf, size_t count, off_t offset) {
               node, StreamStr(*epoch).c_str());
         return static_cast<ssize_t>(node->Issue(*epoch));
     }
+}
+
+ssize_t pwrite64(int fd, const void *buf, size_t count, off_t offset) {
+    return pwrite(fd, buf, count, offset);
+}
+
+
+int __fxstat([[maybe_unused]] int ver, int fd, struct stat *buf) {
+    if (active_scgraph == nullptr) {
+        DEBUG("posix::fstat(%d, %p)\n", fd, buf);
+        return posix::fstat(fd, buf);
+    } else {
+        DEBUG("foreactor::fstat(%d, %p)\n", fd, buf);
+        auto [node, epoch] = active_scgraph->GetFrontier<SyscallFstat>();
+        assert(node != nullptr);
+        assert(node->sc_type == SC_FSTAT);
+        node->CheckArgs(*epoch, fd, buf);
+        DEBUG("fstat<%p>->Issue(%s)\n",
+              node, StreamStr(*epoch).c_str());
+        return static_cast<int>(node->Issue(*epoch));
+    }
+}
+
+int __fxstat64([[maybe_unused]] int ver, int fd, struct stat64 *buf) {
+    return __fxstat(ver, fd, reinterpret_cast<struct stat *>(buf));
+}
+
+int __fxstatat([[maybe_unused]] int ver, int dirfd, const char *pathname,
+               struct stat *buf, int flags) {
+    if (active_scgraph == nullptr) {
+        DEBUG("posix::fstatat(%d, \"%s\", %p, %d)\n",
+              dirfd, pathname, buf, flags);
+        return posix::fstatat(dirfd, pathname, buf, flags);
+    } else {
+        DEBUG("foreactor::fstatat(%d, \"%s\", %p, %d)\n",
+              dirfd, pathname, buf, flags);
+        auto [node, epoch] = active_scgraph->GetFrontier<SyscallFstatat>();
+        assert(node != nullptr);
+        assert(node->sc_type == SC_FSTATAT);
+        node->CheckArgs(*epoch, dirfd, pathname, buf, flags);
+        DEBUG("fstatat<%p>->Issue(%s)\n",
+              node, StreamStr(*epoch).c_str());
+        return static_cast<int>(node->Issue(*epoch));
+    }
+}
+
+int __fxstatat64([[maybe_unused]] int ver, int dirfd, const char *pathname,
+                 struct stat *buf, int flags) {
+    return __fxstatat(ver, dirfd, pathname, buf, flags);
 }
 
 

@@ -108,6 +108,9 @@ std::ostream& operator<<(std::ostream& s, const SyscallNode& n) {
     case SC_OPEN:
         s << StreamStr(static_cast<const SyscallOpen&>(n));
         break;
+    case SC_OPENAT:
+        s << StreamStr(static_cast<const SyscallOpenat&>(n));
+        break;
     case SC_CLOSE:
         s << StreamStr(static_cast<const SyscallClose&>(n));
         break;
@@ -116,6 +119,12 @@ std::ostream& operator<<(std::ostream& s, const SyscallNode& n) {
         break;
     case SC_PWRITE:
         s << StreamStr(static_cast<const SyscallPwrite&>(n));
+        break;
+    case SC_FSTAT:
+        s << StreamStr(static_cast<const SyscallFstat&>(n));
+        break;
+    case SC_FSTATAT:
+        s << StreamStr(static_cast<const SyscallFstatat&>(n));
         break;
     default:       s << "SyscallNode{" << n.node_id << "}";
     }

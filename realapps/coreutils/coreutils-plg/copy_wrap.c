@@ -1,4 +1,13 @@
+#include <config.h>
+#include <stdio.h>
+#include <unistd.h>
+#include <assert.h>
+#include <sys/types.h>
 #include <foreactor.h>
+
+#include "backupfile.h"
+#include "ioblksize.h"
+#include "copy.h"
 
 
 /////////////////////
@@ -9,13 +18,17 @@ static const unsigned graph_id = 0;
 
 
 // Some global state for arggen and rcsave functions.
-// TODO
+static char const *curr_src_name = NULL;
+static char const *curr_dst_name = NULL;
+static int curr_dst_dirfd = -1;
+static char const *curr_dst_relname = NULL;
+static int curr_nonexistent_dst = 0;
+static const struct cp_options *curr_x = NULL;
 
 
 static void BuildSCGraph() {
     foreactor_CreateSCGraph(graph_id, 0);
 
-    // TODO
     // foreactor_AddSyscallOpen(graph_id, 0, "open", NULL, 0, open_arggen, open_rcsave, /*is_start*/ true);
     // foreactor_AddSyscallPwrite(graph_id, 1, "pwrite", NULL, 0, pwrite_arggen, pwrite_rcsave, false);
     // foreactor_AddSyscallPread(graph_id, 2, "pread0", NULL, 0, pread0_arggen, pread0_rcsave, 4096, false);
@@ -46,28 +59,48 @@ static void BuildSCGraph() {
 // funcname() will resolve to __wrap_funcname().
 // 
 // Use `objdump -t filename.o` to check the desired symbol name.
-void __real_copy(void *args);
+bool __real_copy(
+        char const *src_name, char const *dst_name,
+        int dst_dirfd, char const *dst_relname,
+        int nonexistent_dst, const struct cp_options *options,
+        bool *copy_into_self, bool *rename_succeeded);
 
-void __wrap_copy(void *args) {
+bool __wrap_copy(
+        char const *src_name, char const *dst_name,
+        int dst_dirfd, char const *dst_relname,
+        int nonexistent_dst, const struct cp_options *options,
+        bool *copy_into_self, bool *rename_succeeded) {
     if (!foreactor_UsingForeactor()) {
         // Call the original function.
-        __real_copy(args);
+        return __real_copy(src_name, dst_name, dst_dirfd, dst_relname,
+                           nonexistent_dst, options, copy_into_self,
+                           rename_succeeded);
     } else {
         // Build SCGraph once if haven't done yet.
-        // if (!foreactor_HasSCGraph(graph_id))
-        //     BuildSCGraph();
+        if (!foreactor_HasSCGraph(graph_id))
+            BuildSCGraph();
 
-        // foreactor_EnterSCGraph(graph_id);    
-        // curr_args = (ExperSimpleArgs *) args;
+        foreactor_EnterSCGraph(graph_id);    
+        curr_src_name = src_name;
+        curr_dst_name = dst_name;
+        curr_dst_dirfd = dst_dirfd;
+        curr_dst_relname = dst_relname;
+        curr_nonexistent_dst = nonexistent_dst;
+        curr_x = options;
 
         // Call the original function with corresponding SCGraph activated.
-        __real_copy(args);
+        bool ret = __real_copy(src_name, dst_name, dst_dirfd, dst_relname,
+                               nonexistent_dst, options, copy_into_self,
+                               rename_succeeded);
 
-        // foreactor_LeaveSCGraph(graph_id);
-        // curr_args = NULL;
-        // curr_fd = -1;
-        // curr_pwrite_done = false;
-        // curr_pread0_done = false;
-        // curr_pread1_done = false;
+        foreactor_LeaveSCGraph(graph_id);
+        curr_src_name = NULL;
+        curr_dst_name = NULL;
+        curr_dst_dirfd = -1;
+        curr_dst_relname = NULL;
+        curr_nonexistent_dst = 0;
+        curr_x = NULL;
+        
+        return ret;
     }
 }

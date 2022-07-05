@@ -5,6 +5,8 @@
 #include <assert.h>
 #include <fcntl.h>
 #include <unistd.h>
+#include <sys/types.h>
+#include <sys/stat.h>
 
 #include "debug.hpp"
 #include "io_engine.hpp"
@@ -30,10 +32,12 @@ struct ThreadPoolSQEntry {
     union {
         size_t rw_len;
         mode_t open_mode;
+        uint64_t stat_path;
     };
     union {
         int rw_flags;
         int open_flags;
+        int stat_flags;
     };
 };
 

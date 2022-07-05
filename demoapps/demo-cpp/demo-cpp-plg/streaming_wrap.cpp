@@ -6,7 +6,7 @@
 // SCGraph builder //
 /////////////////////
 
-static constexpr unsigned graph_id = 7;
+static constexpr unsigned graph_id = 8;
 
 
 // Some global state for arggen and rcsave functions.

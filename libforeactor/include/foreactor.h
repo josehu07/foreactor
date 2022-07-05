@@ -45,6 +45,7 @@
 #include <stdbool.h>
 #include <fcntl.h>
 #include <unistd.h>
+#include <sys/types.h>
 #include <sys/stat.h>
 
 
@@ -86,6 +87,19 @@ void foreactor_AddSyscallOpen(unsigned graph_id,
                               void (*rcsave_func)(const int *, int),
                               bool is_start);
 
+void foreactor_AddSyscallOpenat(unsigned graph_id,
+                                unsigned node_id,
+                                const char *name,
+                                const int *assoc_dims,
+                                size_t assoc_dims_len,
+                                bool (*arggen_func)(const int *,
+                                                    int *,
+                                                    const char **,
+                                                    int *,
+                                                    mode_t *),
+                                void (*rcsave_func)(const int *, int),
+                                bool is_start);
+
 void foreactor_AddSyscallClose(unsigned graph_id,
                                unsigned node_id,
                                const char *name,
@@ -122,6 +136,30 @@ void foreactor_AddSyscallPwrite(unsigned graph_id,
                                                     off_t *),
                                 void (*rcsave_func)(const int *, ssize_t),
                                 bool is_start);
+
+void foreactor_AddSyscallFstat(unsigned graph_id,
+                               unsigned node_id,
+                               const char *name,
+                               const int *assoc_dims,
+                               size_t assoc_dims_len,
+                               bool (*arggen_func)(const int *,
+                                                   int *,
+                                                   struct stat **),
+                               void (*rcsave_func)(const int *, int),
+                               bool is_start);
+
+void foreactor_AddSyscallFstatat(unsigned graph_id,
+                                 unsigned node_id,
+                                 const char *name,
+                                 const int *assoc_dims,
+                                 size_t assoc_dims_len,
+                                 bool (*arggen_func)(const int *,
+                                                     int *,
+                                                     const char **,
+                                                     struct stat **,
+                                                     int *),
+                                 void (*rcsave_func)(const int *, int),
+                                 bool is_start);
 
 // Set outgoing edge of a SyscallNode.
 void foreactor_SyscallSetNext(unsigned graph_id, unsigned node_id,

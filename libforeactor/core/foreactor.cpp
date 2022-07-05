@@ -1,6 +1,11 @@
 #include <iostream>
 #include <unordered_map>
 #include <unordered_set>
+#include <stdbool.h>
+#include <fcntl.h>
+#include <unistd.h>
+#include <sys/types.h>
+#include <sys/stat.h>
 
 #include "debug.hpp"
 #include "timer.hpp"
@@ -166,6 +171,29 @@ void foreactor_AddSyscallOpen(unsigned graph_id,
     scgraph->AddNode(node, is_start);
 }
 
+void foreactor_AddSyscallOpenat(unsigned graph_id,
+                                unsigned node_id,
+                                const char *name,
+                                const int *assoc_dims,
+                                size_t assoc_dims_len,
+                                bool (*arggen_func)(const int *,
+                                                    int *,
+                                                    const char **,
+                                                    int *,
+                                                    mode_t *),
+                                void (*rcsave_func)(const int *, int),
+                                bool is_start) {
+    SCGraph *scgraph = GetSCGraphFromId(graph_id);
+    std::unordered_set<int> assoc_dims_set =
+        MakeAssocDimsSet(assoc_dims, assoc_dims_len);
+
+    PanicIfNodeExists(scgraph, graph_id, node_id);
+    SyscallOpenat *node = new SyscallOpenat(node_id, std::string(name),
+                                            scgraph, assoc_dims_set,
+                                            arggen_func, rcsave_func);
+    scgraph->AddNode(node, is_start);
+}
+
 void foreactor_AddSyscallClose(unsigned graph_id,
                                unsigned node_id,
                                const char *name,
@@ -230,6 +258,50 @@ void foreactor_AddSyscallPwrite(unsigned graph_id,
     SyscallPwrite *node = new SyscallPwrite(node_id, std::string(name), scgraph,
                                             assoc_dims_set, arggen_func,
                                             rcsave_func);
+    scgraph->AddNode(node, is_start);
+}
+
+void foreactor_AddSyscallFstat(unsigned graph_id,
+                               unsigned node_id,
+                               const char *name,
+                               const int *assoc_dims,
+                               size_t assoc_dims_len,
+                               bool (*arggen_func)(const int *,
+                                                   int *,
+                                                   struct stat **),
+                               void (*rcsave_func)(const int *, int),
+                               bool is_start) {
+    SCGraph *scgraph = GetSCGraphFromId(graph_id);
+    std::unordered_set<int> assoc_dims_set =
+        MakeAssocDimsSet(assoc_dims, assoc_dims_len);
+
+    PanicIfNodeExists(scgraph, graph_id, node_id);
+    SyscallFstat *node = new SyscallFstat(node_id, std::string(name), scgraph,
+                                          assoc_dims_set, arggen_func,
+                                          rcsave_func);
+    scgraph->AddNode(node, is_start);
+}
+
+void foreactor_AddSyscallFstatat(unsigned graph_id,
+                                 unsigned node_id,
+                                 const char *name,
+                                 const int *assoc_dims,
+                                 size_t assoc_dims_len,
+                                 bool (*arggen_func)(const int *,
+                                                     int *,
+                                                     const char **,
+                                                     struct stat **,
+                                                     int *),
+                                 void (*rcsave_func)(const int *, int),
+                                 bool is_start) {
+    SCGraph *scgraph = GetSCGraphFromId(graph_id);
+    std::unordered_set<int> assoc_dims_set =
+        MakeAssocDimsSet(assoc_dims, assoc_dims_len);
+
+    PanicIfNodeExists(scgraph, graph_id, node_id);
+    SyscallFstatat *node = new SyscallFstatat(node_id, std::string(name),
+                                              scgraph, assoc_dims_set,
+                                              arggen_func, rcsave_func);
     scgraph->AddNode(node, is_start);
 }
 

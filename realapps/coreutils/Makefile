@@ -23,9 +23,19 @@ coreutils:
 		./configure "CFLAGS=$(CFLAGS)" && \
 		make -j$(nproc)
 
+.PHONY: build-skipconf
+build-skipconf:
+	cd $(COREUTILS_DIR) && \
+		make -j$(nproc)
+
 
 .PHONY: clean
 clean:
 	cd $(COREUTILS_DIR) && \
 		make clean && \
 		make distclean
+
+.PHONY: clean-skipdist
+clean-skipdist:
+	cd $(COREUTILS_DIR) && \
+		make clean

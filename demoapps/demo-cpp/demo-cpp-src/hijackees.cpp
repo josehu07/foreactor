@@ -4,6 +4,8 @@
 #include <string.h>
 #include <fcntl.h>
 #include <unistd.h>
+#include <sys/types.h>
+#include <sys/stat.h>
 #include <assert.h>
 #include <liburing.h>
 
@@ -20,6 +22,19 @@ void exper_simple(void *args_) {
     ret = pread(fd, args->rbuf0, args->rlen, 0);
     ret = pread(fd, args->rbuf1, args->rlen, args->rlen);
     close(fd);
+}
+
+
+void exper_simple2(void *args_) {
+    ExperSimple2Args *args = reinterpret_cast<ExperSimple2Args *>(args_);
+    [[maybe_unused]] int ret;
+
+    int filefd = openat(args->dirfd, args->filename.c_str(), O_CREAT | O_RDWR,
+                        S_IRUSR | S_IWUSR);
+    ret = fstat(args->dirfd, &args->sbuf0);
+    ret = fstatat(args->dirfd, args->filename.c_str(), &args->sbuf1,
+                  AT_SYMLINK_NOFOLLOW);
+    close(filefd);
 }
 
 
