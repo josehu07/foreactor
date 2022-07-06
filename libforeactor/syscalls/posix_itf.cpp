@@ -38,6 +38,7 @@ FIND_POSIX_FN(pwrite);
 FIND_POSIX_FN(lseek);
 FIND_POSIX_FN(__fxstat);
 FIND_POSIX_FN(__fxstatat);
+FIND_POSIX_FN(statx);
 
 #undef FIND_POSIX_FN
 

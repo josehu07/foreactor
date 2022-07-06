@@ -261,27 +261,6 @@ void foreactor_AddSyscallPwrite(unsigned graph_id,
     scgraph->AddNode(node, is_start);
 }
 
-void foreactor_AddSyscallFstat(unsigned graph_id,
-                               unsigned node_id,
-                               const char *name,
-                               const int *assoc_dims,
-                               size_t assoc_dims_len,
-                               bool (*arggen_func)(const int *,
-                                                   int *,
-                                                   struct stat **),
-                               void (*rcsave_func)(const int *, int),
-                               bool is_start) {
-    SCGraph *scgraph = GetSCGraphFromId(graph_id);
-    std::unordered_set<int> assoc_dims_set =
-        MakeAssocDimsSet(assoc_dims, assoc_dims_len);
-
-    PanicIfNodeExists(scgraph, graph_id, node_id);
-    SyscallFstat *node = new SyscallFstat(node_id, std::string(name), scgraph,
-                                          assoc_dims_set, arggen_func,
-                                          rcsave_func);
-    scgraph->AddNode(node, is_start);
-}
-
 void foreactor_AddSyscallLseek(unsigned graph_id,
                                unsigned node_id,
                                const char *name,
@@ -304,6 +283,28 @@ void foreactor_AddSyscallLseek(unsigned graph_id,
     scgraph->AddNode(node, is_start);
 }
 
+void foreactor_AddSyscallFstat(unsigned graph_id,
+                               unsigned node_id,
+                               const char *name,
+                               const int *assoc_dims,
+                               size_t assoc_dims_len,
+                               bool (*arggen_func)(const int *,
+                                                   int *,
+                                                   struct stat **,
+                                                   bool *),
+                               void (*rcsave_func)(const int *, int),
+                               bool is_start) {
+    SCGraph *scgraph = GetSCGraphFromId(graph_id);
+    std::unordered_set<int> assoc_dims_set =
+        MakeAssocDimsSet(assoc_dims, assoc_dims_len);
+
+    PanicIfNodeExists(scgraph, graph_id, node_id);
+    SyscallFstat *node = new SyscallFstat(node_id, std::string(name), scgraph,
+                                          assoc_dims_set, arggen_func,
+                                          rcsave_func);
+    scgraph->AddNode(node, is_start);
+}
+
 void foreactor_AddSyscallFstatat(unsigned graph_id,
                                  unsigned node_id,
                                  const char *name,
@@ -313,7 +314,8 @@ void foreactor_AddSyscallFstatat(unsigned graph_id,
                                                      int *,
                                                      const char **,
                                                      struct stat **,
-                                                     int *),
+                                                     int *,
+                                                     bool *),
                                  void (*rcsave_func)(const int *, int),
                                  bool is_start) {
     SCGraph *scgraph = GetSCGraphFromId(graph_id);
@@ -384,6 +386,37 @@ void foreactor_BranchAppendEndNode(unsigned graph_id, unsigned node_id) {
     BranchNode *branch_node = static_cast<BranchNode *>(node);
 
     branch_node->AppendChild(nullptr, -1);      // nullptr for end
+}
+
+
+struct stat *foreactor_FstatGetResultBuf(unsigned graph_id, unsigned node_id,
+                                         const int *epoch_) {
+    SCGraph *scgraph = GetSCGraphFromId(graph_id);
+    
+    SCGraphNode *node = GetNodeFromId(scgraph, graph_id, node_id);
+    PANIC_IF(node->node_type != NODE_SC_PURE,
+             "node_id %u is not a pure SyscallNode\n", node_id);
+    SyscallFstat *fstat_node = static_cast<SyscallFstat *>(node);
+    PANIC_IF(fstat_node->sc_type != SC_FSTAT,
+             "node_id %u is not a fstat node\n", node_id);
+
+    const EpochList epoch(scgraph->total_dims, epoch_);
+    return fstat_node->GetStatBuf(epoch);
+}
+
+struct stat *foreactor_FstatatGetResultBuf(unsigned graph_id, unsigned node_id,
+                                           const int *epoch_) {
+    SCGraph *scgraph = GetSCGraphFromId(graph_id);
+    
+    SCGraphNode *node = GetNodeFromId(scgraph, graph_id, node_id);
+    PANIC_IF(node->node_type != NODE_SC_PURE,
+             "node_id %u is not a pure SyscallNode\n", node_id);
+    SyscallFstatat *fstatat_node = static_cast<SyscallFstatat *>(node);
+    PANIC_IF(fstatat_node->sc_type != SC_FSTATAT,
+             "node_id %u is not a fstatat node\n", node_id);
+
+    const EpochList epoch(scgraph->total_dims, epoch_);
+    return fstatat_node->GetStatBuf(epoch);
 }
 
 

@@ -55,14 +55,14 @@ void ThreadPool::HandleSQEntry(const SQEntry& sqe, CQEntry& cqe) {
                                sqe.offset);
         break;
     case SC_FSTAT:
-        cqe.rc = posix::fstat(sqe.fd,
-                              reinterpret_cast<struct stat *>(sqe.buf));
+        cqe.rc = posix::statx(sqe.fd, "", AT_EMPTY_PATH, STATX_BASIC_STATS,
+                              reinterpret_cast<struct statx *>(sqe.buf));
         break;
     case SC_FSTATAT:
-        cqe.rc = posix::fstatat(sqe.fd,
-                                reinterpret_cast<const char *>(sqe.stat_path),
-                                reinterpret_cast<struct stat*>(sqe.buf),
-                                sqe.stat_flags);
+        cqe.rc = posix::statx(sqe.fd,
+                              reinterpret_cast<const char *>(sqe.stat_path),
+                              sqe.stat_flags, STATX_BASIC_STATS,
+                              reinterpret_cast<struct statx *>(sqe.buf));
         break;
     default:
         DEBUG("unknown syscall type %u in SQEntry\n", sqe.sc_type);

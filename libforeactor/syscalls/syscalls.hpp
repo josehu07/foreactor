@@ -319,7 +319,10 @@ class SyscallLseek final : public SyscallNode {
 // fstat
 // TODO: could have merged with fstatat into a single type
 class SyscallFstat final : public SyscallNode {
-    typedef std::function<bool(const int *, int *, struct stat **)> ArggenFunc;
+    typedef std::function<bool(const int *,
+                               int *,
+                               struct stat **,
+                               bool *)> ArggenFunc;
     typedef std::function<void(const int *, int)> RcsaveFunc;
 
     private:
@@ -352,6 +355,11 @@ class SyscallFstat final : public SyscallNode {
                                         const SyscallFstat& n);
 
         void CheckArgs(const EpochList& epoch, int fd_, struct stat *buf_);
+
+        // Provide a method to expose the stat buf pointer to plugins,
+        // because the stat results may affect decision making as well,
+        // hence technically part of the "return value" of this syscall.
+        struct stat *GetStatBuf(const EpochList& epoch);
 };
 
 
@@ -361,7 +369,8 @@ class SyscallFstatat final : public SyscallNode {
                                int *,
                                const char **,
                                struct stat **,
-                               int *)> ArggenFunc;
+                               int *,
+                               bool *)> ArggenFunc;
     typedef std::function<void(const int *, int)> RcsaveFunc;
 
     private:
@@ -400,6 +409,8 @@ class SyscallFstatat final : public SyscallNode {
                        const char *pathname_,
                        struct stat *buf_,
                        int flags_);
+
+        struct stat *GetStatBuf(const EpochList& epoch);
 };
 
 

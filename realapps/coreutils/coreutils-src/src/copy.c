@@ -1318,7 +1318,9 @@ copy_reg (char const *src_name, char const *dst_name,
                || (x->sparse_mode == SPARSE_AUTO
                    && scantype != PLAIN_SCANTYPE)));
 
+      /* [foreactor] for debugging... */
       fdadvise (source_desc, 0, 0, FADVISE_SEQUENTIAL);
+      /* fdadvise (source_desc, 0, 0, FADVISE_RANDOM); */
 
       /* If not making a sparse file, try to use a more-efficient
          buffer size.  */

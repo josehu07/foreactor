@@ -431,7 +431,7 @@ BranchNode::BranchNode(unsigned node_id, std::string name, size_t num_children,
         : SCGraphNode(node_id, name, NODE_BRANCH, scgraph, assoc_dims),
           num_children(num_children), children{}, epoch_dims{},
           decision(assoc_dims), arggen_func(arggen_func) {
-    assert(num_children > 1);
+    assert(num_children >= 1);
 }
 
 

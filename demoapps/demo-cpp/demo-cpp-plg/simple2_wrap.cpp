@@ -66,18 +66,20 @@ static void read_rcsave(const int *epoch, ssize_t res) {
     curr_read_done = true;
 }
 
-static bool fstat_arggen(const int *epoch, int *fd, struct stat **buf) {
+static bool fstat_arggen(const int *epoch, int *fd, struct stat **buf, bool *buf_ready) {
     *fd = curr_args->dirfd;
     *buf = &curr_args->sbuf0;
+    *buf_ready = true;
     return true;
 }
 
-static bool fstatat_arggen(const int *epoch, int *dirfd, const char **pathname, struct stat **buf, int *flags) {
+static bool fstatat_arggen(const int *epoch, int *dirfd, const char **pathname, struct stat **buf, int *flags, bool *buf_ready) {
     if (!curr_read_done)
         return false;
     *dirfd = curr_args->dirfd;
     *pathname = curr_args->filename.c_str();
     *buf = &curr_args->sbuf1;
+    *buf_ready = true;
     *flags = AT_SYMLINK_NOFOLLOW;
     return true;
 }
@@ -114,7 +116,7 @@ static void BuildSCGraph() {
 
     foreactor_SetSCGraphBuilt(graph_id);
 
-    foreactor_DumpDotImg(graph_id, "simple2");
+    // foreactor_DumpDotImg(graph_id, "simple2");
 }
 
 

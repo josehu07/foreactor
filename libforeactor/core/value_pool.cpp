@@ -17,6 +17,12 @@ EpochList::EpochList(unsigned total_dims)
     Reset();
 }
 
+EpochList::EpochList(unsigned total_dims, const int *values)
+        : total_dims(total_dims), epochs(total_dims, 0) {
+    for (size_t i = 0; i < total_dims; ++i)
+        epochs[i] = values[i];
+}
+
 
 std::ostream& operator<<(std::ostream& s, const EpochList& e) {
     s << "EL{" << e.total_dims << ":";

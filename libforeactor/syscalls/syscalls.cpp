@@ -39,7 +39,6 @@ SyscallOpen::SyscallOpen(unsigned node_id, std::string name,
     assert(arggen_func != nullptr);
 }
 
-
 std::ostream& operator<<(std::ostream& s, const SyscallOpen& n) {
     s << "SyscallOpen{";
     n.PrintCommonInfo(s);
@@ -48,7 +47,6 @@ std::ostream& operator<<(std::ostream& s, const SyscallOpen& n) {
       << "mode=" << StreamStr(n.mode) << "}";
     return s;
 }
-
 
 long SyscallOpen::SyscallSync(const EpochList& epoch) {
     return posix::open(pathname.Get(epoch),
@@ -73,7 +71,6 @@ void SyscallOpen::PrepUpoolSqe(int epoch_sum, ThreadPoolSQEntry *sqe) {
 void SyscallOpen::ReflectResult([[maybe_unused]] const EpochList& epoch) {
     return;
 }
-
 
 bool SyscallOpen::GenerateArgs(const EpochList& epoch) {
     assert(!stage.Has(epoch) || stage.Get(epoch) == STAGE_NOTREADY);
@@ -116,7 +113,6 @@ void SyscallOpen::ResetValuePools() {
     mode.Reset();
 }
 
-
 void SyscallOpen::CheckArgs(const EpochList& epoch,
                             const char *pathname_, int flags_, mode_t mode_) {
     TIMER_START(scgraph->timer_check_args);
@@ -153,7 +149,6 @@ SyscallOpenat::SyscallOpenat(unsigned node_id, std::string name,
     assert(arggen_func != nullptr);
 }
 
-
 std::ostream& operator<<(std::ostream& s, const SyscallOpenat& n) {
     s << "SyscallOpenat{";
     n.PrintCommonInfo(s);
@@ -163,7 +158,6 @@ std::ostream& operator<<(std::ostream& s, const SyscallOpenat& n) {
       << "mode=" << StreamStr(n.mode) << "}";
     return s;
 }
-
 
 long SyscallOpenat::SyscallSync(const EpochList& epoch) {
     return posix::openat(dirfd.Get(epoch),
@@ -191,7 +185,6 @@ void SyscallOpenat::PrepUpoolSqe(int epoch_sum, ThreadPoolSQEntry *sqe) {
 void SyscallOpenat::ReflectResult([[maybe_unused]] const EpochList& epoch) {
     return;
 }
-
 
 bool SyscallOpenat::GenerateArgs(const EpochList& epoch) {
     assert(!stage.Has(epoch) || stage.Get(epoch) == STAGE_NOTREADY);
@@ -240,7 +233,6 @@ void SyscallOpenat::ResetValuePools() {
     mode.Reset();
 }
 
-
 void SyscallOpenat::CheckArgs(const EpochList& epoch,
                               int dirfd_,
                               const char *pathname_,
@@ -281,14 +273,12 @@ SyscallClose::SyscallClose(unsigned node_id, std::string name,
     assert(arggen_func != nullptr);
 }
 
-
 std::ostream& operator<<(std::ostream& s, const SyscallClose& n) {
     s << "SyscallClose{";
     n.PrintCommonInfo(s);
     s << ",fd=" << StreamStr(n.fd) << "}";
     return s;
 }
-
 
 long SyscallClose::SyscallSync(const EpochList& epoch) {
     return posix::close(fd.Get(epoch));
@@ -306,7 +296,6 @@ void SyscallClose::PrepUpoolSqe(int epoch_sum, ThreadPoolSQEntry *sqe) {
 void SyscallClose::ReflectResult([[maybe_unused]] const EpochList& epoch) {
     return;
 }
-
 
 bool SyscallClose::GenerateArgs(const EpochList& epoch) {
     assert(!stage.Has(epoch) || stage.Get(epoch) == STAGE_NOTREADY);
@@ -335,7 +324,6 @@ void SyscallClose::ResetValuePools() {
     ResetCommonPools();
     fd.Reset();
 }
-
 
 void SyscallClose::CheckArgs(const EpochList& epoch, int fd_) {
     TIMER_START(scgraph->timer_check_args);
@@ -381,7 +369,6 @@ SyscallPread::~SyscallPread() {
     }
 }
 
-
 std::ostream& operator<<(std::ostream& s, const SyscallPread& n) {
     s << "SyscallPread{";
     n.PrintCommonInfo(s);
@@ -391,7 +378,6 @@ std::ostream& operator<<(std::ostream& s, const SyscallPread& n) {
       << "offset=" << StreamStr(n.offset) << "}";
     return s;
 }
-
 
 long SyscallPread::SyscallSync(const EpochList& epoch) {
     return posix::pread(fd.Get(epoch),
@@ -446,7 +432,6 @@ void SyscallPread::ReflectResult(const EpochList& epoch) {
         memcpy(buf.Get(epoch), internal_buf.Get(epoch), count.Get(epoch));
 }
 
-
 bool SyscallPread::GenerateArgs(const EpochList& epoch) {
     assert(!stage.Has(epoch) || stage.Get(epoch) == STAGE_NOTREADY);
 
@@ -500,7 +485,6 @@ void SyscallPread::ResetValuePools() {
     internal_buf.Reset(/*move_into*/ &pre_alloced_bufs);
 }
 
-
 void SyscallPread::CheckArgs(const EpochList& epoch,
                              int fd_,
                              void *buf_,
@@ -545,7 +529,6 @@ SyscallPwrite::SyscallPwrite(unsigned node_id, std::string name,
     assert(arggen_func != nullptr);
 }
 
-
 std::ostream& operator<<(std::ostream& s, const SyscallPwrite& n) {
     s << "SyscallPwrite{";
     n.PrintCommonInfo(s);
@@ -555,7 +538,6 @@ std::ostream& operator<<(std::ostream& s, const SyscallPwrite& n) {
       << "offset=" << StreamStr(n.offset) << "}";
     return s;
 }
-
 
 long SyscallPwrite::SyscallSync(const EpochList& epoch) {
     return posix::pwrite(fd.Get(epoch),
@@ -583,7 +565,6 @@ void SyscallPwrite::PrepUpoolSqe(int epoch_sum, ThreadPoolSQEntry *sqe) {
 void SyscallPwrite::ReflectResult([[maybe_unused]] const EpochList& epoch) {
     return;
 }
-
 
 bool SyscallPwrite::GenerateArgs(const EpochList& epoch) {
     assert(!stage.Has(epoch) || stage.Get(epoch) == STAGE_NOTREADY);
@@ -631,7 +612,6 @@ void SyscallPwrite::ResetValuePools() {
     offset.Reset();
 }
 
-
 void SyscallPwrite::CheckArgs(const EpochList& epoch,
                               int fd_,
                               const void *buf_,
@@ -672,7 +652,6 @@ SyscallLseek::SyscallLseek(unsigned node_id, std::string name,
     assert(arggen_func != nullptr);
 }
 
-
 std::ostream& operator<<(std::ostream& s, const SyscallLseek& n) {
     s << "SyscallLseek{";
     n.PrintCommonInfo(s);
@@ -681,7 +660,6 @@ std::ostream& operator<<(std::ostream& s, const SyscallLseek& n) {
       << "whence=" << StreamStr(n.whence) << "}";
     return s;
 }
-
 
 long SyscallLseek::SyscallSync(const EpochList& epoch) {
     return posix::lseek(fd.Get(epoch), offset.Get(epoch), whence.Get(epoch));
@@ -700,7 +678,6 @@ void SyscallLseek::PrepUpoolSqe(int epoch_sum, ThreadPoolSQEntry *sqe) {
 void SyscallLseek::ReflectResult([[maybe_unused]] const EpochList& epoch) {
     return;
 }
-
 
 bool SyscallLseek::GenerateArgs(const EpochList& epoch) {
     assert(!stage.Has(epoch) || stage.Get(epoch) == STAGE_NOTREADY);
@@ -723,7 +700,6 @@ void SyscallLseek::ResetValuePools() {
     offset.Reset();
     whence.Reset();
 }
-
 
 void SyscallLseek::CheckArgs(const EpochList& epoch,
                              int fd_,
@@ -772,7 +748,6 @@ SyscallFstat::~SyscallFstat() {
     }
 }
 
-
 std::ostream& operator<<(std::ostream& s, const SyscallFstat& n) {
     s << "SyscallFstat{";
     n.PrintCommonInfo(s);
@@ -780,7 +755,6 @@ std::ostream& operator<<(std::ostream& s, const SyscallFstat& n) {
       << "buf=" << StreamStr(n.buf) << "}";
     return s;
 }
-
 
 long SyscallFstat::SyscallSync(const EpochList& epoch) {
     return posix::fstat(fd.Get(epoch), buf.Get(epoch));
@@ -801,10 +775,14 @@ void SyscallFstat::PrepUringSqe(int epoch_sum, struct io_uring_sqe *sqe) {
 }
 
 void SyscallFstat::PrepUpoolSqe(int epoch_sum, ThreadPoolSQEntry *sqe) {
-    // my user-level thread pool recognizes fstat
+    if ((!statx_buf.Has(epoch_sum)) || statx_buf.Get(epoch_sum) == nullptr) {
+        assert(empty_statx_bufs.size() > 0);
+        statx_buf.Set(epoch_sum,
+            empty_statx_bufs.extract(empty_statx_bufs.cbegin()).value());
+    }
     sqe->sc_type = SC_FSTAT;
     sqe->fd = fd.Get(epoch_sum);
-    sqe->buf = reinterpret_cast<uint64_t>(buf.Get(epoch_sum));
+    sqe->buf = reinterpret_cast<uint64_t>(statx_buf.Get(epoch_sum));
 }
 
 void SyscallFstat::ReflectResult(const EpochList& epoch) {
@@ -813,14 +791,14 @@ void SyscallFstat::ReflectResult(const EpochList& epoch) {
         struct stat *dst_buf = buf.Get(epoch);
         struct statx *src_buf = statx_buf.Get(epoch);
         dst_buf->st_dev = makedev(src_buf->stx_dev_major,
-                              src_buf->stx_dev_minor);
+                                  src_buf->stx_dev_minor);
         dst_buf->st_ino = src_buf->stx_ino;
         dst_buf->st_mode = src_buf->stx_mode;
         dst_buf->st_nlink = src_buf->stx_nlink;
         dst_buf->st_uid = src_buf->stx_uid;
         dst_buf->st_gid = src_buf->stx_gid;
         dst_buf->st_rdev = makedev(src_buf->stx_rdev_major,
-                               src_buf->stx_rdev_minor);
+                                   src_buf->stx_rdev_minor);
         dst_buf->st_size = src_buf->stx_size;
         dst_buf->st_blksize = src_buf->stx_blksize;
         dst_buf->st_blocks = src_buf->stx_blocks;
@@ -830,21 +808,22 @@ void SyscallFstat::ReflectResult(const EpochList& epoch) {
     }
 }
 
-
 bool SyscallFstat::GenerateArgs(const EpochList& epoch) {
     assert(!stage.Has(epoch) || stage.Get(epoch) == STAGE_NOTREADY);
 
     int fd_;
     struct stat *buf_;
-    if (!arggen_func(epoch.RawArray(), &fd_, &buf_))
+    bool buf_ready;
+    if (!arggen_func(epoch.RawArray(), &fd_, &buf_, &buf_ready))
         return false;
 
     if (!fd.Has(epoch))
         fd.Set(epoch, fd_);
-    if (!buf.Has(epoch))
+    if (buf_ready && !buf.Has(epoch))
         buf.Set(epoch, buf_);
     assert(fd_ == fd.Get(epoch));
-    assert(buf_ == buf.Get(epoch));
+    if (buf_ready)
+        assert(buf_ == buf.Get(epoch));
 
     stage.Set(epoch, STAGE_ARGREADY);
     return true;
@@ -868,7 +847,6 @@ void SyscallFstat::ResetValuePools() {
     statx_buf.Reset(/*move_into*/ &empty_statx_bufs);
 }
 
-
 void SyscallFstat::CheckArgs(const EpochList& epoch,
                              int fd_,
                              struct stat *buf_) {
@@ -879,10 +857,17 @@ void SyscallFstat::CheckArgs(const EpochList& epoch,
         if (!buf.Has(epoch))
             buf.Set(epoch, buf_);
         stage.Set(epoch, STAGE_ARGREADY);
+    } else if (!buf.Has(epoch)) {
+        // previously used internal buffer
+        buf.Set(epoch, buf_);
     }
     assert(fd_ == fd.Get(epoch));
     assert(buf_ == buf.Get(epoch));
     TIMER_PAUSE(scgraph->timer_check_args);
+}
+
+struct stat *SyscallFstat::GetStatBuf(const EpochList& epoch) {
+    return buf.Get(epoch);
 }
 
 
@@ -913,7 +898,6 @@ SyscallFstatat::~SyscallFstatat() {
     }
 }
 
-
 std::ostream& operator<<(std::ostream& s, const SyscallFstatat& n) {
     s << "SyscallFstatat{";
     n.PrintCommonInfo(s);
@@ -923,7 +907,6 @@ std::ostream& operator<<(std::ostream& s, const SyscallFstatat& n) {
       << "flags=" << StreamStr(n.flags) << "}";
     return s;
 }
-
 
 long SyscallFstatat::SyscallSync(const EpochList& epoch) {
     return posix::fstatat(dirfd.Get(epoch),
@@ -947,11 +930,15 @@ void SyscallFstatat::PrepUringSqe(int epoch_sum, struct io_uring_sqe *sqe) {
 }
 
 void SyscallFstatat::PrepUpoolSqe(int epoch_sum, ThreadPoolSQEntry *sqe) {
-    // my user-level thread pool recognizes fstat
+    if ((!statx_buf.Has(epoch_sum)) || statx_buf.Get(epoch_sum) == nullptr) {
+        assert(empty_statx_bufs.size() > 0);
+        statx_buf.Set(epoch_sum,
+            empty_statx_bufs.extract(empty_statx_bufs.cbegin()).value());
+    }
     sqe->sc_type = SC_FSTATAT;
     sqe->fd = dirfd.Get(epoch_sum);
     sqe->stat_path = reinterpret_cast<uint64_t>(pathname.Get(epoch_sum));
-    sqe->buf = reinterpret_cast<uint64_t>(buf.Get(epoch_sum));
+    sqe->buf = reinterpret_cast<uint64_t>(statx_buf.Get(epoch_sum));
     sqe->stat_flags = flags.Get(epoch_sum);
 }
 
@@ -961,14 +948,14 @@ void SyscallFstatat::ReflectResult(const EpochList& epoch) {
         struct stat *dst_buf = buf.Get(epoch);
         struct statx *src_buf = statx_buf.Get(epoch);
         dst_buf->st_dev = makedev(src_buf->stx_dev_major,
-                              src_buf->stx_dev_minor);
+                                  src_buf->stx_dev_minor);
         dst_buf->st_ino = src_buf->stx_ino;
         dst_buf->st_mode = src_buf->stx_mode;
         dst_buf->st_nlink = src_buf->stx_nlink;
         dst_buf->st_uid = src_buf->stx_uid;
         dst_buf->st_gid = src_buf->stx_gid;
         dst_buf->st_rdev = makedev(src_buf->stx_rdev_major,
-                               src_buf->stx_rdev_minor);
+                                   src_buf->stx_rdev_minor);
         dst_buf->st_size = src_buf->stx_size;
         dst_buf->st_blksize = src_buf->stx_blksize;
         dst_buf->st_blocks = src_buf->stx_blocks;
@@ -978,7 +965,6 @@ void SyscallFstatat::ReflectResult(const EpochList& epoch) {
     }
 }
 
-
 bool SyscallFstatat::GenerateArgs(const EpochList& epoch) {
     assert(!stage.Has(epoch) || stage.Get(epoch) == STAGE_NOTREADY);
 
@@ -986,20 +972,24 @@ bool SyscallFstatat::GenerateArgs(const EpochList& epoch) {
     const char *pathname_;
     struct stat *buf_;
     int flags_;
-    if (!arggen_func(epoch.RawArray(), &dirfd_, &pathname_, &buf_, &flags_))
+    bool buf_ready;
+    if (!arggen_func(epoch.RawArray(), &dirfd_, &pathname_, &buf_, &flags_,
+                     &buf_ready)) {
         return false;
+}
 
     if (!dirfd.Has(epoch))
         dirfd.Set(epoch, dirfd_);
     if (!pathname.Has(epoch))
         pathname.Set(epoch, pathname_);
-    if (!buf.Has(epoch))
+    if (buf_ready && !buf.Has(epoch))
         buf.Set(epoch, buf_);
     if (!flags.Has(epoch))
         flags.Set(epoch, flags_);
     assert(dirfd_ == dirfd.Get(epoch));
     assert(pathname_ == pathname.Get(epoch));
-    assert(buf_ == buf.Get(epoch));
+    if (buf_ready)
+        assert(buf_ == buf.Get(epoch));
     assert(flags_ == flags.Get(epoch));
 
     stage.Set(epoch, STAGE_ARGREADY);
@@ -1028,7 +1018,6 @@ void SyscallFstatat::ResetValuePools() {
     statx_buf.Reset(/*move_into*/ &empty_statx_bufs);
 }
 
-
 void SyscallFstatat::CheckArgs(const EpochList& epoch,
                                int dirfd_,
                                const char *pathname_,
@@ -1045,12 +1034,19 @@ void SyscallFstatat::CheckArgs(const EpochList& epoch,
         if (!flags.Has(epoch))
             flags.Set(epoch, flags_);
         stage.Set(epoch, STAGE_ARGREADY);
+    } else if (!buf.Has(epoch)) {
+        // previously used internal buffer
+        buf.Set(epoch, buf_);
     }
     assert(dirfd_ == dirfd.Get(epoch));
     assert(pathname_ == pathname.Get(epoch));
     assert(buf_ == buf.Get(epoch));
     assert(flags_ == flags.Get(epoch));
     TIMER_PAUSE(scgraph->timer_check_args);
+}
+
+struct stat *SyscallFstatat::GetStatBuf(const EpochList& epoch) {
+    return buf.Get(epoch);
 }
 
 

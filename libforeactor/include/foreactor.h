@@ -66,10 +66,12 @@ extern "C" {
 // the library must be this function.
 bool foreactor_UsingForeactor();
 
+
 // Create a new SCGraph representing a hijacked app function.
 void foreactor_CreateSCGraph(unsigned grpah_id, unsigned total_dims);
 void foreactor_SetSCGraphBuilt(unsigned graph_id);
 bool foreactor_HasSCGraph(unsigned graph_id);
+
 
 // Add a SyscallNode of certain type to the SCGraph. Exactly one node in
 // graph (SyscallNode or BranchNode) sets is_start = true.
@@ -121,7 +123,7 @@ void foreactor_AddSyscallPread(unsigned graph_id,
                                                    char **,
                                                    size_t *,
                                                    off_t *,
-                                                   bool *),
+                                                   bool *),  // buf_ready?
                                void (*rcsave_func)(const int *, ssize_t),
                                size_t pre_alloc_buf_size,
                                bool is_start);
@@ -159,7 +161,8 @@ void foreactor_AddSyscallFstat(unsigned graph_id,
                                size_t assoc_dims_len,
                                bool (*arggen_func)(const int *,
                                                    int *,
-                                                   struct stat **),
+                                                   struct stat **,
+                                                   bool *),
                                void (*rcsave_func)(const int *, int),
                                bool is_start);
 
@@ -172,14 +175,17 @@ void foreactor_AddSyscallFstatat(unsigned graph_id,
                                                      int *,
                                                      const char **,
                                                      struct stat **,
-                                                     int *),
+                                                     int *,
+                                                     bool *),
                                  void (*rcsave_func)(const int *, int),
                                  bool is_start);
+
 
 // Set outgoing edge of a SyscallNode. For a SyscallNode, not setting
 // its next node means its next is the end of SCGraph.
 void foreactor_SyscallSetNext(unsigned graph_id, unsigned node_id,
                               unsigned next_id, bool weak_edge);
+
 
 // Add a BranchNode to the SCGraph.
 void foreactor_AddBranchNode(unsigned graph_id,
@@ -191,6 +197,7 @@ void foreactor_AddBranchNode(unsigned graph_id,
                              size_t num_children,
                              bool is_start);
 
+
 // Append an outgoing edge to a BranchNode (could be a back-pointing edge,
 // in which case the `epoch_dim` arg should be the index of its corresponding
 // epoch number; otherwise `epoch_dim` should be -1).
@@ -198,9 +205,18 @@ void foreactor_BranchAppendChild(unsigned graph_id, unsigned node_id,
                                  unsigned child_id, int epoch_dim);
 void foreactor_BranchAppendEndNode(unsigned graph_id, unsigned node_id);
 
+
+// Special syscall-type-specific helper functions.
+struct stat *foreactor_FstatGetResultBuf(unsigned graph_id, unsigned node_id,
+                                         const int *epoch_);
+struct stat *foreactor_FstatatGetResultBuf(unsigned graph_id, unsigned node_id,
+                                           const int *epoch_);
+
+
 // Called upon entering/leaving a hijacked app function.
 void foreactor_EnterSCGraph(unsigned graph_id);
 void foreactor_LeaveSCGraph(unsigned graph_id);
+
 
 // Visualization helper.
 void foreactor_DumpDotImg(unsigned graph_id, const char *filestem);

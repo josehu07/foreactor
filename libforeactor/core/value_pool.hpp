@@ -26,6 +26,7 @@ class EpochList {
     public:
         EpochList() = delete;
         EpochList(unsigned total_dims);
+        EpochList(unsigned total_dims, const int *values);
         ~EpochList() {}
 
         friend std::ostream& operator<<(std::ostream& s,
