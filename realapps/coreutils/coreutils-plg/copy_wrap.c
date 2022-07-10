@@ -118,6 +118,9 @@ static bool read_src_arggen(const int *epoch, bool *link, int *fd, char **buf, s
                             bool *buf_ready, bool *skip_memcpy) {
     if (!curr_dst_fstat_done)
         return false;
+    off_t aligned_offset = ((off_t) IO_BUFSIZE) * epoch[0];
+    if (aligned_offset >= curr_src_file_size)
+        return false;   // don't pre-issue the last read since it will have LINK flag set and thus never get submitted
     *link = true;
     *fd = curr_src_fd;
     *buf = NULL;
@@ -125,9 +128,8 @@ static bool read_src_arggen(const int *epoch, bool *link, int *fd, char **buf, s
     // copy loop. cp used a while loop and stops until a read returns 0 size,
     // while this plugin fetches the file size from fstat_src and explicitly
     // controls each pread.
-    off_t aligned_offset = ((off_t) IO_BUFSIZE) * epoch[0];
     *count = IO_BUFSIZE;
-    *offset = (aligned_offset < curr_src_file_size) ? aligned_offset : curr_src_file_size;
+    *offset = aligned_offset;
     *buf_ready = false;
     *skip_memcpy = true;
     return true;
