@@ -93,6 +93,13 @@ enum Dereference_symlink
    || (Mode) == REFLINK_AUTO		\
    || (Mode) == REFLINK_ALWAYS)
 
+/* [foreactor] fadvise mode option. */
+enum Fadvise_mode {
+   FM_RANDOM = 1,
+   FM_NORMAL,
+   FM_SEQUENTIAL
+};
+
 /* These options control how files are copied by at least the
    following programs: mv (when rename doesn't work), cp, install.
    So, if you add a new member, be sure to initialize it in
@@ -276,6 +283,9 @@ struct cp_options
 
   /* FIXME */
   Hash_table *src_info;
+
+  /* [foreactor] fadvise mode option. */
+  enum Fadvise_mode fadvise_mode;
 };
 
 /* Arrange to make rename calls go through the wrapper function

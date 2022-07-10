@@ -1,5 +1,6 @@
 #include <tuple>
 #include <vector>
+#include <unordered_set>
 #include <thread>
 #include <future>
 #include <assert.h>
@@ -144,9 +145,7 @@ ThreadPool::~ThreadPool() {
 
 void ThreadPool::Prepare(SyscallNode *node, int epoch_sum) {
     EntryId entry_id = EncodeEntryId(node, epoch_sum);
-
-    assert(!prepared.contains(entry_id));
-    prepared.insert(entry_id);
+    prepared.push_back(entry_id);
 }
 
 int ThreadPool::SubmitAll() {

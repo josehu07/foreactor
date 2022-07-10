@@ -1,4 +1,5 @@
 #include <tuple>
+#include <vector>
 #include <unordered_set>
 #include <assert.h>
 #include <signal.h>
@@ -37,9 +38,7 @@ IOUring::~IOUring() {
 
 void IOUring::Prepare(SyscallNode *node, int epoch_sum) {
     EntryId entry_id = EncodeEntryId(node, epoch_sum);
-    
-    assert(!prepared.contains(entry_id));
-    prepared.insert(entry_id);
+    prepared.push_back(entry_id);
 }
 
 int IOUring::SubmitAll() {

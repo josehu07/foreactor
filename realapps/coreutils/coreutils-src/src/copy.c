@@ -1318,9 +1318,11 @@ copy_reg (char const *src_name, char const *dst_name,
                || (x->sparse_mode == SPARSE_AUTO
                    && scantype != PLAIN_SCANTYPE)));
 
-      /* [foreactor] for debugging... */
-      fdadvise (source_desc, 0, 0, FADVISE_SEQUENTIAL);
-      /* fdadvise (source_desc, 0, 0, FADVISE_RANDOM); */
+      /* [foreactor] fadvise mode options. */
+      fdadvise (source_desc, 0, 0,
+                (x->fadvise_mode == FM_RANDOM) ? FADVISE_RANDOM :
+                (x->fadvise_mode == FM_NORMAL) ? FADVISE_NORMAL :
+                                                 FADVISE_SEQUENTIAL);
 
       /* If not making a sparse file, try to use a more-efficient
          buffer size.  */
@@ -3155,6 +3157,8 @@ cp_options_default (struct cp_options *x)
   x->chown_privileges = x->owner_privileges = (geteuid () == ROOT_UID);
 #endif
   x->rename_errno = -1;
+  /* [foreactor] fadvise mode option. */
+  x->fadvise_mode = FM_SEQUENTIAL;
 }
 
 /* Return true if it's OK for chown to fail, where errno is

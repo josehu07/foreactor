@@ -67,6 +67,7 @@ enum
   PRESERVE_ATTRIBUTES_OPTION,
   REFLINK_OPTION,
   SPARSE_OPTION,
+  FADVISE_OPTION,
   STRIP_TRAILING_SLASHES_OPTION,
   UNLINK_DEST_BEFORE_OPENING
 };
@@ -101,6 +102,15 @@ static enum Reflink_type const reflink_type[] =
 };
 ARGMATCH_VERIFY (reflink_type_string, reflink_type);
 
+static char const *const fadvise_mode_string[] =
+{
+  "random", "normal", "sequential", NULL
+};
+static enum Fadvise_mode const fadvise_mode[] =
+{
+  FM_RANDOM, FM_NORMAL, FM_SEQUENTIAL
+};
+
 static struct option const long_opts[] =
 {
   {"archive", no_argument, NULL, 'a'},
@@ -108,6 +118,7 @@ static struct option const long_opts[] =
   {"backup", optional_argument, NULL, 'b'},
   {"copy-contents", no_argument, NULL, COPY_CONTENTS_OPTION},
   {"dereference", no_argument, NULL, 'L'},
+  {"fadvise", required_argument, NULL, FADVISE_OPTION},
   {"force", no_argument, NULL, 'f'},
   {"interactive", no_argument, NULL, 'i'},
   {"link", no_argument, NULL, 'l'},
@@ -983,6 +994,11 @@ main (int argc, char **argv)
           else
             x.reflink_mode = XARGMATCH ("--reflink", optarg,
                                        reflink_type_string, reflink_type);
+          break;
+
+        case FADVISE_OPTION:
+          x.fadvise_mode = XARGMATCH("--fadvise", optarg,
+                                     fadvise_mode_string, fadvise_mode);
           break;
 
         case 'a':

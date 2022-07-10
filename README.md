@@ -144,6 +144,22 @@ python3 run-all.py -h   # TODO better instructions
 </details>
 
 <details>
+<summary>GNU Tar v1.34</summary>
+
+| Function | Note |
+| :-: | :- |
+| `TODO` | TODO |
+
+Build and run:
+
+```bash
+cd realapps/tar
+make clean && make
+# TODO something
+```
+</details>
+
+<details>
 <summary>GNU Coreutils v9.1</summary>
 
 | Function | Note |

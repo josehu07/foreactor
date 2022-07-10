@@ -1,4 +1,5 @@
 #include <tuple>
+#include <vector>
 #include <unordered_set>
 #include <assert.h>
 
@@ -22,7 +23,10 @@ class IOEngine {
         static EntryId EncodeEntryId(SyscallNode* node, int epoch_sum);
         static std::tuple<SyscallNode *, int> DecodeEntryId(EntryId entry_id);
 
-        std::unordered_set<EntryId> prepared;
+        // Use vector instead of unordered_set for the prepared set so that
+        // we still preserve the order of prepared syscalls when submitting,
+        // in case that matters for better perfomrance.
+        std::vector<EntryId> prepared;
         std::unordered_set<EntryId> onthefly;
 
     public:
