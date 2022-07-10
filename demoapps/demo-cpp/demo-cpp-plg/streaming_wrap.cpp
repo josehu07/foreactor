@@ -12,7 +12,8 @@ static constexpr unsigned graph_id = 8;
 // Some global state for arggen and rcsave functions.
 static ExperStreamingArgs *curr_args = nullptr;
 
-static bool pread_arggen(const int *epoch, int *fd, char **buf, size_t *count, off_t *offset, bool *buf_ready) {
+static bool pread_arggen(const int *epoch, bool *link, int *fd, char **buf, size_t *count, off_t *offset,
+                         bool *buf_ready, bool *skip_memcpy) {
     *fd = curr_args->fd_in;
     *buf = curr_args->single_buf ? curr_args->bufs[0] : curr_args->bufs[epoch[0]];
     *count = curr_args->block_size;
@@ -21,7 +22,7 @@ static bool pread_arggen(const int *epoch, int *fd, char **buf, size_t *count, o
     return true;
 }
 
-static bool pwrite_arggen(const int *epoch, int *fd, const char **buf, size_t *count, off_t *offset) {
+static bool pwrite_arggen(const int *epoch, bool *link, int *fd, const char **buf, size_t *count, off_t *offset) {
     return false;   // just not pre-issuing any writes
 }
 

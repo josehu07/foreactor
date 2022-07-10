@@ -13,7 +13,8 @@ static constexpr unsigned graph_id = 6;
 static ExperReadSeqArgs *curr_args = nullptr;
 static int curr_preads_done = 0;
 
-static bool pread_arggen(const int *epoch, int *fd, char **buf, size_t *count, off_t *offset, bool *buf_ready) {
+static bool pread_arggen(const int *epoch, bool *link, int *fd, char **buf, size_t *count, off_t *offset,
+                         bool *buf_ready, bool *skip_memcpy) {
     *fd = curr_args->multi_file ? curr_args->fds[epoch[0]] : curr_args->fds[0];
     *buf = curr_args->same_buffer ? curr_args->rbufs[0] : curr_args->rbufs[epoch[0]];
     *count = curr_args->rlen;

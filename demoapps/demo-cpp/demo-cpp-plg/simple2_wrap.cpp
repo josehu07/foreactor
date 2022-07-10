@@ -17,7 +17,7 @@ static bool curr_write_done = false;
 static bool curr_lseek_done = false;
 static bool curr_read_done = false;
 
-static bool openat_arggen(const int *epoch, int *dirfd, const char **pathname, int *flags, mode_t *mode) {
+static bool openat_arggen(const int *epoch, bool *link, int *dirfd, const char **pathname, int *flags, mode_t *mode) {
     *dirfd = curr_args->dirfd;
     *pathname = curr_args->filename.c_str();
     *flags = O_CREAT | O_RDWR;
@@ -29,7 +29,7 @@ static void openat_rcsave(const int *epoch, int fd) {
     curr_filefd = fd;
 }
 
-static bool write_arggen(const int *epoch, int *fd, const char **buf, size_t *count, off_t *offset) {
+static bool write_arggen(const int *epoch, bool *link, int *fd, const char **buf, size_t *count, off_t *offset) {
     if (curr_filefd <= 0)
         return false;
     *fd = curr_filefd;
@@ -43,7 +43,7 @@ static void write_rcsave(const int *epoch, ssize_t res) {
     curr_write_done = true;
 }
 
-static bool lseek_arggen(const int *epoch, int *fd, off_t *offset, int *whence) {
+static bool lseek_arggen(const int *epoch, bool *link, int *fd, off_t *offset, int *whence) {
     return false;
 }
 
@@ -51,7 +51,8 @@ static void lseek_rcsave(const int *epoch, off_t res) {
     curr_lseek_done = true;
 }
 
-static bool read_arggen(const int *epoch, int *fd, char **buf, size_t *count, off_t *offset, bool *buf_ready) {
+static bool read_arggen(const int *epoch, bool *link, int *fd, char **buf, size_t *count, off_t *offset,
+                        bool *buf_ready, bool *skip_memcpy) {
     if (!curr_lseek_done)
         return false;
     *fd = curr_filefd;
@@ -66,14 +67,16 @@ static void read_rcsave(const int *epoch, ssize_t res) {
     curr_read_done = true;
 }
 
-static bool fstat_arggen(const int *epoch, int *fd, struct stat **buf, bool *buf_ready) {
+static bool fstat_arggen(const int *epoch, bool *link, int *fd, struct stat **buf,
+                         bool *buf_ready) {
     *fd = curr_args->dirfd;
     *buf = &curr_args->sbuf0;
     *buf_ready = true;
     return true;
 }
 
-static bool fstatat_arggen(const int *epoch, int *dirfd, const char **pathname, struct stat **buf, int *flags, bool *buf_ready) {
+static bool fstatat_arggen(const int *epoch, bool *link, int *dirfd, const char **pathname, struct stat **buf, int *flags,
+                           bool *buf_ready) {
     if (!curr_read_done)
         return false;
     *dirfd = curr_args->dirfd;
@@ -88,7 +91,7 @@ static void fstatat_rcsave(const int *epoch, int res) {
     curr_fstatat_done = true;
 }
 
-static bool close_arggen(const int *epoch, int *fd) {
+static bool close_arggen(const int *epoch, bool *link, int *fd) {
     if (!curr_fstatat_done)
         return false;
     *fd = curr_filefd;

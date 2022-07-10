@@ -75,11 +75,13 @@ void SyscallOpen::ReflectResult([[maybe_unused]] const EpochList& epoch) {
 bool SyscallOpen::GenerateArgs(const EpochList& epoch) {
     assert(!stage.Has(epoch) || stage.Get(epoch) == STAGE_NOTREADY);
 
+    bool link_ = false;
     const char *pathname_;
     int flags_;
     mode_t mode_;
-    if (!arggen_func(epoch.RawArray(), &pathname_, &flags_, &mode_))
+    if (!arggen_func(epoch.RawArray(), &link_, &pathname_, &flags_, &mode_))
         return false;
+    link.Set(epoch, link_);
 
     assert(pathname_ != nullptr);
     if (!pathname.Has(epoch))
@@ -189,12 +191,14 @@ void SyscallOpenat::ReflectResult([[maybe_unused]] const EpochList& epoch) {
 bool SyscallOpenat::GenerateArgs(const EpochList& epoch) {
     assert(!stage.Has(epoch) || stage.Get(epoch) == STAGE_NOTREADY);
 
+    bool link_ = false;
     int dirfd_;
     const char *pathname_;
     int flags_;
     mode_t mode_;
-    if (!arggen_func(epoch.RawArray(), &dirfd_, &pathname_, &flags_, &mode_))
+    if (!arggen_func(epoch.RawArray(), &link_, &dirfd_, &pathname_, &flags_, &mode_))
         return false;
+    link.Set(epoch, link_);
 
     assert(pathname_ != nullptr);
     if (!dirfd.Has(epoch))
@@ -300,9 +304,11 @@ void SyscallClose::ReflectResult([[maybe_unused]] const EpochList& epoch) {
 bool SyscallClose::GenerateArgs(const EpochList& epoch) {
     assert(!stage.Has(epoch) || stage.Get(epoch) == STAGE_NOTREADY);
 
+    bool link_ = false;
     int fd_;
-    if (!arggen_func(epoch.RawArray(), &fd_))
+    if (!arggen_func(epoch.RawArray(), &link_, &fd_))
         return false;
+    link.Set(epoch, link_);
 
     if (!fd.Has(epoch))
         fd.Set(epoch, fd_);
@@ -349,16 +355,18 @@ SyscallPread::SyscallPread(unsigned node_id, std::string name,
         : SyscallNode(node_id, name, SC_PREAD, /*pure_sc*/ true,
                       scgraph, assoc_dims),
           fd(assoc_dims), buf(assoc_dims), count(assoc_dims),
-          offset(assoc_dims), internal_buf(assoc_dims),
-          arggen_func(arggen_func), rcsave_func(rcsave_func) {
+          offset(assoc_dims), skip_memcpy(assoc_dims),
+          internal_buf(assoc_dims), arggen_func(arggen_func),
+          rcsave_func(rcsave_func) {
     assert(arggen_func != nullptr);
     // at most can have pre_issue_depth + 1 internal buffers simultaneously
     // in use
     for (int i = 0; i < scgraph->pre_issue_depth + 1; ++i) {
         // align allocation to hardware sector size, in case the file is
         // open O_DIRECT
-        pre_alloced_bufs.insert(
-            new (std::align_val_t(512)) char[pre_alloc_buf_size]);
+        char *ib = new (std::align_val_t(512)) char[pre_alloc_buf_size];
+        pre_alloced_bufs.insert(ib);
+        ib_ref_counts[ib] = 0;
     }
 }
 
@@ -380,25 +388,38 @@ std::ostream& operator<<(std::ostream& s, const SyscallPread& n) {
 }
 
 long SyscallPread::SyscallSync(const EpochList& epoch) {
-    return posix::pread(fd.Get(epoch),
-                        buf.Get(epoch),
-                        count.Get(epoch),
-                        offset.Get(epoch));
+    // as long as an internal_buf is assigned for this epoch, read into
+    // it even for a SyscallSync, in case any subsequent writes used this
+    // internal_buf through linking
+    char *read_buf;
+    bool use_internal_buf = internal_buf.Has(epoch) && link.Get(epoch);
+    if (use_internal_buf)
+        read_buf = internal_buf.Get(epoch);
+    else
+        read_buf = buf.Get(epoch);
+
+    long res = posix::pread(fd.Get(epoch),
+                            read_buf,
+                            count.Get(epoch),
+                            offset.Get(epoch));
+
+    if (use_internal_buf) {
+        assert(skip_memcpy.Has(epoch));
+        if (!skip_memcpy.Get(epoch))
+            memcpy(buf.Get(epoch), read_buf, res);
+    }
+
+    return res;
 }
 
 void SyscallPread::PrepUringSqe(int epoch_sum, struct io_uring_sqe *sqe) {
-    // use internal buffer if true destination buffer not ready yet
     char *read_buf;
     if (!buf.Has(epoch_sum)) {
-        if ((!internal_buf.Has(epoch_sum)) ||
-            internal_buf.Get(epoch_sum) == nullptr) {
-            assert(pre_alloced_bufs.size() > 0);
-            internal_buf.Set(epoch_sum,
-                pre_alloced_bufs.extract(pre_alloced_bufs.cbegin()).value());
-        }
+        assert(internal_buf.Has(epoch_sum));
         read_buf = internal_buf.Get(epoch_sum);
     } else
         read_buf = buf.Get(epoch_sum);
+    
     io_uring_prep_read(sqe,
                        fd.Get(epoch_sum),
                        read_buf,
@@ -407,18 +428,13 @@ void SyscallPread::PrepUringSqe(int epoch_sum, struct io_uring_sqe *sqe) {
 }
 
 void SyscallPread::PrepUpoolSqe(int epoch_sum, ThreadPoolSQEntry *sqe) {
-    // use internal buffer if true destination buffer not ready yet
     char *read_buf;
     if (!buf.Has(epoch_sum)) {
-        if ((!internal_buf.Has(epoch_sum)) ||
-            internal_buf.Get(epoch_sum) == nullptr) {
-            assert(pre_alloced_bufs.size() > 0);
-            internal_buf.Set(epoch_sum,
-                pre_alloced_bufs.extract(pre_alloced_bufs.cbegin()).value());
-        }
+        assert(internal_buf.Has(epoch_sum));
         read_buf = internal_buf.Get(epoch_sum);
     } else
         read_buf = buf.Get(epoch_sum);
+    
     sqe->sc_type = SC_PREAD;
     sqe->fd = fd.Get(epoch_sum);
     sqe->buf = reinterpret_cast<uint64_t>(read_buf);
@@ -428,22 +444,29 @@ void SyscallPread::PrepUpoolSqe(int epoch_sum, ThreadPoolSQEntry *sqe) {
 
 void SyscallPread::ReflectResult(const EpochList& epoch) {
     assert(buf.Has(epoch));
-    if (internal_buf.Has(epoch))
-        memcpy(buf.Get(epoch), internal_buf.Get(epoch), count.Get(epoch));
+    if (internal_buf.Has(epoch)) {
+        assert(skip_memcpy.Has(epoch));
+        if (!skip_memcpy.Get(epoch))
+            memcpy(buf.Get(epoch), internal_buf.Get(epoch), rc.Get(epoch));
+    }
 }
 
 bool SyscallPread::GenerateArgs(const EpochList& epoch) {
     assert(!stage.Has(epoch) || stage.Get(epoch) == STAGE_NOTREADY);
 
+    bool link_ = false;
     int fd_;
     char *buf_;
     size_t count_;
     off_t offset_;
-    bool buf_ready;
-    if (!arggen_func(epoch.RawArray(), &fd_, &buf_, &count_, &offset_,
-                     &buf_ready)) {
+    bool buf_ready = false;
+    bool skip_memcpy_ = false;
+    if (!arggen_func(epoch.RawArray(), &link_, &fd_, &buf_, &count_, &offset_,
+                     &buf_ready, &skip_memcpy_)) {
         return false;
     }
+    link.Set(epoch, link_);
+    skip_memcpy.Set(epoch, skip_memcpy_);
 
     if (!fd.Has(epoch))
         fd.Set(epoch, fd_);
@@ -459,6 +482,16 @@ bool SyscallPread::GenerateArgs(const EpochList& epoch) {
     assert(count_ == count.Get(epoch));
     assert(offset_ == offset.Get(epoch));
 
+    // use internal buffer if true destination buffer not ready yet
+    if (!buf_ready) {
+        if ((!internal_buf.Has(epoch)) ||
+            internal_buf.Get(epoch) == nullptr) {
+            assert(pre_alloced_bufs.size() > 0);
+            internal_buf.Set(epoch,
+                pre_alloced_bufs.extract(pre_alloced_bufs.cbegin()).value());
+        }
+    }
+
     stage.Set(epoch, STAGE_ARGREADY);
     return true;
 }
@@ -472,8 +505,13 @@ void SyscallPread::RemoveOneEpoch(const EpochList& epoch) {
     buf.Remove(epoch);
     count.Remove(epoch);
     offset.Remove(epoch);
-    if (internal_buf.Has(epoch))
-        internal_buf.Remove(epoch, /*move_into*/ &pre_alloced_bufs);
+    if (skip_memcpy.Has(epoch))
+        skip_memcpy.Remove(epoch);
+    if (internal_buf.Has(epoch)) {
+        char *ib = internal_buf.Get(epoch);
+        if (ib_ref_counts[ib] == 0)
+            internal_buf.Remove(epoch, /*move_into*/ &pre_alloced_bufs);
+    }
 }
 
 void SyscallPread::ResetValuePools() {
@@ -482,6 +520,7 @@ void SyscallPread::ResetValuePools() {
     buf.Reset();
     count.Reset();
     offset.Reset();
+    skip_memcpy.Reset();
     internal_buf.Reset(/*move_into*/ &pre_alloced_bufs);
 }
 
@@ -510,6 +549,25 @@ void SyscallPread::CheckArgs(const EpochList& epoch,
     assert(count_ == count.Get(epoch));
     assert(offset_ == offset.Get(epoch));
     TIMER_PAUSE(scgraph->timer_check_args);
+}
+
+char *SyscallPread::RefInternalBuf(const EpochList& epoch) {
+    if (!internal_buf.Has(epoch))
+        return nullptr;
+    char *ib = internal_buf.Get(epoch);
+    assert(ib_ref_counts[ib] >= 0);
+    ib_ref_counts[ib]++;
+    return ib;
+}
+
+void SyscallPread::PutInternalBuf(const EpochList& epoch) {
+    if (internal_buf.Has(epoch)) {
+        char *ib = internal_buf.Get(epoch);
+        assert(ib_ref_counts[ib] > 0);
+        ib_ref_counts[ib]--;
+        if (ib_ref_counts[ib] == 0)
+            internal_buf.Remove(epoch, /*move_into*/ &pre_alloced_bufs);
+    }
 }
 
 
@@ -569,12 +627,14 @@ void SyscallPwrite::ReflectResult([[maybe_unused]] const EpochList& epoch) {
 bool SyscallPwrite::GenerateArgs(const EpochList& epoch) {
     assert(!stage.Has(epoch) || stage.Get(epoch) == STAGE_NOTREADY);
 
+    bool link_ = false;
     int fd_;
     const char *buf_;
     size_t count_;
     off_t offset_;
-    if (!arggen_func(epoch.RawArray(), &fd_, &buf_, &count_, &offset_))
+    if (!arggen_func(epoch.RawArray(), &link_, &fd_, &buf_, &count_, &offset_))
         return false;
+    link.Set(epoch, link_);
 
     if (!fd.Has(epoch))
         fd.Set(epoch, fd_);
@@ -585,6 +645,7 @@ bool SyscallPwrite::GenerateArgs(const EpochList& epoch) {
     if (!offset.Has(epoch))
         offset.Set(epoch, offset_);
     assert(fd_ == fd.Get(epoch));
+    assert(buf_ == buf.Get(epoch));
     assert(memcmp(buf_, buf.Get(epoch), count_) == 0);
     assert(count_ == count.Get(epoch));
     assert(offset_ == offset.Get(epoch));
@@ -630,7 +691,9 @@ void SyscallPwrite::CheckArgs(const EpochList& epoch,
         stage.Set(epoch, STAGE_ARGREADY);
     }
     assert(fd_ == fd.Get(epoch));
-    assert(memcmp(buf_, buf.Get(epoch), count_) == 0);
+    // if using the internal buffer of previous pread, the address value will
+    // be different from the user buffer fed in here and the user buffer will
+    // contain meaningless bytes
     assert(count_ == count.Get(epoch));
     assert(offset_ == offset.Get(epoch));
     TIMER_PAUSE(scgraph->timer_check_args);
@@ -761,11 +824,6 @@ long SyscallFstat::SyscallSync(const EpochList& epoch) {
 }
 
 void SyscallFstat::PrepUringSqe(int epoch_sum, struct io_uring_sqe *sqe) {
-    if ((!statx_buf.Has(epoch_sum)) || statx_buf.Get(epoch_sum) == nullptr) {
-        assert(empty_statx_bufs.size() > 0);
-        statx_buf.Set(epoch_sum,
-            empty_statx_bufs.extract(empty_statx_bufs.cbegin()).value());
-    }
     io_uring_prep_statx(sqe,
                         fd.Get(epoch_sum),
                         "",
@@ -775,11 +833,6 @@ void SyscallFstat::PrepUringSqe(int epoch_sum, struct io_uring_sqe *sqe) {
 }
 
 void SyscallFstat::PrepUpoolSqe(int epoch_sum, ThreadPoolSQEntry *sqe) {
-    if ((!statx_buf.Has(epoch_sum)) || statx_buf.Get(epoch_sum) == nullptr) {
-        assert(empty_statx_bufs.size() > 0);
-        statx_buf.Set(epoch_sum,
-            empty_statx_bufs.extract(empty_statx_bufs.cbegin()).value());
-    }
     sqe->sc_type = SC_FSTAT;
     sqe->fd = fd.Get(epoch_sum);
     sqe->buf = reinterpret_cast<uint64_t>(statx_buf.Get(epoch_sum));
@@ -811,11 +864,13 @@ void SyscallFstat::ReflectResult(const EpochList& epoch) {
 bool SyscallFstat::GenerateArgs(const EpochList& epoch) {
     assert(!stage.Has(epoch) || stage.Get(epoch) == STAGE_NOTREADY);
 
+    bool link_ = false;
     int fd_;
     struct stat *buf_;
     bool buf_ready;
-    if (!arggen_func(epoch.RawArray(), &fd_, &buf_, &buf_ready))
+    if (!arggen_func(epoch.RawArray(), &link_, &fd_, &buf_, &buf_ready))
         return false;
+    link.Set(epoch, link_);
 
     if (!fd.Has(epoch))
         fd.Set(epoch, fd_);
@@ -824,6 +879,13 @@ bool SyscallFstat::GenerateArgs(const EpochList& epoch) {
     assert(fd_ == fd.Get(epoch));
     if (buf_ready)
         assert(buf_ == buf.Get(epoch));
+
+    // assign internal statx_buf
+    if ((!statx_buf.Has(epoch)) || statx_buf.Get(epoch) == nullptr) {
+        assert(empty_statx_bufs.size() > 0);
+        statx_buf.Set(epoch,
+            empty_statx_bufs.extract(empty_statx_bufs.cbegin()).value());
+    }
 
     stage.Set(epoch, STAGE_ARGREADY);
     return true;
@@ -916,11 +978,6 @@ long SyscallFstatat::SyscallSync(const EpochList& epoch) {
 }
 
 void SyscallFstatat::PrepUringSqe(int epoch_sum, struct io_uring_sqe *sqe) {
-    if ((!statx_buf.Has(epoch_sum)) || statx_buf.Get(epoch_sum) == nullptr) {
-        assert(empty_statx_bufs.size() > 0);
-        statx_buf.Set(epoch_sum,
-            empty_statx_bufs.extract(empty_statx_bufs.cbegin()).value());
-    }
     io_uring_prep_statx(sqe,
                         dirfd.Get(epoch_sum),
                         pathname.Get(epoch_sum),
@@ -930,11 +987,6 @@ void SyscallFstatat::PrepUringSqe(int epoch_sum, struct io_uring_sqe *sqe) {
 }
 
 void SyscallFstatat::PrepUpoolSqe(int epoch_sum, ThreadPoolSQEntry *sqe) {
-    if ((!statx_buf.Has(epoch_sum)) || statx_buf.Get(epoch_sum) == nullptr) {
-        assert(empty_statx_bufs.size() > 0);
-        statx_buf.Set(epoch_sum,
-            empty_statx_bufs.extract(empty_statx_bufs.cbegin()).value());
-    }
     sqe->sc_type = SC_FSTATAT;
     sqe->fd = dirfd.Get(epoch_sum);
     sqe->stat_path = reinterpret_cast<uint64_t>(pathname.Get(epoch_sum));
@@ -968,15 +1020,17 @@ void SyscallFstatat::ReflectResult(const EpochList& epoch) {
 bool SyscallFstatat::GenerateArgs(const EpochList& epoch) {
     assert(!stage.Has(epoch) || stage.Get(epoch) == STAGE_NOTREADY);
 
+    bool link_ = false;
     int dirfd_;
     const char *pathname_;
     struct stat *buf_;
     int flags_;
     bool buf_ready;
-    if (!arggen_func(epoch.RawArray(), &dirfd_, &pathname_, &buf_, &flags_,
-                     &buf_ready)) {
+    if (!arggen_func(epoch.RawArray(), &link_, &dirfd_, &pathname_, &buf_,
+                     &flags_, &buf_ready)) {
         return false;
-}
+    }
+    link.Set(epoch, link_);
 
     if (!dirfd.Has(epoch))
         dirfd.Set(epoch, dirfd_);
@@ -991,6 +1045,13 @@ bool SyscallFstatat::GenerateArgs(const EpochList& epoch) {
     if (buf_ready)
         assert(buf_ == buf.Get(epoch));
     assert(flags_ == flags.Get(epoch));
+
+    // assign internal statx_buf
+    if ((!statx_buf.Has(epoch)) || statx_buf.Get(epoch) == nullptr) {
+        assert(empty_statx_bufs.size() > 0);
+        statx_buf.Set(epoch,
+            empty_statx_bufs.extract(empty_statx_bufs.cbegin()).value());
+    }
 
     stage.Set(epoch, STAGE_ARGREADY);
     return true;

@@ -15,7 +15,7 @@ static int curr_fd = -1;
 static int curr_pwrites_done = 0;
 static int curr_preads_done = 0;
 
-static bool open_arggen(const int *epoch, const char **pathname, int *flags, mode_t *mode) {
+static bool open_arggen(const int *epoch, bool *link, const char **pathname, int *flags, mode_t *mode) {
     *pathname = curr_args->filename.c_str();
     *flags = O_CREAT | O_RDWR;
     *mode = S_IRUSR | S_IWUSR;
@@ -26,7 +26,7 @@ static void open_rcsave(const int *epoch, int fd) {
     curr_fd = fd;
 }
 
-static bool pwrite_arggen(const int *epoch, int *fd, const char **buf, size_t *count, off_t *offset) {
+static bool pwrite_arggen(const int *epoch, bool *link, int *fd, const char **buf, size_t *count, off_t *offset) {
     if (curr_fd < 0 || curr_preads_done % (curr_args->nreadsd2 * 2) != 0)
         return false;
     *fd = curr_fd;
@@ -46,7 +46,8 @@ static bool branch0_arggen(const int *epoch, int *decision) {
     return true;
 }
 
-static bool pread0_arggen(const int *epoch, int *fd, char **buf, size_t *count, off_t *offset, bool *buf_ready) {
+static bool pread0_arggen(const int *epoch, bool *link, int *fd, char **buf, size_t *count, off_t *offset,
+                          bool *buf_ready, bool *skip_memcpy) {
     if (curr_pwrites_done == 0 || curr_pwrites_done % curr_args->nwrites != 0)
         return false;
     *fd = curr_fd;
@@ -62,7 +63,8 @@ static void pread0_rcsave(const int *epoch, ssize_t res) {
     curr_preads_done++;
 }
 
-static bool pread1_arggen(const int *epoch, int *fd, char **buf, size_t *count, off_t *offset, bool *buf_ready) {
+static bool pread1_arggen(const int *epoch, bool *link, int *fd, char **buf, size_t *count, off_t *offset,
+                          bool *buf_ready, bool *skip_memcpy) {
     if (curr_pwrites_done == 0 || curr_pwrites_done % curr_args->nwrites != 0)
         return false;
     *fd = curr_fd;
@@ -88,7 +90,7 @@ static bool branch2_arggen(const int *epoch, int *decision) {
     return true;
 }
 
-static bool close_arggen(const int *epoch, int *fd) {
+static bool close_arggen(const int *epoch, bool *link, int *fd) {
     if (curr_preads_done < static_cast<int>(curr_args->nreadsd2 * curr_args->nrepeats * 2))
         return false;
     *fd = curr_fd;

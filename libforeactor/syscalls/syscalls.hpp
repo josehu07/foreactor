@@ -42,9 +42,10 @@ struct ThreadPoolSQEntry;   // forward declaration
 // TODO: could have merged with openat into a single type
 class SyscallOpen final : public SyscallNode {
     typedef std::function<bool(const int *,
-                          const char **,
-                          int *,
-                          mode_t *)> ArggenFunc;
+                               bool *,
+                               const char **,
+                               int *,
+                               mode_t *)> ArggenFunc;
     typedef std::function<void(const int *, int)> RcsaveFunc;
 
     private:
@@ -95,10 +96,11 @@ class SyscallOpen final : public SyscallNode {
 // openat
 class SyscallOpenat final : public SyscallNode {
     typedef std::function<bool(const int *,
-                          int *,
-                          const char **,
-                          int *,
-                          mode_t *)> ArggenFunc;
+                               bool *,
+                               int *,
+                               const char **,
+                               int *,
+                               mode_t *)> ArggenFunc;
     typedef std::function<void(const int *, int)> RcsaveFunc;
 
     private:
@@ -147,7 +149,7 @@ class SyscallOpenat final : public SyscallNode {
 
 // close
 class SyscallClose final : public SyscallNode {
-    typedef std::function<bool(const int *, int *)> ArggenFunc;
+    typedef std::function<bool(const int *, bool *, int *)> ArggenFunc;
     typedef std::function<void(const int *, int)> RcsaveFunc;
 
     private:
@@ -182,11 +184,13 @@ class SyscallClose final : public SyscallNode {
 // pread
 class SyscallPread final : public SyscallNode {
     typedef std::function<bool(const int *,
-                          int *,
-                          char **,
-                          size_t *,
-                          off_t *,
-                          bool *)> ArggenFunc;
+                               bool *,
+                               int *,
+                               char **,
+                               size_t *,
+                               off_t *,
+                               bool *,
+                               bool *)> ArggenFunc;
     typedef std::function<void(const int *, ssize_t)> RcsaveFunc;
 
     private:
@@ -196,7 +200,9 @@ class SyscallPread final : public SyscallNode {
         ValuePool<off_t> offset;
 
         // Used when issued async.
+        ValuePool<bool> skip_memcpy;
         ValuePool<char *> internal_buf;
+        std::unordered_map<char *, int> ib_ref_counts;
         std::unordered_set<char *> pre_alloced_bufs;
 
         ArggenFunc arggen_func;
@@ -227,16 +233,21 @@ class SyscallPread final : public SyscallNode {
                        void *buf_,
                        size_t count_,
                        off_t offset_);
+
+        // Expose internal buffer to pwrite to avoid memcpy in some cases.
+        char *RefInternalBuf(const EpochList& epoch);
+        void PutInternalBuf(const EpochList& epoch);
 };
 
 
 // pwrite
 class SyscallPwrite final : public SyscallNode {
     typedef std::function<bool(const int *,
-                          int *,
-                          const char **,
-                          size_t *,
-                          off_t *)> ArggenFunc;
+                               bool *,
+                               int *,
+                               const char **,
+                               size_t *,
+                               off_t *)> ArggenFunc;
     typedef std::function<void(const int *, ssize_t)> RcsaveFunc;
 
     private:
@@ -279,7 +290,11 @@ class SyscallPwrite final : public SyscallNode {
 // Note that lseek is never offloaded async since io_uring does not support
 // this opcode.
 class SyscallLseek final : public SyscallNode {
-    typedef std::function<bool(const int *, int *, off_t *, int *)> ArggenFunc;
+    typedef std::function<bool(const int *,
+                               bool *,
+                               int *,
+                               off_t *,
+                               int *)> ArggenFunc;
     typedef std::function<void(const int *, off_t)> RcsaveFunc;
 
     private:
@@ -320,6 +335,7 @@ class SyscallLseek final : public SyscallNode {
 // TODO: could have merged with fstatat into a single type
 class SyscallFstat final : public SyscallNode {
     typedef std::function<bool(const int *,
+                               bool *,
                                int *,
                                struct stat **,
                                bool *)> ArggenFunc;
@@ -366,6 +382,7 @@ class SyscallFstat final : public SyscallNode {
 // fstatat
 class SyscallFstatat final : public SyscallNode {
     typedef std::function<bool(const int *,
+                               bool *,
                                int *,
                                const char **,
                                struct stat **,

@@ -20,7 +20,7 @@ struct ExperArgs {};
 typedef std::function<void(void *)> ExperFunc;
 
 
-struct ExperSimpleArgs : ExperArgs {
+struct ExperSimple1Args : ExperArgs {
     const std::string filename;
     const std::string wcontent;
     const size_t wlen;
@@ -28,19 +28,19 @@ struct ExperSimpleArgs : ExperArgs {
     char * const rbuf0;
     char * const rbuf1;
 
-    ExperSimpleArgs(std::string filename, std::string wcontent)
+    ExperSimple1Args(std::string filename, std::string wcontent)
         : filename(filename), wcontent(wcontent), wlen(wcontent.length()),
           rlen(wlen / 2), rbuf0(new char[rlen]), rbuf1(new char[rlen]) {
         assert(rbuf0 != nullptr);
         assert(rbuf1 != nullptr);
     }
-    ~ExperSimpleArgs() {
+    ~ExperSimple1Args() {
         delete[] rbuf0;
         delete[] rbuf1;
     }
 };
 
-void exper_simple(void *args);
+void exper_simple1(void *args);
 
 
 struct ExperSimple2Args : ExperArgs {
@@ -290,3 +290,25 @@ struct ExperLdbGetArgs : ExperArgs {
 off_t ldb_get_calculate_offset(const char *index_block, const std::string& key,
                                size_t file_size, size_t value_size);
 void exper_ldb_get(void *args);
+
+
+struct ExperLinkingArgs : ExperArgs {
+    const int fd_in;
+    const int fd_out;
+    const size_t block_size;
+    const unsigned num_blocks;
+    char * const buf;
+
+    ExperLinkingArgs(int fd_in, int fd_out, size_t block_size,
+                     unsigned num_blocks)
+        : fd_in(fd_in), fd_out(fd_out), block_size(block_size),
+          num_blocks(num_blocks),
+          buf(new (std::align_val_t(512)) char[block_size]) {
+        assert(buf != nullptr);
+    }
+    ~ExperLinkingArgs() {
+        delete[] buf;
+    }
+};
+
+void exper_linking(void *args);

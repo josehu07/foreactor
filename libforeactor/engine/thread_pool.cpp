@@ -164,6 +164,10 @@ int ThreadPool::SubmitAll() {
         // do syscall-specific preparation, filling in args etc.
         node->PrepUpoolSqe(epoch_sum, &entries.back());
 
+        // TODO: implement the link feature for user thread pool backend
+        PANIC_IF(node->link.Get(epoch_sum),
+                 "thread pool backend does not support link feature yet\n");
+
         onthefly.insert(entry_id);
         node->stage.Set(epoch_sum, STAGE_ONTHEFLY);
     }

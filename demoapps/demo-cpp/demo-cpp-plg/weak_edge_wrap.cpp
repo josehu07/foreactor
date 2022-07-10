@@ -13,7 +13,7 @@ static constexpr unsigned graph_id = 4;
 static ExperWeakEdgeArgs *curr_args = nullptr;
 static int curr_pwrites_done = 0;
 
-static bool pwrite_arggen(const int *epoch, int *fd, const char **buf, size_t *count, off_t *offset) {
+static bool pwrite_arggen(const int *epoch, bool *link, int *fd, const char **buf, size_t *count, off_t *offset) {
     *fd = curr_args->fd;
     *buf = curr_args->wcontents[epoch[0]].c_str();
     *count = curr_args->len;
@@ -25,7 +25,8 @@ static void pwrite_rcsave(const int *epoch, ssize_t res) {
     curr_pwrites_done++;
 }
 
-static bool pread0_arggen(const int *epoch, int *fd, char **buf, size_t *count, off_t *offset, bool *buf_ready) {
+static bool pread0_arggen(const int *epoch, bool *link, int *fd, char **buf, size_t *count, off_t *offset,
+                          bool *buf_ready, bool *skip_memcpy) {
     if (curr_pwrites_done < epoch[0] + 1)
         return false;
     *fd = curr_args->fd;
@@ -36,7 +37,8 @@ static bool pread0_arggen(const int *epoch, int *fd, char **buf, size_t *count, 
     return true;
 }
 
-static bool pread1_arggen(const int *epoch, int *fd, char **buf, size_t *count, off_t *offset, bool *buf_ready) {
+static bool pread1_arggen(const int *epoch, bool *link, int *fd, char **buf, size_t *count, off_t *offset,
+                          bool *buf_ready, bool *skip_memcpy) {
     if (curr_pwrites_done < epoch[0] + 1)
         return false;
     *fd = curr_args->fd;

@@ -155,6 +155,7 @@ void foreactor_AddSyscallOpen(unsigned graph_id,
                               const int *assoc_dims,
                               size_t assoc_dims_len,
                               bool (*arggen_func)(const int *,
+                                                  bool *,
                                                   const char **,
                                                   int *,
                                                   mode_t *),
@@ -177,6 +178,7 @@ void foreactor_AddSyscallOpenat(unsigned graph_id,
                                 const int *assoc_dims,
                                 size_t assoc_dims_len,
                                 bool (*arggen_func)(const int *,
+                                                    bool *,
                                                     int *,
                                                     const char **,
                                                     int *,
@@ -199,7 +201,7 @@ void foreactor_AddSyscallClose(unsigned graph_id,
                                const char *name,
                                const int *assoc_dims,
                                size_t assoc_dims_len,
-                               bool (*arggen_func)(const int *, int *),
+                               bool (*arggen_func)(const int *, bool *, int *),
                                void (*rcsave_func)(const int *, int),
                                bool is_start) {
     SCGraph *scgraph = GetSCGraphFromId(graph_id);
@@ -219,10 +221,12 @@ void foreactor_AddSyscallPread(unsigned graph_id,
                               const int *assoc_dims,
                               size_t assoc_dims_len,
                               bool (*arggen_func)(const int *,
+                                                  bool *,
                                                   int *,
                                                   char **,
                                                   size_t *,
                                                   off_t *,
+                                                  bool *,
                                                   bool *),
                               void (*rcsave_func)(const int *, ssize_t),
                               size_t pre_alloc_buf_size,
@@ -244,6 +248,7 @@ void foreactor_AddSyscallPwrite(unsigned graph_id,
                                 const int *assoc_dims,
                                 size_t assoc_dims_len,
                                 bool (*arggen_func)(const int *,
+                                                    bool *,
                                                     int *,
                                                     const char **,
                                                     size_t *,
@@ -267,6 +272,7 @@ void foreactor_AddSyscallLseek(unsigned graph_id,
                                const int *assoc_dims,
                                size_t assoc_dims_len,
                                bool (*arggen_func)(const int *,  // not used
+                                                   bool *,
                                                    int *,
                                                    off_t *,
                                                    int *),
@@ -289,6 +295,7 @@ void foreactor_AddSyscallFstat(unsigned graph_id,
                                const int *assoc_dims,
                                size_t assoc_dims_len,
                                bool (*arggen_func)(const int *,
+                                                   bool *,
                                                    int *,
                                                    struct stat **,
                                                    bool *),
@@ -311,6 +318,7 @@ void foreactor_AddSyscallFstatat(unsigned graph_id,
                                  const int *assoc_dims,
                                  size_t assoc_dims_len,
                                  bool (*arggen_func)(const int *,
+                                                     bool *,
                                                      int *,
                                                      const char **,
                                                      struct stat **,
@@ -417,6 +425,36 @@ struct stat *foreactor_FstatatGetResultBuf(unsigned graph_id, unsigned node_id,
 
     const EpochList epoch(scgraph->total_dims, epoch_);
     return fstatat_node->GetStatBuf(epoch);
+}
+
+char *foreactor_PreadRefInternalBuf(unsigned graph_id, unsigned node_id,
+                                    const int *epoch_) {
+    SCGraph *scgraph = GetSCGraphFromId(graph_id);
+    
+    SCGraphNode *node = GetNodeFromId(scgraph, graph_id, node_id);
+    PANIC_IF(node->node_type != NODE_SC_PURE,
+             "node_id %u is not a pure SyscallNode\n", node_id);
+    SyscallPread *pread_node = static_cast<SyscallPread *>(node);
+    PANIC_IF(pread_node->sc_type != SC_PREAD,
+             "node_id %u is not a pread node\n", node_id);
+
+    const EpochList epoch(scgraph->total_dims, epoch_);
+    return pread_node->RefInternalBuf(epoch);
+}
+
+void foreactor_PreadPutInternalBuf(unsigned graph_id, unsigned node_id,
+                                   const int *epoch_) {
+    SCGraph *scgraph = GetSCGraphFromId(graph_id);
+    
+    SCGraphNode *node = GetNodeFromId(scgraph, graph_id, node_id);
+    PANIC_IF(node->node_type != NODE_SC_PURE,
+             "node_id %u is not a pure SyscallNode\n", node_id);
+    SyscallPread *pread_node = static_cast<SyscallPread *>(node);
+    PANIC_IF(pread_node->sc_type != SC_PREAD,
+             "node_id %u is not a pread node\n", node_id);
+
+    const EpochList epoch(scgraph->total_dims, epoch_);
+    pread_node->PutInternalBuf(epoch);
 }
 
 

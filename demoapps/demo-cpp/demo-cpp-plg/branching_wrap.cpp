@@ -27,7 +27,7 @@ static bool branch0_arggen(const int *epoch, int *decision) {
     return true;
 }
 
-static bool open_arggen(const int *epoch, const char **pathname, int *flags, mode_t *mode) {
+static bool open_arggen(const int *epoch, bool *link, const char **pathname, int *flags, mode_t *mode) {
     *pathname = curr_args->filename.c_str();
     *flags = O_CREAT | O_RDWR;
     *mode = S_IRUSR | S_IWUSR;
@@ -38,7 +38,7 @@ static void open_rcsave(const int *epoch, int fd) {
     curr_fd = fd;
 }
 
-static bool pwrite0_arggen(const int *epoch, int *fd, const char **buf, size_t *count, off_t *offset) {
+static bool pwrite0_arggen(const int *epoch, bool *link, int *fd, const char **buf, size_t *count, off_t *offset) {
     if (curr_fd < 0)
         return false;
     *fd = curr_fd;
@@ -52,7 +52,7 @@ static void pwrite0_rcsave(const int *epoch, ssize_t res) {
     curr_branch0_done = true;
 }
 
-static bool pwrite1_arggen(const int *epoch, int *fd, const char **buf, size_t *count, off_t *offset) {
+static bool pwrite1_arggen(const int *epoch, bool *link, int *fd, const char **buf, size_t *count, off_t *offset) {
     *fd = curr_args->fd;
     *buf = curr_args->wcontent1.c_str();
     *count = curr_args->wlen;
@@ -64,7 +64,7 @@ static void pwrite1_rcsave(const int *epoch, ssize_t res) {
     curr_branch0_done = true;
 }
 
-static bool pwrite2_arggen(const int *epoch, int *fd, const char **buf, size_t *count, off_t *offset) {
+static bool pwrite2_arggen(const int *epoch, bool *link, int *fd, const char **buf, size_t *count, off_t *offset) {
     if (!curr_branch0_done)
         return false;
     *fd = curr_fd;
@@ -86,7 +86,8 @@ static bool branch1_arggen(const int *epoch, int *decision) {
     return true;
 }
 
-static bool pread0_arggen(const int *epoch, int *fd, char **buf, size_t *count, off_t *offset, bool *buf_ready) {
+static bool pread0_arggen(const int *epoch, bool *link, int *fd, char **buf, size_t *count, off_t *offset,
+                          bool *buf_ready, bool *skip_memcpy) {
     if (!curr_pwrite2_done)
         return false;
     *fd = curr_fd;
@@ -106,7 +107,8 @@ static bool branch2_arggen(const int *epoch, int *decision) {
     return true;
 }
 
-static bool pread1_arggen(const int *epoch, int *fd, char **buf, size_t *count, off_t *offset, bool *buf_ready) {
+static bool pread1_arggen(const int *epoch, bool *link, int *fd, char **buf, size_t *count, off_t *offset,
+                          bool *buf_ready, bool *skip_memcpy) {
     if (!curr_pwrite2_done)
         return false;
     *fd = curr_fd;
@@ -123,7 +125,8 @@ static void pread1_rcsave(const int *epoch, ssize_t res) {
         curr_branch1_done = true;
 }
 
-static bool pread2_arggen(const int *epoch, int *fd, char **buf, size_t *count, off_t *offset, bool *buf_ready) {
+static bool pread2_arggen(const int *epoch, bool *link, int *fd, char **buf, size_t *count, off_t *offset,
+                          bool *buf_ready, bool *skip_memcpy) {
     if (!curr_pwrite2_done)
         return false;
     *fd = curr_fd;
@@ -140,7 +143,8 @@ static void pread2_rcsave(const int *epoch, ssize_t res) {
         curr_branch1_done = true;
 }
 
-static bool pread3_arggen(const int *epoch, int *fd, char **buf, size_t *count, off_t *offset, bool *buf_ready) {
+static bool pread3_arggen(const int *epoch, bool *link, int *fd, char **buf, size_t *count, off_t *offset,
+                          bool *buf_ready, bool *skip_memcpy) {
     if (!curr_pwrite2_done)
         return false;
     *fd = curr_fd;
@@ -157,7 +161,8 @@ static void pread3_rcsave(const int *epoch, ssize_t res) {
         curr_branch1_done = true;
 }
 
-static bool pread4_arggen(const int *epoch, int *fd, char **buf, size_t *count, off_t *offset, bool *buf_ready) {
+static bool pread4_arggen(const int *epoch, bool *link, int *fd, char **buf, size_t *count, off_t *offset,
+                          bool *buf_ready, bool *skip_memcpy) {
     if (!curr_pwrite2_done)
         return false;
     *fd = curr_fd;
@@ -184,7 +189,7 @@ static bool branch3_arggen(const int *epoch, int *decision) {
     return true;
 }
 
-static bool pwrite3_arggen(const int *epoch, int *fd, const char **buf, size_t *count, off_t *offset) {
+static bool pwrite3_arggen(const int *epoch, bool *link, int *fd, const char **buf, size_t *count, off_t *offset) {
     if (!curr_branch1_done)
         return false;
     *fd = curr_fd;
@@ -198,7 +203,7 @@ static void pwrite3_rcsave(const int *epoch, ssize_t res) {
     curr_branch3_done = true;
 }
 
-static bool close_arggen(const int *epoch, int *fd) {
+static bool close_arggen(const int *epoch, bool *link, int *fd) {
     if (!curr_branch3_done)
         return false;
     *fd = curr_fd;

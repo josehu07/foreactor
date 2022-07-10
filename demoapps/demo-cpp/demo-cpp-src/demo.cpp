@@ -103,10 +103,10 @@ void run_exper(std::string& dbdir, std::string& exper, unsigned num_iters,
     } else if (manual_pool)
         pool.StartThreads();
 
-    if (exper == "simple") {
-        ExperSimpleArgs args("simple.dat", rand_string(8192));
+    if (exper == "simple1") {
+        ExperSimple1Args args("simple1.dat", rand_string(8192));
 
-        run_iters(exper_simple, &args, num_iters, drop_caches, !dump_result);
+        run_iters(exper_simple1, &args, num_iters, drop_caches, !dump_result);
 
         if (dump_result) {
             std::cout << std::string(args.rbuf0, args.rbuf0 + args.rlen) << std::endl
@@ -392,6 +392,43 @@ void run_exper(std::string& dbdir, std::string& exper, unsigned num_iters,
         }
         for (auto index_block : index_blocks)
             delete[] index_block;
+
+    } else if (exper == "linking") {
+        size_t block_size = req_size;
+        unsigned num_blocks = 256;
+
+        int open_flags = O_CREAT | O_RDWR;
+        if (o_direct)
+            open_flags |= O_DIRECT;
+
+        int fd_in = open("linking_in.dat", open_flags, S_IRUSR | S_IWUSR);
+        int fd_out = open("linking_out.dat", open_flags, S_IRUSR | S_IWUSR);
+
+        std::string wcontent = rand_string(block_size);
+        char *wbuf = new (std::align_val_t(512)) char[block_size];
+        memcpy(wbuf, wcontent.c_str(), wcontent.length());
+        for (unsigned i = 0; i < num_blocks; ++i) {
+            wbuf[std::rand() % block_size] = rand_string(1)[0];
+            [[maybe_unused]] ssize_t ret = pwrite(fd_in, wbuf, block_size, i * block_size);
+            assert(ret == static_cast<ssize_t>(block_size));
+        }
+        delete[] wbuf;
+
+        ExperLinkingArgs args(fd_in, fd_out, block_size, num_blocks);
+
+        run_iters(exper_linking, &args, num_iters, drop_caches, !dump_result);
+
+        if (dump_result) {
+            char *rbuf = new (std::align_val_t(512)) char[block_size];
+            for (unsigned i = 0; i < num_blocks; ++i) {
+                [[maybe_unused]] ssize_t ret = pread(fd_out, rbuf, block_size, i * block_size);
+                std::cout << std::string(rbuf, rbuf + block_size) << std::endl;
+            }
+            delete[] rbuf;
+        }
+
+        close(fd_in);
+        close(fd_out);
 
     } else {
         std::cerr << "Error: unrecognized experiment " << exper << std::endl;

@@ -85,6 +85,7 @@ void foreactor_AddSyscallOpen(unsigned graph_id,
                               const int *assoc_dims,
                               size_t assoc_dims_len,
                               bool (*arggen_func)(const int *,   // epoch array
+                                                  bool *,        // link?
                                                   const char **, // pathname
                                                   int *,         // flags
                                                   mode_t *),     // mode
@@ -97,6 +98,7 @@ void foreactor_AddSyscallOpenat(unsigned graph_id,
                                 const int *assoc_dims,
                                 size_t assoc_dims_len,
                                 bool (*arggen_func)(const int *, // similar...
+                                                    bool *,
                                                     int *,
                                                     const char **,
                                                     int *,
@@ -109,7 +111,7 @@ void foreactor_AddSyscallClose(unsigned graph_id,
                                const char *name,
                                const int *assoc_dims,
                                size_t assoc_dims_len,
-                               bool (*arggen_func)(const int *, int *),
+                               bool (*arggen_func)(const int *, bool *, int *),
                                void (*rcsave_func)(const int *, int),
                                bool is_start);
 
@@ -119,11 +121,13 @@ void foreactor_AddSyscallPread(unsigned graph_id,
                                const int *assoc_dims,
                                size_t assoc_dims_len,
                                bool (*arggen_func)(const int *,
+                                                   bool *,
                                                    int *,
                                                    char **,
                                                    size_t *,
                                                    off_t *,
-                                                   bool *),  // buf_ready?
+                                                   bool *,   // buf_ready?
+                                                   bool *),  // skip_memcpy?
                                void (*rcsave_func)(const int *, ssize_t),
                                size_t pre_alloc_buf_size,
                                bool is_start);
@@ -134,6 +138,7 @@ void foreactor_AddSyscallPwrite(unsigned graph_id,
                                 const int *assoc_dims,
                                 size_t assoc_dims_len,
                                 bool (*arggen_func)(const int *,
+                                                    bool *,
                                                     int *,
                                                     const char **,
                                                     size_t *,
@@ -148,6 +153,7 @@ void foreactor_AddSyscallLseek(unsigned graph_id,
                                size_t assoc_dims_len,
                                // not used, lseek is never offloaded async
                                bool (*arggen_func)(const int *,
+                                                   bool *,
                                                    int *,
                                                    off_t *,
                                                    int *),
@@ -160,9 +166,10 @@ void foreactor_AddSyscallFstat(unsigned graph_id,
                                const int *assoc_dims,
                                size_t assoc_dims_len,
                                bool (*arggen_func)(const int *,
+                                                   bool *,
                                                    int *,
                                                    struct stat **,
-                                                   bool *),
+                                                   bool *),  // buf_ready?
                                void (*rcsave_func)(const int *, int),
                                bool is_start);
 
@@ -172,11 +179,12 @@ void foreactor_AddSyscallFstatat(unsigned graph_id,
                                  const int *assoc_dims,
                                  size_t assoc_dims_len,
                                  bool (*arggen_func)(const int *,
+                                                     bool *,
                                                      int *,
                                                      const char **,
                                                      struct stat **,
                                                      int *,
-                                                     bool *),
+                                                     bool *),  // buf_ready?
                                  void (*rcsave_func)(const int *, int),
                                  bool is_start);
 
@@ -211,6 +219,11 @@ struct stat *foreactor_FstatGetResultBuf(unsigned graph_id, unsigned node_id,
                                          const int *epoch_);
 struct stat *foreactor_FstatatGetResultBuf(unsigned graph_id, unsigned node_id,
                                            const int *epoch_);
+
+char *foreactor_PreadRefInternalBuf(unsigned graph_id, unsigned node_id,
+                                    const int *epoch_);
+void foreactor_PreadPutInternalBuf(unsigned graph_id, unsigned node_id,
+                                   const int *epoch_);
 
 
 // Called upon entering/leaving a hijacked app function.

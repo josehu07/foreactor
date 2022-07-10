@@ -12,7 +12,7 @@ static constexpr unsigned graph_id = 7;
 // Some global state for arggen and rcsave functions.
 static ExperWriteSeqArgs *curr_args = nullptr;
 
-static bool pwrite_arggen(const int *epoch, int *fd, const char **buf, size_t *count, off_t *offset) {
+static bool pwrite_arggen(const int *epoch, bool *link, int *fd, const char **buf, size_t *count, off_t *offset) {
     *fd = curr_args->multi_file ? curr_args->fds[epoch[0]] : curr_args->fds[0];
     *buf = curr_args->wbufs[epoch[0]];
     *count = curr_args->wlen;

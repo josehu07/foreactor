@@ -59,6 +59,11 @@ int IOUring::SubmitAll() {
         if (sqe_async_flag)
             sqe->flags |= IOSQE_ASYNC;
 
+        // if this request is to be linked with the next one in queue to
+        // form an ordered chain
+        if (node->link.Get(epoch_sum))
+            sqe->flags |= IOSQE_IO_LINK;
+
         onthefly.insert(entry_id);
         node->stage.Set(epoch_sum, STAGE_ONTHEFLY);
     }
