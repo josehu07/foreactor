@@ -83,7 +83,7 @@ To enable foreactor for an application function, we need the following component
 
 ```bash
 cd libforeactor
-make clean && make
+make
 cd ..
 ```
 </details>
@@ -93,7 +93,7 @@ cd ..
 
 ```bash
 cd demoapps/demo-cpp
-make clean && make
+make
 mkdir /tmp/demo_dbdir
 
 # Run the `simple` function without foreactor:
@@ -134,12 +134,40 @@ This repository contains a collection of applications that involve functions sui
 | :-: | :- |
 | `Version::Get` | Chained `pread`s with possible `open`s and early exits |
 
-Build and run:
+Build:
 
 ```bash
 cd realapps/leveldb
-make clean && make
+make
+```
+
+Run:
+
+```bash
 python3 run-all.py -h   # TODO better instructions
+```
+</details>
+
+<details>
+<summary>GNU Coreutils v9.1</summary>
+
+| Function | Note |
+| :-: | :- |
+| `cp sparse_copy` | Standard loop of `read`-`write`s of 128KiB chunks |
+
+Build:
+
+```bash
+cd realapps/coreutils
+sudo apt install automake
+make reconf
+make
+```
+
+Run:
+
+```bash
+# TODO
 ```
 </details>
 
@@ -150,28 +178,19 @@ python3 run-all.py -h   # TODO better instructions
 | :-: | :- |
 | `TODO` | TODO |
 
-Build and run:
+Build:
 
 ```bash
 cd realapps/tar
-make clean && make
-# TODO something
+sudo apt install automake
+make reconf
+make
 ```
-</details>
 
-<details>
-<summary>GNU Coreutils v9.1</summary>
-
-| Function | Note |
-| :-: | :- |
-| `TODO` | TODO |
-
-Build and run:
+Run:
 
 ```bash
-cd realapps/coreutils
-make clean && make
-# TODO something
+# TODO
 ```
 </details>
 
@@ -182,13 +201,18 @@ make clean && make
 | :-: | :- |
 | `TODO` | TODO |
 
-Build and run:
+Build:
 
 ```bash
-sudo apt install libcurl4-openssl-dev
 cd realapps/git
-make clean && make
-# TODO something
+sudo apt install libcurl4-openssl-dev
+make
+```
+
+Run:
+
+```bash
+# TODO
 ```
 </details>
 

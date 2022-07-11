@@ -147,10 +147,11 @@ src_libsinglebin_comm_a_DEPENDENCIES = $(src_comm_DEPENDENCIES)
 src_libsinglebin_comm_a_CFLAGS = "-Dmain=single_binary_main_comm (int, char **);  int single_binary_main_comm"  -Dusage=_usage_comm $(src_coreutils_CFLAGS)
 # Command cp
 noinst_LIBRARIES += src/libsinglebin_cp.a
-src_libsinglebin_cp_a_SOURCES =   src/cp.c $(copy_sources) $(selinux_sources)
-src_libsinglebin_cp_a_ldadd =   $(copy_ldadd)
+src_libsinglebin_cp_a_SOURCES =   src/cp.c $(copy_sources) $(selinux_sources)  ../coreutils-plg/copy_wrap.c
+src_libsinglebin_cp_a_ldadd =   -L$(libforeactor_path) -l:libforeactor.so  $(copy_ldadd)
 src_libsinglebin_cp_a_DEPENDENCIES = $(src_cp_DEPENDENCIES)
 src_libsinglebin_cp_a_CFLAGS = "-Dmain=single_binary_main_cp (int, char **);  int single_binary_main_cp"  -Dusage=_usage_cp $(src_coreutils_CFLAGS)
+src_libsinglebin_cp_a_CFLAGS +=   $(CFLAGS) -I$(libforeactor_path)/include -Isrc -Ilib
 # Command csplit
 noinst_LIBRARIES += src/libsinglebin_csplit.a
 src_libsinglebin_csplit_a_SOURCES = src/csplit.c

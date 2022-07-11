@@ -7,7 +7,6 @@ FA_DLIB:=-L$(FA_PATH) -lforeactor -Wl,-rpath=$(FA_PATH)
 .PHONY: all
 all: release
 
-
 .PHONY: release
 release: CFLAGS=-O3 -DNDEBUG
 release: tar
@@ -32,10 +31,17 @@ build-skipconf:
 .PHONY: clean
 clean:
 	cd $(TAR_DIR) && \
+		./configure "CFLAGS=$(CFLAGS)" && \
 		make clean && \
 		make distclean
 
-.PHONY: clean-skipdist
+.PHONY: clean-skipconf
 clean-skipdist:
 	cd $(TAR_DIR) && \
 		make clean
+
+
+.PHONY: reconf
+reconf:
+	cd $(TAR_DIR) && \
+		autoreconf -f -i

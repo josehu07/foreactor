@@ -1,3 +1,4 @@
 realapps/coreutils/coreutils-src/** linguist-vendored
 realapps/git/git-src/** linguist-vendored
 realapps/leveldb/leveldb-src/** linguist-vendored
+realapps/tar/tar/** linguist-vendored

@@ -13734,34 +13734,6 @@ _ACEOF
 
 
 
-  { $as_echo "$as_me:${as_lineno-$LINENO}: checking whether ctype.h defines __header_inline" >&5
-$as_echo_n "checking whether ctype.h defines __header_inline... " >&6; }
-if ${gl_cv_have___header_inline+:} false; then :
-  $as_echo_n "(cached) " >&6
-else
-  cat confdefs.h - <<_ACEOF >conftest.$ac_ext
-/* end confdefs.h.  */
-#include <ctype.h>
-                         #ifndef __header_inline
-                          #error "<ctype.h> does not define __header_inline"
-                         #endif
-
-_ACEOF
-if ac_fn_c_try_cpp "$LINENO"; then :
-  gl_cv_have___header_inline=yes
-else
-  gl_cv_have___header_inline=no
-fi
-rm -f conftest.err conftest.i conftest.$ac_ext
-fi
-{ $as_echo "$as_me:${as_lineno-$LINENO}: result: $gl_cv_have___header_inline" >&5
-$as_echo "$gl_cv_have___header_inline" >&6; }
-  if test "$gl_cv_have___header_inline" = yes; then
-
-$as_echo "#define HAVE___HEADER_INLINE 1" >>confdefs.h
-
-  fi
-
 
 
 
@@ -18081,8 +18053,8 @@ rm -f core conftest.err conftest.$ac_objext \
         LIBS=$save_LIBS
         test $gl_pthread_api = yes && break
       done
-      echo "$as_me:18084: gl_pthread_api=$gl_pthread_api" >&5
-      echo "$as_me:18085: LIBPTHREAD=$LIBPTHREAD" >&5
+      echo "$as_me:18056: gl_pthread_api=$gl_pthread_api" >&5
+      echo "$as_me:18057: LIBPTHREAD=$LIBPTHREAD" >&5
 
       gl_pthread_in_glibc=no
       # On Linux with glibc >= 2.34, libc contains the fully functional
@@ -18107,7 +18079,7 @@ rm -f conftest*
 
           ;;
       esac
-      echo "$as_me:18110: gl_pthread_in_glibc=$gl_pthread_in_glibc" >&5
+      echo "$as_me:18082: gl_pthread_in_glibc=$gl_pthread_in_glibc" >&5
 
       # Test for libpthread by looking for pthread_kill. (Not pthread_self,
       # since it is defined as a macro on OSF/1.)
@@ -18261,7 +18233,7 @@ fi
 
         fi
       fi
-      echo "$as_me:18264: LIBPMULTITHREAD=$LIBPMULTITHREAD" >&5
+      echo "$as_me:18236: LIBPMULTITHREAD=$LIBPMULTITHREAD" >&5
     fi
     { $as_echo "$as_me:${as_lineno-$LINENO}: checking whether POSIX threads API is available" >&5
 $as_echo_n "checking whether POSIX threads API is available... " >&6; }
@@ -23739,8 +23711,8 @@ rm -f core conftest.err conftest.$ac_objext \
         LIBS=$save_LIBS
         test $gl_pthread_api = yes && break
       done
-      echo "$as_me:23742: gl_pthread_api=$gl_pthread_api" >&5
-      echo "$as_me:23743: LIBPTHREAD=$LIBPTHREAD" >&5
+      echo "$as_me:23714: gl_pthread_api=$gl_pthread_api" >&5
+      echo "$as_me:23715: LIBPTHREAD=$LIBPTHREAD" >&5
 
       gl_pthread_in_glibc=no
       # On Linux with glibc >= 2.34, libc contains the fully functional
@@ -23765,7 +23737,7 @@ rm -f conftest*
 
           ;;
       esac
-      echo "$as_me:23768: gl_pthread_in_glibc=$gl_pthread_in_glibc" >&5
+      echo "$as_me:23740: gl_pthread_in_glibc=$gl_pthread_in_glibc" >&5
 
       # Test for libpthread by looking for pthread_kill. (Not pthread_self,
       # since it is defined as a macro on OSF/1.)
@@ -23919,7 +23891,7 @@ fi
 
         fi
       fi
-      echo "$as_me:23922: LIBPMULTITHREAD=$LIBPMULTITHREAD" >&5
+      echo "$as_me:23894: LIBPMULTITHREAD=$LIBPMULTITHREAD" >&5
     fi
     { $as_echo "$as_me:${as_lineno-$LINENO}: checking whether POSIX threads API is available" >&5
 $as_echo_n "checking whether POSIX threads API is available... " >&6; }
@@ -24145,8 +24117,8 @@ rm -f core conftest.err conftest.$ac_objext \
         LIBS=$save_LIBS
         test $gl_pthread_api = yes && break
       done
-      echo "$as_me:24148: gl_pthread_api=$gl_pthread_api" >&5
-      echo "$as_me:24149: LIBPTHREAD=$LIBPTHREAD" >&5
+      echo "$as_me:24120: gl_pthread_api=$gl_pthread_api" >&5
+      echo "$as_me:24121: LIBPTHREAD=$LIBPTHREAD" >&5
 
       gl_pthread_in_glibc=no
       # On Linux with glibc >= 2.34, libc contains the fully functional
@@ -24171,7 +24143,7 @@ rm -f conftest*
 
           ;;
       esac
-      echo "$as_me:24174: gl_pthread_in_glibc=$gl_pthread_in_glibc" >&5
+      echo "$as_me:24146: gl_pthread_in_glibc=$gl_pthread_in_glibc" >&5
 
       # Test for libpthread by looking for pthread_kill. (Not pthread_self,
       # since it is defined as a macro on OSF/1.)
@@ -24325,7 +24297,7 @@ fi
 
         fi
       fi
-      echo "$as_me:24328: LIBPMULTITHREAD=$LIBPMULTITHREAD" >&5
+      echo "$as_me:24300: LIBPMULTITHREAD=$LIBPMULTITHREAD" >&5
     fi
     { $as_echo "$as_me:${as_lineno-$LINENO}: checking whether POSIX threads API is available" >&5
 $as_echo_n "checking whether POSIX threads API is available... " >&6; }

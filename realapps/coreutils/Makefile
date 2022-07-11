@@ -7,7 +7,6 @@ FA_DLIB:=-L$(FA_PATH) -lforeactor -Wl,-rpath=$(FA_PATH)
 .PHONY: all
 all: release
 
-
 .PHONY: release
 release: CFLAGS=-O3 -DNDEBUG
 release: coreutils
@@ -32,6 +31,7 @@ build-skipconf:
 .PHONY: clean
 clean:
 	cd $(COREUTILS_DIR) && \
+		./configure "CFLAGS=$(CFLAGS)" && \
 		make clean && \
 		make distclean
 
@@ -39,3 +39,9 @@ clean:
 clean-skipdist:
 	cd $(COREUTILS_DIR) && \
 		make clean
+
+
+.PHONY: reconf
+reconf:
+	cd $(COREUTILS_DIR) && \
+		autoreconf -f -i

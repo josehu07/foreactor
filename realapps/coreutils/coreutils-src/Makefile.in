@@ -1989,14 +1989,15 @@ src_libsinglebin_cp_a_AR = $(AR) $(ARFLAGS)
 src_libsinglebin_cp_a_LIBADD =
 am__src_libsinglebin_cp_a_SOURCES_DIST = src/cp.c src/copy.c \
 	src/cp-hash.c src/force-link.c src/force-link.h src/selinux.c \
-	src/selinux.h
+	src/selinux.h ../coreutils-plg/copy_wrap.c
 am__objects_185 = src/libsinglebin_cp_a-copy.$(OBJEXT) \
 	src/libsinglebin_cp_a-cp-hash.$(OBJEXT) \
 	src/libsinglebin_cp_a-force-link.$(OBJEXT)
 am__objects_186 = src/libsinglebin_cp_a-selinux.$(OBJEXT)
 @SINGLE_BINARY_TRUE@am_src_libsinglebin_cp_a_OBJECTS =  \
 @SINGLE_BINARY_TRUE@	src/libsinglebin_cp_a-cp.$(OBJEXT) \
-@SINGLE_BINARY_TRUE@	$(am__objects_185) $(am__objects_186)
+@SINGLE_BINARY_TRUE@	$(am__objects_185) $(am__objects_186) \
+@SINGLE_BINARY_TRUE@	../coreutils-plg/src_libsinglebin_cp_a-copy_wrap.$(OBJEXT)
 src_libsinglebin_cp_a_OBJECTS = $(am_src_libsinglebin_cp_a_OBJECTS)
 src_libsinglebin_csplit_a_AR = $(AR) $(ARFLAGS)
 src_libsinglebin_csplit_a_LIBADD =
@@ -3062,6 +3063,7 @@ DEFAULT_INCLUDES = -I.@am__isrc@ -I$(top_builddir)/lib
 depcomp = $(SHELL) $(top_srcdir)/build-aux/depcomp
 am__maybe_remake_depfiles = depfiles
 am__depfiles_remade = ../coreutils-plg/$(DEPDIR)/src_cp-copy_wrap.Po \
+	../coreutils-plg/$(DEPDIR)/src_libsinglebin_cp_a-copy_wrap.Po \
 	lib/$(DEPDIR)/alloca.Po \
 	lib/$(DEPDIR)/libcoreutils_a-acl-errno-valid.Po \
 	lib/$(DEPDIR)/libcoreutils_a-acl-internal.Po \
@@ -6688,11 +6690,12 @@ src_cp_LDADD = $(LDADD) -L$(libforeactor_path) -l:libforeactor.so \
 # [foreactor] link with libforeactor.so for cp
 libforeactor_path = $(shell realpath ../../../libforeactor)
 
-# [foreactor] library include and search path
+# [foreactor] explicit search path and include paths
 
 # [foreactor] linker wrap option for cp
-src_cp_LDFLAGS = -Wl,-rpath=$(libforeactor_path) -Wl,--wrap=copy
-src_cp_CFLAGS = -I$(libforeactor_path)/include
+src_cp_LDFLAGS = $(LDFLAGS) -Wl,-rpath=$(libforeactor_path) \
+	-Wl,--wrap=copy
+src_cp_CFLAGS = $(CFLAGS) -I$(libforeactor_path)/include -Isrc -Ilib
 @SINGLE_BINARY_FALSE@src_coreutils_LDADD = $(LDADD)
 #src_coreutils_LDFLAGS = $(AM_LDFLAGS)
 @SINGLE_BINARY_TRUE@src_coreutils_LDADD = $(single_binary_deps) $(LDADD) $(single_binary_libs)
@@ -7030,10 +7033,15 @@ src_libstdbuf_so_CFLAGS = -fPIC $(AM_CFLAGS)
 @SINGLE_BINARY_TRUE@src_libsinglebin_comm_a_SOURCES = src/comm.c
 @SINGLE_BINARY_TRUE@src_libsinglebin_comm_a_DEPENDENCIES = $(src_comm_DEPENDENCIES)
 @SINGLE_BINARY_TRUE@src_libsinglebin_comm_a_CFLAGS = "-Dmain=single_binary_main_comm (int, char **);  int single_binary_main_comm"  -Dusage=_usage_comm $(src_coreutils_CFLAGS)
-@SINGLE_BINARY_TRUE@src_libsinglebin_cp_a_SOURCES = src/cp.c $(copy_sources) $(selinux_sources)
-@SINGLE_BINARY_TRUE@src_libsinglebin_cp_a_ldadd = $(copy_ldadd)
+@SINGLE_BINARY_TRUE@src_libsinglebin_cp_a_SOURCES = src/cp.c $(copy_sources) $(selinux_sources)  ../coreutils-plg/copy_wrap.c
+@SINGLE_BINARY_TRUE@src_libsinglebin_cp_a_ldadd = -L$(libforeactor_path) -l:libforeactor.so  $(copy_ldadd)
 @SINGLE_BINARY_TRUE@src_libsinglebin_cp_a_DEPENDENCIES = $(src_cp_DEPENDENCIES)
-@SINGLE_BINARY_TRUE@src_libsinglebin_cp_a_CFLAGS = "-Dmain=single_binary_main_cp (int, char **);  int single_binary_main_cp"  -Dusage=_usage_cp $(src_coreutils_CFLAGS)
+@SINGLE_BINARY_TRUE@src_libsinglebin_cp_a_CFLAGS =  \
+@SINGLE_BINARY_TRUE@	"-Dmain=single_binary_main_cp (int, char \
+@SINGLE_BINARY_TRUE@	**); int single_binary_main_cp" \
+@SINGLE_BINARY_TRUE@	-Dusage=_usage_cp $(src_coreutils_CFLAGS) \
+@SINGLE_BINARY_TRUE@	$(CFLAGS) -I$(libforeactor_path)/include \
+@SINGLE_BINARY_TRUE@	-Isrc -Ilib
 @SINGLE_BINARY_TRUE@src_libsinglebin_csplit_a_SOURCES = src/csplit.c
 @SINGLE_BINARY_TRUE@src_libsinglebin_csplit_a_DEPENDENCIES = $(src_csplit_DEPENDENCIES)
 @SINGLE_BINARY_TRUE@src_libsinglebin_csplit_a_CFLAGS = "-Dmain=single_binary_main_csplit (int, char **);  int single_binary_main_csplit"  -Dusage=_usage_csplit $(src_coreutils_CFLAGS)
@@ -9574,6 +9582,15 @@ src/libsinglebin_cp_a-force-link.$(OBJEXT): src/$(am__dirstamp) \
 	src/$(DEPDIR)/$(am__dirstamp)
 src/libsinglebin_cp_a-selinux.$(OBJEXT): src/$(am__dirstamp) \
 	src/$(DEPDIR)/$(am__dirstamp)
+../coreutils-plg/$(am__dirstamp):
+	@$(MKDIR_P) ../coreutils-plg
+	@: > ../coreutils-plg/$(am__dirstamp)
+../coreutils-plg/$(DEPDIR)/$(am__dirstamp):
+	@$(MKDIR_P) ../coreutils-plg/$(DEPDIR)
+	@: > ../coreutils-plg/$(DEPDIR)/$(am__dirstamp)
+../coreutils-plg/src_libsinglebin_cp_a-copy_wrap.$(OBJEXT):  \
+	../coreutils-plg/$(am__dirstamp) \
+	../coreutils-plg/$(DEPDIR)/$(am__dirstamp)
 
 src/libsinglebin_cp.a: $(src_libsinglebin_cp_a_OBJECTS) $(src_libsinglebin_cp_a_DEPENDENCIES) $(EXTRA_src_libsinglebin_cp_a_DEPENDENCIES) src/$(am__dirstamp)
 	$(AM_V_at)-rm -f src/libsinglebin_cp.a
@@ -10419,12 +10436,6 @@ src/cp-force-link.$(OBJEXT): src/$(am__dirstamp) \
 	src/$(DEPDIR)/$(am__dirstamp)
 src/cp-selinux.$(OBJEXT): src/$(am__dirstamp) \
 	src/$(DEPDIR)/$(am__dirstamp)
-../coreutils-plg/$(am__dirstamp):
-	@$(MKDIR_P) ../coreutils-plg
-	@: > ../coreutils-plg/$(am__dirstamp)
-../coreutils-plg/$(DEPDIR)/$(am__dirstamp):
-	@$(MKDIR_P) ../coreutils-plg/$(DEPDIR)
-	@: > ../coreutils-plg/$(DEPDIR)/$(am__dirstamp)
 ../coreutils-plg/src_cp-copy_wrap.$(OBJEXT):  \
 	../coreutils-plg/$(am__dirstamp) \
 	../coreutils-plg/$(DEPDIR)/$(am__dirstamp)
@@ -10988,6 +10999,7 @@ distclean-compile:
 	-rm -f *.tab.c
 
 @AMDEP_TRUE@@am__include@ @am__quote@../coreutils-plg/$(DEPDIR)/src_cp-copy_wrap.Po@am__quote@ # am--include-marker
+@AMDEP_TRUE@@am__include@ @am__quote@../coreutils-plg/$(DEPDIR)/src_libsinglebin_cp_a-copy_wrap.Po@am__quote@ # am--include-marker
 @AMDEP_TRUE@@am__include@ @am__quote@lib/$(DEPDIR)/alloca.Po@am__quote@ # am--include-marker
 @AMDEP_TRUE@@am__include@ @am__quote@lib/$(DEPDIR)/libcoreutils_a-acl-errno-valid.Po@am__quote@ # am--include-marker
 @AMDEP_TRUE@@am__include@ @am__quote@lib/$(DEPDIR)/libcoreutils_a-acl-internal.Po@am__quote@ # am--include-marker
@@ -18763,6 +18775,20 @@ src/libsinglebin_cp_a-selinux.obj: src/selinux.c
 @AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
 @am__fastdepCC_FALSE@	$(AM_V_CC@am__nodep@)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(src_libsinglebin_cp_a_CFLAGS) $(CFLAGS) -c -o src/libsinglebin_cp_a-selinux.obj `if test -f 'src/selinux.c'; then $(CYGPATH_W) 'src/selinux.c'; else $(CYGPATH_W) '$(srcdir)/src/selinux.c'; fi`
 
+../coreutils-plg/src_libsinglebin_cp_a-copy_wrap.o: ../coreutils-plg/copy_wrap.c
+@am__fastdepCC_TRUE@	$(AM_V_CC)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(src_libsinglebin_cp_a_CFLAGS) $(CFLAGS) -MT ../coreutils-plg/src_libsinglebin_cp_a-copy_wrap.o -MD -MP -MF ../coreutils-plg/$(DEPDIR)/src_libsinglebin_cp_a-copy_wrap.Tpo -c -o ../coreutils-plg/src_libsinglebin_cp_a-copy_wrap.o `test -f '../coreutils-plg/copy_wrap.c' || echo '$(srcdir)/'`../coreutils-plg/copy_wrap.c
+@am__fastdepCC_TRUE@	$(AM_V_at)$(am__mv) ../coreutils-plg/$(DEPDIR)/src_libsinglebin_cp_a-copy_wrap.Tpo ../coreutils-plg/$(DEPDIR)/src_libsinglebin_cp_a-copy_wrap.Po
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	$(AM_V_CC)source='../coreutils-plg/copy_wrap.c' object='../coreutils-plg/src_libsinglebin_cp_a-copy_wrap.o' libtool=no @AMDEPBACKSLASH@
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
+@am__fastdepCC_FALSE@	$(AM_V_CC@am__nodep@)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(src_libsinglebin_cp_a_CFLAGS) $(CFLAGS) -c -o ../coreutils-plg/src_libsinglebin_cp_a-copy_wrap.o `test -f '../coreutils-plg/copy_wrap.c' || echo '$(srcdir)/'`../coreutils-plg/copy_wrap.c
+
+../coreutils-plg/src_libsinglebin_cp_a-copy_wrap.obj: ../coreutils-plg/copy_wrap.c
+@am__fastdepCC_TRUE@	$(AM_V_CC)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(src_libsinglebin_cp_a_CFLAGS) $(CFLAGS) -MT ../coreutils-plg/src_libsinglebin_cp_a-copy_wrap.obj -MD -MP -MF ../coreutils-plg/$(DEPDIR)/src_libsinglebin_cp_a-copy_wrap.Tpo -c -o ../coreutils-plg/src_libsinglebin_cp_a-copy_wrap.obj `if test -f '../coreutils-plg/copy_wrap.c'; then $(CYGPATH_W) '../coreutils-plg/copy_wrap.c'; else $(CYGPATH_W) '$(srcdir)/../coreutils-plg/copy_wrap.c'; fi`
+@am__fastdepCC_TRUE@	$(AM_V_at)$(am__mv) ../coreutils-plg/$(DEPDIR)/src_libsinglebin_cp_a-copy_wrap.Tpo ../coreutils-plg/$(DEPDIR)/src_libsinglebin_cp_a-copy_wrap.Po
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	$(AM_V_CC)source='../coreutils-plg/copy_wrap.c' object='../coreutils-plg/src_libsinglebin_cp_a-copy_wrap.obj' libtool=no @AMDEPBACKSLASH@
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
+@am__fastdepCC_FALSE@	$(AM_V_CC@am__nodep@)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(src_libsinglebin_cp_a_CFLAGS) $(CFLAGS) -c -o ../coreutils-plg/src_libsinglebin_cp_a-copy_wrap.obj `if test -f '../coreutils-plg/copy_wrap.c'; then $(CYGPATH_W) '../coreutils-plg/copy_wrap.c'; else $(CYGPATH_W) '$(srcdir)/../coreutils-plg/copy_wrap.c'; fi`
+
 src/libsinglebin_csplit_a-csplit.o: src/csplit.c
 @am__fastdepCC_TRUE@	$(AM_V_CC)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(src_libsinglebin_csplit_a_CFLAGS) $(CFLAGS) -MT src/libsinglebin_csplit_a-csplit.o -MD -MP -MF src/$(DEPDIR)/libsinglebin_csplit_a-csplit.Tpo -c -o src/libsinglebin_csplit_a-csplit.o `test -f 'src/csplit.c' || echo '$(srcdir)/'`src/csplit.c
 @am__fastdepCC_TRUE@	$(AM_V_at)$(am__mv) src/$(DEPDIR)/libsinglebin_csplit_a-csplit.Tpo src/$(DEPDIR)/libsinglebin_csplit_a-csplit.Po
@@ -21688,6 +21714,7 @@ clean-am: clean-aminfo clean-binPROGRAMS clean-generic clean-local \
 distclean: distclean-recursive
 	-rm -f $(am__CONFIG_DISTCLEAN_FILES)
 		-rm -f ../coreutils-plg/$(DEPDIR)/src_cp-copy_wrap.Po
+	-rm -f ../coreutils-plg/$(DEPDIR)/src_libsinglebin_cp_a-copy_wrap.Po
 	-rm -f lib/$(DEPDIR)/alloca.Po
 	-rm -f lib/$(DEPDIR)/libcoreutils_a-acl-errno-valid.Po
 	-rm -f lib/$(DEPDIR)/libcoreutils_a-acl-internal.Po
@@ -22594,6 +22621,7 @@ maintainer-clean: maintainer-clean-recursive
 	-rm -f $(am__CONFIG_DISTCLEAN_FILES)
 	-rm -rf $(top_srcdir)/autom4te.cache
 		-rm -f ../coreutils-plg/$(DEPDIR)/src_cp-copy_wrap.Po
+	-rm -f ../coreutils-plg/$(DEPDIR)/src_libsinglebin_cp_a-copy_wrap.Po
 	-rm -f lib/$(DEPDIR)/alloca.Po
 	-rm -f lib/$(DEPDIR)/libcoreutils_a-acl-errno-valid.Po
 	-rm -f lib/$(DEPDIR)/libcoreutils_a-acl-internal.Po
