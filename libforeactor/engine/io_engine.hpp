@@ -33,6 +33,9 @@ class IOEngine {
         IOEngine() {}
         ~IOEngine() {}
 
+        // Check if the last request in prepared list has LINK flag set.
+        bool DanglingLink() const;
+
         // Insert one request into the prepared set; requests in this set
         // are in PREPARED stage, but the io_uring_prep_xxx() is not done
         // yet to avoid polluting the SQ if it eventually isn't submitted.

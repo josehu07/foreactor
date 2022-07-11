@@ -13,8 +13,8 @@
 #include "thread_pool.hpp"
 
 
-void exper_simple(void *args_) {
-    ExperSimpleArgs *args = reinterpret_cast<ExperSimpleArgs *>(args_);
+void exper_simple1(void *args_) {
+    ExperSimple1Args *args = reinterpret_cast<ExperSimple1Args *>(args_);
     [[maybe_unused]] ssize_t ret;
     
     int fd = open(args->filename.c_str(), O_CREAT | O_RDWR, S_IRUSR | S_IWUSR);
@@ -319,5 +319,22 @@ void exper_ldb_get(void *args_) {
             memcpy(args->result, buf, args->value_size);
             break;
         }
+    }
+}
+
+
+void exper_linking(void *args_) {
+    ExperLinkingArgs *args = reinterpret_cast<ExperLinkingArgs *>(args_);
+
+    for (unsigned i = 0; i < args->num_blocks; ++i) {
+        char *buf = args->buf;
+        size_t count = args->block_size;
+        off_t offset = i * args->block_size;
+        
+        [[maybe_unused]] ssize_t ret = pread(args->fd_in, buf, count, offset);
+        assert(ret == static_cast<ssize_t>(count));
+        
+        ret = pwrite(args->fd_out, buf, count, offset);
+        assert(ret == static_cast<ssize_t>(count));
     }
 }

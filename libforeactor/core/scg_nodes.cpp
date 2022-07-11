@@ -92,7 +92,7 @@ SyscallNode::SyscallNode(unsigned node_id, std::string name,
         : SCGraphNode(node_id, name, pure_sc ? NODE_SC_PURE : NODE_SC_SEFF,
                       scgraph, assoc_dims),
           sc_type(sc_type), next_node(nullptr), edge_type(EDGE_BASE),
-          stage(assoc_dims), rc(assoc_dims) {
+          stage(assoc_dims), rc(assoc_dims), link(assoc_dims) {
     assert(node_type == NODE_SC_PURE || node_type == NODE_SC_SEFF);
 }
 
@@ -100,7 +100,7 @@ SyscallNode::SyscallNode(unsigned node_id, std::string name,
 void SyscallNode::PrintCommonInfo(std::ostream& s) const {
     s << node_id << ",name='" << name << "'"
       << ",next=" << next_node << ",edge=" << edge_type
-      << ",stage=" << stage << ",rc=" << rc;
+      << ",stage=" << stage << ",rc=" << rc << ",link=" << link;
 }
 
 std::ostream& operator<<(std::ostream& s, const SyscallNode& n) {
@@ -165,11 +165,14 @@ void SyscallNode::CmplAsync(const EpochList& epoch) {
 void SyscallNode::RemoveOneFromCommonPools(const EpochList& epoch) {
     stage.Remove(epoch);
     rc.Remove(epoch);
+    if (link.Has(epoch))
+        link.Remove(epoch);
 }
 
 void SyscallNode::ResetCommonPools() {
     stage.Reset();
     rc.Reset();
+    link.Reset();
 }
 
 
@@ -353,9 +356,11 @@ peek_continue:
 
     // see some number of syscall nodes prepared, may do SubmitAll()
     // if we have a sufficient number of prepared entries or if the
-    // earliest prepared entry is close enough to current frontier
-    if (scgraph->num_prepared > 0) {
-        // TODO: these conditions might be tunable
+    // earliest prepared entry is close enough to current frontier;
+    // submitting a list of requests with the last one having the LINK
+    // flag set could be problematic, so we prohibit that
+    if (scgraph->num_prepared > 0 && !scgraph->engine->DanglingLink()) {
+        // TODO: these conditions should be tunable
         if ((scgraph->num_prepared >= scgraph->pre_issue_depth / 2) ||
             (scgraph->prepared_distance <= 0)) {
             // move all prepared requests to in_progress stage, actually

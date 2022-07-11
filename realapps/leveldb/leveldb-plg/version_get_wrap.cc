@@ -185,7 +185,7 @@ decide_open:
     return true;
 }
 
-static bool open_arggen(const int *epoch, const char **pathname, int *flags, mode_t *mode) {
+static bool open_arggen(const int *epoch, bool *link, const char **pathname, int *flags, mode_t *mode) {
     assert(epoch[0] < curr_tables.size());
     std::string filename = TableFileName(curr_version->vset_->dbname_, curr_tables[epoch[0]]->number);
     *pathname = filename.c_str();
@@ -205,7 +205,8 @@ static void open_rcsave(const int *epoch, int fd) {
     assert(ret == 0);
 }
 
-static bool pread_footer_arggen(const int *epoch, int *fd, char **buf, size_t *count, off_t *offset, bool *buf_ready) {
+static bool pread_footer_arggen(const int *epoch, bool *link, int *fd, char **buf, size_t *count, off_t *offset,
+                                bool *buf_ready, bool *skip_memcpy) {
     return false;   // depends on preceding open anyway
 }
 
@@ -213,7 +214,8 @@ static void pread_footer_rcsave(const int *epoch, ssize_t res) {
     return;
 }
 
-static bool pread_index_arggen(const int *epoch, int *fd, char **buf, size_t *count, off_t *offset, bool *buf_ready) {
+static bool pread_index_arggen(const int *epoch, bool *link, int *fd, char **buf, size_t *count, off_t *offset,
+                               bool *buf_ready, bool *skip_memcpy) {
     return false;   // depends on preceding footer pread anyway
 }
 
@@ -221,7 +223,8 @@ static void pread_index_rcsave(const int *epoch, ssize_t res) {
     return;
 }
 
-static bool pread_data_arggen(const int *epoch, int *fd, char **buf, size_t *count, off_t *offset, bool *buf_ready) {
+static bool pread_data_arggen(const int *epoch, bool *link, int *fd, char **buf, size_t *count, off_t *offset,
+                              bool *buf_ready, bool *skip_memcpy) {
     assert(epoch[0] < curr_tables.size());
     if (!curr_open_states[epoch[0]])
         return false;   // depends on preceding index pread anyway

@@ -6,11 +6,18 @@ import argparse
 
 
 YCSBCLI_BIN = "./ycsbcli"
+
 URING_QUEUE = 32
 CGROUP_NAME = "leveldb_group"
 
 CACHED_ITERS = 3
 DROP_CACHES_ITERS = 1
+
+
+def check_file_exists(path):
+    if not os.path.isfile(path):
+        print(f"Error: {path} does not exist")
+        exit(1)
 
 
 def set_cgroup_mem_limit(mem_limit):
@@ -143,11 +150,6 @@ def run_exprs(libforeactor, dbdir, trace, mem_limit, drop_caches,
             fout.write(result + '\n')
             print(result)
 
-
-def check_file_exists(path):
-    if not os.path.isfile(path):
-        print(f"Error: {path} does not exist")
-        exit(1)
 
 def main():
     parser = argparse.ArgumentParser(description="LevelDB benchmark driver")

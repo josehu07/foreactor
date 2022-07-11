@@ -16,7 +16,7 @@ static bool curr_pwrite_done = false;
 static bool curr_pread0_done = false;
 static bool curr_pread1_done = false;
 
-static bool open_arggen(const int *epoch, const char **pathname, int *flags, mode_t *mode) {
+static bool open_arggen(const int *epoch, bool *link, const char **pathname, int *flags, mode_t *mode) {
     *pathname = curr_args->filename;
     *flags = O_CREAT | O_RDWR;
     *mode = S_IRUSR | S_IWUSR;
@@ -27,7 +27,7 @@ static void open_rcsave(const int *epoch, int fd) {
     curr_fd = fd;
 }
 
-static bool pwrite_arggen(const int *epoch, int *fd, const char **buf, size_t *count, off_t *offset) {
+static bool pwrite_arggen(const int *epoch, bool *link, int *fd, const char **buf, size_t *count, off_t *offset) {
     if (curr_fd < 0)
         return false;
     *fd = curr_fd;
@@ -41,7 +41,8 @@ static void pwrite_rcsave(const int *epoch, ssize_t res) {
     curr_pwrite_done = true;
 }
 
-static bool pread0_arggen(const int *epoch, int *fd, char **buf, size_t *count, off_t *offset, bool *buf_ready) {
+static bool pread0_arggen(const int *epoch, bool *link, int *fd, char **buf, size_t *count, off_t *offset,
+                          bool *buf_ready, bool *skip_memcpy) {
     if (!curr_pwrite_done)
         return false;
     *fd = curr_fd;
@@ -56,7 +57,8 @@ static void pread0_rcsave(const int *epoch, ssize_t res) {
     curr_pread0_done = true;
 }
 
-static bool pread1_arggen(const int *epoch, int *fd, char **buf, size_t *count, off_t *offset, bool *buf_ready) {
+static bool pread1_arggen(const int *epoch, bool *link, int *fd, char **buf, size_t *count, off_t *offset,
+                          bool *buf_ready, bool *skip_memcpy) {
     if (!curr_pwrite_done)
         return false;
     *fd = curr_fd;
@@ -71,7 +73,7 @@ static void pread1_rcsave(const int *epoch, ssize_t res) {
     curr_pread1_done = true;
 }
 
-static bool close_arggen(const int *epoch, int *fd) {
+static bool close_arggen(const int *epoch, bool *link, int *fd) {
     if (!curr_pread0_done || !curr_pread1_done)
         return false;
     *fd = curr_fd;

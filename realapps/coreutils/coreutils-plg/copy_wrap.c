@@ -33,7 +33,8 @@ static ssize_t curr_src_file_size = -1;
 static int curr_dst_fd = -1;
 static bool curr_dst_fstat_done = false;
 
-static bool fstatat_src_arggen(const int *epoch, int *dirfd, const char **pathname, struct stat **buf, int *flags, bool *buf_ready) {
+static bool fstatat_src_arggen(const int *epoch, bool *link, int *dirfd, const char **pathname, struct stat **buf, int *flags,
+                               bool *buf_ready) {
     return false;
 }
 
@@ -51,7 +52,8 @@ static bool branch_fstatat_dst_arggen(const int *epoch, int *decision) {
     return true;
 }
 
-static bool fstatat_dst_arggen(const int *epoch, int *dirfd, const char **pathname, struct stat **buf, int *flags, bool *buf_ready) {
+static bool fstatat_dst_arggen(const int *epoch, bool *link, int *dirfd, const char **pathname, struct stat **buf, int *flags,
+                               bool *buf_ready) {
     return false;
 }
 
@@ -69,7 +71,8 @@ static bool branch_fstatat_dst_extra_arggen(const int *epoch, int *decision) {
     return true;
 }
 
-static bool fstatat_dst_extra_arggen(const int *epoch, int *dirfd, const char **pathname, struct stat **buf, int *flags, bool *buf_ready) {
+static bool fstatat_dst_extra_arggen(const int *epoch, bool *link, int *dirfd, const char **pathname, struct stat **buf, int *flags,
+                                     bool *buf_ready) {
     return false;
 }
 
@@ -77,7 +80,7 @@ static void fstatat_dst_extra_rcsave(const int *epoch, int res) {
     curr_fstatat_dst_extra_res = res;
 }
 
-static bool open_src_arggen(const int *epoch, const char **pathname, int *flags, mode_t *mode) {
+static bool open_src_arggen(const int *epoch, bool *link, const char **pathname, int *flags, mode_t *mode) {
     return false;
 }
 
@@ -85,7 +88,8 @@ static void open_src_rcsave(const int *epoch, int fd) {
     curr_src_fd = fd;
 }
 
-static bool fstat_src_arggen(const int *epoch, int *fd, struct stat **buf, bool *buf_ready) {
+static bool fstat_src_arggen(const int *epoch, bool *link, int *fd, struct stat **buf,
+                             bool *buf_ready) {
     return false;
 }
 
@@ -94,7 +98,7 @@ static void fstat_src_rcsave(const int *epoch, int res) {
     curr_src_file_size = foreactor_FstatGetResultBuf(graph_id, 6, epoch)->st_size;
 }
 
-static bool openat_dst_arggen(const int *epoch, int *dirfd, const char **pathname, int *flags, mode_t *mode) {
+static bool openat_dst_arggen(const int *epoch, bool *link, int *dirfd, const char **pathname, int *flags, mode_t *mode) {
     return false;
 }
 
@@ -102,7 +106,7 @@ static void openat_dst_rcsave(const int *epoch, int fd) {
     curr_dst_fd = fd;
 }
 
-static bool fstat_dst_arggen(const int *epoch, int *fd, struct stat **buf, bool *buf_ready) {
+static bool fstat_dst_arggen(const int *epoch, bool *link, int *fd, struct stat **buf, bool *buf_ready) {
     return false;
 }
 
@@ -110,19 +114,24 @@ static void fstat_dst_rcsave(const int *epoch, int res) {
     curr_dst_fstat_done = true;
 }
 
-static bool read_src_arggen(const int *epoch, int *fd, char **buf, size_t *count, off_t *offset, bool *buf_ready) {
+static bool read_src_arggen(const int *epoch, bool *link, int *fd, char **buf, size_t *count, off_t *offset,
+                            bool *buf_ready, bool *skip_memcpy) {
     if (!curr_dst_fstat_done)
         return false;
+    off_t aligned_offset = ((off_t) IO_BUFSIZE) * epoch[0];
+    if (aligned_offset >= curr_src_file_size)
+        return false;   // don't pre-issue the last read since it will have LINK flag set and thus never get submitted
+    *link = true;
     *fd = curr_src_fd;
     *buf = NULL;
     // Note that this is a slightly different logic than the original app
     // copy loop. cp used a while loop and stops until a read returns 0 size,
     // while this plugin fetches the file size from fstat_src and explicitly
     // controls each pread.
-    off_t aligned_offset = ((off_t) IO_BUFSIZE) * epoch[0];
     *count = IO_BUFSIZE;
-    *offset = (aligned_offset < curr_src_file_size) ? aligned_offset : curr_src_file_size;
+    *offset = aligned_offset;
     *buf_ready = false;
+    *skip_memcpy = true;
     return true;
 }
 
@@ -141,12 +150,21 @@ static bool branch_stop_loop_arggen(const int *epoch, int *decision) {
     return true;
 }
 
-static bool write_dst_arggen(const int *epoch, int *fd, const char **buf, size_t *count, off_t *offset) {
-    return false;   // just do not parallelize writes
+static bool write_dst_arggen(const int *epoch, bool *link, int *fd, const char **buf, size_t *count, off_t *offset) {
+    char *ib = foreactor_PreadRefInternalBuf(graph_id, 9, epoch);
+    if (ib == NULL)
+        return false;
+    *fd = curr_dst_fd;
+    *buf = ib;
+    off_t aligned_offset = ((off_t) IO_BUFSIZE) * epoch[0];
+    *count = IO_BUFSIZE;
+    *offset = aligned_offset;
+    return true;
 }
 
 static void write_dst_rcsave(const int *epoch, ssize_t res) {
     assert(res > 0);
+    foreactor_PreadPutInternalBuf(graph_id, 9, epoch);
 }
 
 static bool branch_all_written_arggen(const int *epoch, int *decision) {
@@ -154,15 +172,16 @@ static bool branch_all_written_arggen(const int *epoch, int *decision) {
     return true;
 }
 
-static bool close_dst_arggen(const int *epoch, int *fd) {
+static bool close_dst_arggen(const int *epoch, bool *link, int *fd) {
     return false;
 }
 
-static bool close_src_arggen(const int *epoch, int *fd) {
+static bool close_src_arggen(const int *epoch, bool *link, int *fd) {
     return false;
 }
 
-static bool fstatat_dst_end_arggen(const int *epoch, int *dirfd, const char **pathname, struct stat **buf, int *flags, bool *buf_ready) {
+static bool fstatat_dst_end_arggen(const int *epoch, bool *link, int *dirfd, const char **pathname, struct stat **buf, int *flags,
+                                   bool *buf_ready) {
     return false;
 }
 

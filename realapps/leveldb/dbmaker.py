@@ -13,6 +13,12 @@ SAMEKEY_NUMOPS_PER_RUN = 100
 YCSBRUN_NUMOPS_SCALE = 1
 
 
+def check_file_exists(path):
+    if not os.path.isfile(path):
+        print(f"Error: {path} does not exist")
+        exit(1)
+
+
 def run_ycsbcli(dbdir, trace, value_size, memtable_limit, filesize_limit,
                 bg_compact_off):
     cmd = [YCSBCLI_BIN, "-d", dbdir, "-v", str(value_size), "-f", trace,
@@ -257,11 +263,6 @@ def generate_workloads(stats, dbdir, ycsb_bin, ycsb_workload, num_records,
     run_trace = f"{output_prefix}-{num_l0_tables}-ycsbrun.txt"
     convert_trace(ycsb_output, run_trace)
 
-
-def check_file_exists(path):
-    if not os.path.isfile(path):
-        print(f"Error: {path} does not exist")
-        exit(1)
 
 def main():
     parser = argparse.ArgumentParser(description="LevelDB database image setup")

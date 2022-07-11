@@ -111,6 +111,7 @@ class SyscallNode : public SCGraphNode {
         // Fields that progress across loops.
         ValuePool<SyscallStage> stage;
         ValuePool<long> rc;
+        ValuePool<bool> link;
 
         SyscallNode() = delete;
         SyscallNode(unsigned node_id, std::string name, SyscallType sc_type,

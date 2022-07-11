@@ -6,7 +6,19 @@ import subprocess
 
 
 def gen_env(libforeactor, use_foreactor, backend):
-    DEPTHS = [8, 2, 8, 32, 2, 16, 128, 128, 16, 16]
+    DEPTHS = [
+        8,      # simple1
+        2,      # simple2
+        8,      # branching
+        32,     # looping
+        2,      # weak_edge
+        16,     # crossing
+        128,    # read_seq
+        128,    # write_seq
+        16,     # streaming
+        16,     # ldb_get
+        16,     # linking
+    ]
     QUEUE = 256
     UTHREADS = 8
 
@@ -42,10 +54,12 @@ def run_cmd(cmd, env):
     return result.stdout.decode('utf-8')
 
 
-def default_configs():
-    return [{'use_foreactor': True, 'backend': 'io_uring_default',   'extra_args': []},
-            {'use_foreactor': True, 'backend': 'io_uring_sqe_async', 'extra_args': []},
-            {'use_foreactor': True, 'backend': 'thread_pool',        'extra_args': []}]
+def default_configs(exper_name):
+    configs = [{'use_foreactor': True, 'backend': 'io_uring_default',   'extra_args': []},
+               {'use_foreactor': True, 'backend': 'io_uring_sqe_async', 'extra_args': []}]
+    if exper_name != "linking":
+        configs.append({'use_foreactor': True, 'backend': 'thread_pool', 'extra_args': []})
+    return configs
 
 def args_str(original, args, config=None):
     if original:
@@ -70,7 +84,7 @@ def run_dump(name, dbdir, libforeactor, req_size, args=[], extra_configs=[]):
     env = gen_env(libforeactor, False, None)
     output_original = run_cmd(cmd, env)
     
-    configs = default_configs()
+    configs = default_configs(name)
     configs += extra_configs
     for config in configs:
         print(f" dumping {name}-config{args_str(False, args, config)}...", end='')
@@ -102,7 +116,7 @@ def run_stat(name, dbdir, libforeactor, timing_iters, req_size, args=[], extra_c
     if len(output_original) > 0:
         print(output_original)
 
-    configs = default_configs()
+    configs = default_configs(name)
     configs += extra_configs
     for config in configs:
         print(f" running {name}-config{args_str(False, args, config)}...")
@@ -116,7 +130,7 @@ def run_stat(name, dbdir, libforeactor, timing_iters, req_size, args=[], extra_c
 def run_all(dbdir, libforeactor, timing_iters, req_size, skip_dump, skip_stat):
     if not skip_dump:
         print("Checking correctness ---")
-        run_dump("simple", dbdir, libforeactor, req_size)
+        run_dump("simple1", dbdir, libforeactor, req_size)
         run_dump("simple2", dbdir, libforeactor, req_size)
         run_dump("branching", dbdir, libforeactor, req_size)
         run_dump("looping", dbdir, libforeactor, req_size)
@@ -150,6 +164,7 @@ def run_all(dbdir, libforeactor, timing_iters, req_size, skip_dump, skip_stat):
                  args=['--open_barrier'])
         run_dump("ldb_get", dbdir, libforeactor, req_size,
                  args=['--open_barrier', '--key_match_at', '7'])
+        run_dump("linking", dbdir, libforeactor, req_size)
         print()
 
     if not skip_stat:
@@ -202,6 +217,9 @@ def run_all(dbdir, libforeactor, timing_iters, req_size, skip_dump, skip_stat):
                  args=['--o_direct', '--key_match_at', '7'])
         run_stat("ldb_get", dbdir, libforeactor, timing_iters, req_size,
                  args=['--o_direct', '--open_barrier', '--key_match_at', '7'])
+        run_stat("linking", dbdir, libforeactor, timing_iters, req_size)
+        run_stat("linking", dbdir, libforeactor, timing_iters, req_size,
+                 args=['--o_direct'])
 
 
 if __name__ == "__main__":

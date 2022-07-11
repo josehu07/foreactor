@@ -19,7 +19,7 @@ static bool branch_table_open_arggen(const int *epoch, int *decision) {
     return true;
 }
 
-static bool open_arggen(const int *epoch, const char **pathname, int *flags, mode_t *mode) {
+static bool open_arggen(const int *epoch, bool *link, const char **pathname, int *flags, mode_t *mode) {
     *pathname = curr_args->filenames[epoch[0]].c_str();
     *flags = curr_args->open_flags;
     *mode = S_IRUSR | S_IWUSR;
@@ -30,7 +30,8 @@ static void open_rcsave(const int *epoch, int fd) {
     curr_fds[epoch[0]] = fd;
 }
 
-static bool pread_index_arggen(const int *epoch, int *fd, char **buf, size_t *count, off_t *offset, bool *buf_ready) {
+static bool pread_index_arggen(const int *epoch, bool *link, int *fd, char **buf, size_t *count, off_t *offset,
+                               bool *buf_ready, bool *skip_memcpy) {
     if (curr_fds[epoch[0]] <= 0)
         return false;
     *fd = curr_fds[epoch[0]];
@@ -46,7 +47,8 @@ static void pread_index_rcsave(const int *epoch, ssize_t res) {
     curr_index_block_ready[epoch[0]] = true;
 }
 
-static bool pread_data_arggen(const int *epoch, int *fd, char **buf, size_t *count, off_t *offset, bool *buf_ready) {
+static bool pread_data_arggen(const int *epoch, bool *link, int *fd, char **buf, size_t *count, off_t *offset,
+                              bool *buf_ready, bool *skip_memcpy) {
     if (curr_fds[epoch[0]] <= 0 || !curr_index_block_ready[epoch[0]])
         return false;
     *fd = curr_fds[epoch[0]];

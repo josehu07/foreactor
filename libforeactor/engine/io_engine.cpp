@@ -30,4 +30,13 @@ std::tuple<SyscallNode *, int> IOEngine::DecodeEntryId(EntryId entry_id) {
 }
 
 
+bool IOEngine::DanglingLink() const {
+    if (prepared.size() == 0)
+        return false;
+
+    auto [node, epoch_sum] = DecodeEntryId(prepared.back());
+    return node->link.Has(epoch_sum) && node->link.Get(epoch_sum);
+}
+
+
 }
