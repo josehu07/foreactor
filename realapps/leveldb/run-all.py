@@ -10,11 +10,11 @@ DBMAKER_PY = "./dbmaker.py"
 BENCHER_PY = "./bencher.py"
 
 VALUE_SIZES = {
-    "256B": 256,
+    # "256B": 256,
     # "512B": 512,
-    "1K":   1024,
+    # "1K":   1024,
     # "2K":   2 * 1024,
-    "4K":   4 * 1024,
+    # "4K":   4 * 1024,
     # "8K":   8 * 1024,
     "16K":  16 * 1024,
     # "32K":  32 * 1024,
@@ -24,11 +24,34 @@ VALUE_SIZES = {
     # "512K": 512 * 1024,
     "1M":   1024 * 1024,
 }
-NUMS_L0_TABLES = [8, 12]
-# BACKENDS = ["io_uring_default", "io_uring_sqe_async", "thread_pool"]
-BACKENDS = ["io_uring_sqe_async", "io_uring_sqe_async"]
+# NUMS_L0_TABLES = [8, 12]
+NUMS_L0_TABLES = [12]
+
+BACKENDS = ["io_uring_default", "io_uring_sqe_async", "thread_pool"]
 PRE_ISSUE_DEPTH_LIST = [4, 8, 12, 15]
 MEM_PERCENTAGES = [100, 80, 60, 40, 20]
+
+
+def check_file_exists(path):
+    if not os.path.isfile(path):
+        print(f"Error: {path} does not exist")
+        exit(1)
+
+def check_dir_exists(dir_path):
+    if not os.path.isdir(dir_path):
+        print(f"Error: directory {dir_path} does not exist")
+        exit(1)
+
+def prepare_empty_dir(dir_path):
+    if os.path.isdir(dir_path):
+        for file in os.listdir(dir_path):
+            path = os.path.join(dir_path, file)
+            try:
+                shutil.rmtree(path)
+            except OSError:
+                os.remove(path)
+    else:
+        os.mkdir(dir_path)
 
 
 def run_makedb(dbdir_prefix, value_size, value_size_abbr, ycsb_bin, ycsb_workload,
@@ -130,22 +153,6 @@ def run_all_ycsbrun(libforeactor, dbdir_prefix, value_sizes, nums_l0_tables,
                     print(output.rstrip())
 
 
-def check_file_exists(path):
-    if not os.path.isfile(path):
-        print(f"Error: {path} does not exist")
-        exit(1)
-
-def prepare_empty_dir(dir_path):
-    if os.path.isdir(dir_path):
-        for file in os.listdir(dir_path):
-            path = os.path.join(dir_path, file)
-            try:
-                shutil.rmtree(path)
-            except OSError:
-                os.remove(path)
-    else:
-        os.mkdir(dir_path)
-
 def main():
     parser = argparse.ArgumentParser(description="Run all LevelDB experiments")
     parser.add_argument('-m', dest='mode', required=True,
@@ -163,6 +170,8 @@ def main():
     # change to the directory containing this script
     script_dir = os.path.dirname(os.path.realpath(__file__))
     os.chdir(script_dir)
+
+    check_dir_exists(args.dbdir_prefix)
 
     if args.mode == "dbmaker":
         check_file_exists(DBMAKER_PY)
