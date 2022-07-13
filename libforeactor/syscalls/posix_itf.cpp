@@ -4,6 +4,7 @@
 #include <dlfcn.h>
 #include <assert.h>
 #include <stdarg.h>
+#include <dirent.h>
 #include <sys/file.h>
 #include <sys/types.h>
 #include <sys/stat.h>
@@ -39,6 +40,8 @@ FIND_POSIX_FN(lseek);
 FIND_POSIX_FN(__fxstat);
 FIND_POSIX_FN(__fxstatat);
 FIND_POSIX_FN(statx);
+// FIND_POSIX_FN(opendir);
+// FIND_POSIX_FN(fdopendir);
 
 #undef FIND_POSIX_FN
 
@@ -271,6 +274,15 @@ int __fxstatat64([[maybe_unused]] int ver, int dirfd, const char *pathname,
     return __fxstatat(ver, dirfd, pathname,
                       reinterpret_cast<struct stat *>(buf), flags);
 }
+
+
+// DIR *opendir(const char *name) {
+    
+// }
+
+// DIR *fdopendir(int fd) {
+    
+// }
 
 
 }

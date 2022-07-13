@@ -19,6 +19,7 @@ namespace foreactor {
 // With this thread-wide SCGraph pointer, a hijacked syscall checks the
 // current frontier of the SCGraph on its thread to locate its node.
 extern thread_local SCGraph *active_scgraph;
+extern thread_local SCGraph *paused_scgraph;
 
 
 // Syscall graph class, consisting of a collection of well-defined nodes

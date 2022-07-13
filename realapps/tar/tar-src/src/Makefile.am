@@ -46,9 +46,23 @@ tar_SOURCES = \
  warning.c\
  xattrs.c
 
+# [foreactor] involve plugin in source files
+tar_SOURCES += dumpfilemy.c ../../tar-plg/dump_file_my_wrap.c
+
 AM_CPPFLAGS = -I$(top_srcdir)/gnu -I../ -I../gnu -I$(top_srcdir)/lib -I../lib
 AM_CFLAGS = $(WARN_CFLAGS) $(WERROR_CFLAGS)
 
 LDADD = ../lib/libtar.a ../gnu/libgnu.a $(LIBINTL) $(LIBICONV)
 
 tar_LDADD = $(LIBS) $(LDADD) $(LIB_CLOCK_GETTIME) $(LIB_EACCESS) $(LIB_SELINUX)
+
+# [foreactor] link with libforeactor.so
+libforeactor_path = $(shell realpath ../../../../libforeactor)
+tar_LDADD += -L$(libforeactor_path) -l:libforeactor.so
+
+# [foreactor] explicit search path and include paths
+tar_LDFLAGS = $(LDFLAGS) -Wl,-rpath=$(libforeactor_path)
+tar_CFLAGS = $(CFLAGS) -I$(libforeactor_path)/include -Isrc -Ilib
+
+# [foreactor] linker wrap option
+tar_LDFLAGS += -Wl,--wrap=dump_file_my

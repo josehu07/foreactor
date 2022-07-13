@@ -23,6 +23,7 @@ namespace foreactor {
 ////////////////////////////////////////////////
 
 thread_local SCGraph *active_scgraph = nullptr;
+thread_local SCGraph *paused_scgraph = nullptr;
 
 void SCGraph::RegisterSCGraph(SCGraph *scgraph) {
     assert(active_scgraph == nullptr);

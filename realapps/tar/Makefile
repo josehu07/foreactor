@@ -36,7 +36,7 @@ clean:
 		make distclean
 
 .PHONY: clean-skipconf
-clean-skipdist:
+clean-skipconf:
 	cd $(TAR_DIR) && \
 		make clean
 

@@ -60,7 +60,7 @@ sudo update-alternatives --install /usr/bin/gcov gcov /usr/bin/gcov-10 100
 ```bash
 git clone https://github.com/axboe/liburing.git
 cd liburing
-make
+make -j$(nproc)
 sudo make install
 cd ..
 ```
@@ -83,7 +83,7 @@ To enable foreactor for an application function, we need the following component
 
 ```bash
 cd libforeactor
-make
+make -j$(nproc)
 cd ..
 ```
 </details>
@@ -93,7 +93,7 @@ cd ..
 
 ```bash
 cd demoapps/demo-cpp
-make
+make -j$(nproc)
 mkdir /tmp/demo_dbdir
 
 # Run the `simple` function without foreactor:
@@ -182,7 +182,7 @@ Build:
 
 ```bash
 cd realapps/tar
-sudo apt install automake
+sudo apt install automake texinfo
 make reconf
 make
 ```

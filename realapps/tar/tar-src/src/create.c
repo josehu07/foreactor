@@ -27,6 +27,8 @@
 #include "common.h"
 #include <hash.h>
 
+#include <foreactor.h>
+
 /* Error number to use when an impostor is discovered.
    Pretend the impostor isn't there.  */
 enum { IMPOSTOR_ERRNO = ENOENT };
@@ -930,6 +932,9 @@ start_header (struct tar_stat_info *st)
     }
   else
     {
+      /* [foreactor] corner case path pause/resume */
+      foreactor_PauseCurrentSCGraph();
+
       if (uname)
 	st->uname = xstrdup (uname);
       else
@@ -939,6 +944,8 @@ start_header (struct tar_stat_info *st)
 	st->gname = xstrdup (gname);
       else
 	gid_to_gname (st->stat.st_gid, &st->gname);
+
+      foreactor_ResumeCurrentSCGraph();
 
       if (archive_format == POSIX_FORMAT
 	  && (strlen (st->uname) > UNAME_FIELD_SIZE
@@ -1419,7 +1426,7 @@ create_archive (void)
       const char *name;
       while ((name = name_next (1)) != NULL)
 	if (!excluded_name (name, NULL))
-	  dump_file (0, name, name);
+	  dump_file_my (0, name, name);  /* [foreactor] for interception */
     }
 
   write_eot ();
@@ -1581,6 +1588,9 @@ subfile_open (struct tar_stat_info const *dir, char const *file, int flags)
   static bool initialized;
   if (! initialized)
     {
+      /* [foreactor] corner case path pause/resume */
+      foreactor_PauseCurrentSCGraph();
+
       /* Initialize any tables that might be needed when file
 	 descriptors are exhausted, and whose initialization might
 	 require a file descriptor.  This includes the system message
@@ -1588,6 +1598,8 @@ subfile_open (struct tar_stat_info const *dir, char const *file, int flags)
       initialized = true;
       strerror (ENOENT);
       gettext ("");
+
+      foreactor_ResumeCurrentSCGraph();
     }
 
   while ((fd = openat (dir ? dir->fd : chdir_fd, file, flags)) < 0

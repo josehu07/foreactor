@@ -1,5 +1,6 @@
 #include <fcntl.h>
 #include <unistd.h>
+#include <dirent.h>
 #include <sys/types.h>
 #include <sys/stat.h>
 
@@ -27,6 +28,8 @@ DECL_POSIX_FN(lseek);
 DECL_POSIX_FN(__fxstat);
 DECL_POSIX_FN(__fxstatat);
 DECL_POSIX_FN(statx);
+// FIND_POSIX_FN(opendir);
+// FIND_POSIX_FN(fdopendir);
 
 #undef DECL_POSIX_FN
 

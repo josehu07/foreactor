@@ -42,8 +42,14 @@ extern void (*error_hook) (void);
    single argument of the form ((0, errno, _("FORMAT"), Args...)).  errno
    is zero when the error is not being detected by the system.  */
 
+/* [foreactor] turn off warning printing so that it does not mess up with
+               our SCGraph. */
+/*
 #define WARN(Args) \
   do { if (error_hook) error_hook (); error Args; } while (0)
+*/
+#define WARN(Args) \
+  do { if (error_hook) error_hook (); } while (0)
 #define ERROR(Args) \
   do						\
     {						\

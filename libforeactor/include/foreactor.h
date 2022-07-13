@@ -64,7 +64,7 @@ extern "C" {
 
 // Check env var to see if using foreactor. The first call by a plugin into
 // the library must be this function.
-bool foreactor_UsingForeactor();
+bool foreactor_UsingForeactor(void);
 
 
 // Create a new SCGraph representing a hijacked app function.
@@ -229,6 +229,11 @@ void foreactor_PreadPutInternalBuf(unsigned graph_id, unsigned node_id,
 // Called upon entering/leaving a hijacked app function.
 void foreactor_EnterSCGraph(unsigned graph_id);
 void foreactor_LeaveSCGraph(unsigned graph_id);
+
+
+// Used to silence corner case paths to get a cleaner SCGraph if needed.
+void foreactor_PauseCurrentSCGraph(void);
+void foreactor_ResumeCurrentSCGraph(void);
 
 
 // Visualization helper.

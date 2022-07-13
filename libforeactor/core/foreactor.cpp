@@ -49,6 +49,7 @@ void __attribute__((destructor)) foreactor_dtor() {
 
 // For each hijacked app function, there's one SCGraph instance per thread.
 thread_local std::unordered_map<unsigned, SCGraph> scgraphs;
+thread_local std::unordered_map<unsigned, int> scgraph_nest_cnts;
 
 // If on, one IOUring instance per SCGraph instance per thread.
 thread_local std::unordered_map<unsigned, IOUring> io_urings;
@@ -64,7 +65,7 @@ thread_local std::unordered_map<unsigned, ThreadPool> thread_pools;
 extern "C" {
 
 
-bool foreactor_UsingForeactor() {
+bool foreactor_UsingForeactor(void) {
     if (!EnvParsed)
         ParseEnvValues();
     return UseForeactor;
@@ -134,6 +135,9 @@ void foreactor_CreateSCGraph(unsigned graph_id, unsigned total_dims) {
                      std::forward_as_tuple(graph_id),
                      std::forward_as_tuple(graph_id, total_dims, engine,
                                            EnvPreIssueDepth(graph_id)));
+
+    // initialize nest_cnt to 0
+    scgraph_nest_cnts[graph_id] = 0;
 }
 
 void foreactor_SetSCGraphBuilt(unsigned graph_id) {
@@ -460,22 +464,51 @@ void foreactor_PreadPutInternalBuf(unsigned graph_id, unsigned node_id,
 
 void foreactor_EnterSCGraph(unsigned graph_id) {
     if (UseForeactor) {
-        // register this SCGraph as active
-        SCGraph *scgraph = GetSCGraphFromId(graph_id);
-        assert(scgraph->IsBuilt());
-        SCGraph::RegisterSCGraph(scgraph);
+        if (active_scgraph == nullptr) {
+            // this is the first time entering this wrapped function;
+            // future recursive invocations will stay in the same SCGraph
+            assert(scgraph_nest_cnts[graph_id] == 0);
+            // register this SCGraph as active
+            SCGraph *scgraph = GetSCGraphFromId(graph_id);
+            assert(scgraph->IsBuilt());
+            SCGraph::RegisterSCGraph(scgraph);
+        }
+        scgraph_nest_cnts[graph_id]++;
     }
 }
 
 void foreactor_LeaveSCGraph(unsigned graph_id) {
     if (UseForeactor) {
-        // clear everything prepared/on-the-fly, reset all epoch numbers to 0
-        SCGraph *scgraph = GetSCGraphFromId(graph_id);
-        assert(scgraph->IsBuilt());
-        scgraph->ClearAllReqs();
-        scgraph->ResetToStart();
-        // unregister this SCGraph
-        SCGraph::UnregisterSCGraph();
+        assert(scgraph_nest_cnts[graph_id] > 0);
+        scgraph_nest_cnts[graph_id]--;
+        if (scgraph_nest_cnts[graph_id] == 0) {
+            // clear everything prepared/on-the-fly, reset all epoch numbers to 0
+            SCGraph *scgraph = GetSCGraphFromId(graph_id);
+            assert(scgraph->IsBuilt());
+            scgraph->ClearAllReqs();
+            scgraph->ResetToStart();
+            // unregister this SCGraph
+            SCGraph::UnregisterSCGraph();
+        }
+    }
+}
+
+
+void foreactor_PauseCurrentSCGraph(void) {
+    if (UseForeactor) {
+        assert(active_scgraph != nullptr);
+        assert(paused_scgraph == nullptr);
+        paused_scgraph = active_scgraph;
+        active_scgraph = nullptr;
+    }
+}
+
+void foreactor_ResumeCurrentSCGraph(void) {
+    if (UseForeactor) {
+        assert(active_scgraph == nullptr);
+        assert(paused_scgraph != nullptr);
+        active_scgraph = paused_scgraph;
+        paused_scgraph = nullptr;
     }
 }
 

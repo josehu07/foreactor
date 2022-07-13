@@ -510,6 +510,11 @@ void create_archive (void);
 void pad_archive (off_t size_left);
 void dump_file (struct tar_stat_info *parent, char const *name,
 		char const *fullname);
+
+/* [foreactor] expose for the interception trick. */
+void dump_file_my (struct tar_stat_info *parent, char const *name,
+        char const *fullname);
+
 union block *start_header (struct tar_stat_info *st);
 void finish_header (struct tar_stat_info *st, union block *header,
 		    off_t block_ordinal);

@@ -35,8 +35,8 @@ clean:
 		make clean && \
 		make distclean
 
-.PHONY: clean-skipdist
-clean-skipdist:
+.PHONY: clean-skipconf
+clean-skipconf:
 	cd $(COREUTILS_DIR) && \
 		make clean
 
