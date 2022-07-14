@@ -96,7 +96,7 @@ cd demoapps/demo-cpp
 make -j$(nproc)
 mkdir /tmp/demo_dbdir
 
-# Run the `simple` function without foreactor:
+# Run the `simple2` function without foreactor:
 ./demo --exper simple2 --dbdir /tmp/demo_dbdir --dump_result
 
 # Run it with foreactor with io_uring backend sqe_async mode,
@@ -200,7 +200,7 @@ Run:
 It does not take too much effort to make a new plugin for an application function, as long as the syscall graph for that function is conceptually clear.
 
 <details>
-<summary>Make a new plugin for new appliation function...</summary>
+<summary>Make a new plugin for an application function...</summary>
 
 ```bash
 objdump -t path/to/original/app/file.o | grep funcname_keyword
