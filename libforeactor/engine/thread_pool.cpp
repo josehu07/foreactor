@@ -8,6 +8,7 @@
 #include <sched.h>
 #include <fcntl.h>
 #include <unistd.h>
+#include <dirent.h>
 #include <sys/types.h>
 #include <sys/stat.h>
 
@@ -64,6 +65,12 @@ void ThreadPool::HandleSQEntry(const SQEntry& sqe, CQEntry& cqe) {
                               reinterpret_cast<const char *>(sqe.stat_path),
                               sqe.stat_flags, STATX_BASIC_STATS,
                               reinterpret_cast<struct statx *>(sqe.buf));
+        break;
+    case SC_GETDENTS:
+        cqe.rc = posix::getdents(sqe.fd,
+                                 reinterpret_cast<struct linux_dirent64 *>(
+                                    sqe.buf),
+                                 sqe.dirp_count);
         break;
     default:
         DEBUG("unknown syscall type %u in SQEntry\n", sqe.sc_type);

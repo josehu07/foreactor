@@ -210,7 +210,7 @@ static void BuildSCGraph() {
     foreactor_AddSyscallFstatat(graph_id, 15, "fstatat_dst_end", NULL, 0, fstatat_dst_end_arggen, NULL, false);
 
     foreactor_SyscallSetNext(graph_id, 0, 1, /*weak_edge*/ true);
-    foreactor_BranchAppendChild(graph_id, 1, 2, -1);
+    foreactor_BranchAppendChild(graph_id, 1, 2, /*epoch_dim*/ -1);
     foreactor_BranchAppendChild(graph_id, 1, 5, -1);
     foreactor_SyscallSetNext(graph_id, 2, 3, false);
     foreactor_BranchAppendChild(graph_id, 3, 4, -1);

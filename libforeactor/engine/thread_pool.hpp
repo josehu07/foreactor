@@ -6,6 +6,7 @@
 #include <assert.h>
 #include <fcntl.h>
 #include <unistd.h>
+#include <dirent.h>
 #include <sys/types.h>
 #include <sys/stat.h>
 
@@ -34,6 +35,7 @@ struct ThreadPoolSQEntry {
         size_t rw_len;
         mode_t open_mode;
         uint64_t stat_path;
+        size_t dirp_count;
     };
     union {
         int rw_flags;

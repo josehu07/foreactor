@@ -40,8 +40,7 @@ FIND_POSIX_FN(lseek);
 FIND_POSIX_FN(__fxstat);
 FIND_POSIX_FN(__fxstatat);
 FIND_POSIX_FN(statx);
-// FIND_POSIX_FN(opendir);
-// FIND_POSIX_FN(fdopendir);
+FIND_POSIX_FN(getdents64);
 
 #undef FIND_POSIX_FN
 
@@ -276,13 +275,21 @@ int __fxstatat64([[maybe_unused]] int ver, int dirfd, const char *pathname,
 }
 
 
-// DIR *opendir(const char *name) {
-    
-// }
-
-// DIR *fdopendir(int fd) {
-    
-// }
+ssize_t getdents64(int fd, void *dirp, size_t count) {
+    if (active_scgraph == nullptr) {
+        DEBUG("posix::getdents(%d, %p, %lu)\n", fd, dirp, count);
+        return posix::getdents(fd, dirp, count);
+    } else {
+        DEBUG("foreactor::getdents(%d, %p, %lu)\n", fd, dirp, count);
+        auto [node, epoch] = active_scgraph->GetFrontier<SyscallGetdents>();
+        assert(node != nullptr);
+        assert(node->sc_type == SC_GETDENTS);
+        node->CheckArgs(*epoch, fd, dirp, count);
+        DEBUG("getdents<%p>->Issue(%s)\n",
+              node, StreamStr(*epoch).c_str());
+        return static_cast<ssize_t>(node->Issue(*epoch));
+    }
+}
 
 
 }

@@ -5,6 +5,7 @@
 #include <functional>
 #include <fcntl.h>
 #include <unistd.h>
+#include <dirent.h>
 #include <sys/types.h>
 #include <sys/stat.h>
 #include <assert.h>
@@ -24,14 +25,15 @@ namespace foreactor {
 // Note that these are not strictly syscalls but rather POSIX glibc functions.
 typedef enum SyscallType : unsigned {
     SC_BASE,
-    SC_OPEN,    // open
-    SC_OPENAT,  // openat
-    SC_CLOSE,   // close
-    SC_PREAD,   // pread
-    SC_PWRITE,  // pwrite
-    SC_LSEEK,   // lseek
-    SC_FSTAT,   // fstat
-    SC_FSTATAT, // fstatat
+    SC_OPEN,        // open
+    SC_OPENAT,      // openat
+    SC_CLOSE,       // close
+    SC_PREAD,       // pread
+    SC_PWRITE,      // pwrite
+    SC_LSEEK,       // lseek
+    SC_FSTAT,       // fstat
+    SC_FSTATAT,     // fstatat
+    SC_GETDENTS     // getdents64
 } SyscallType;
 
 
@@ -428,6 +430,56 @@ class SyscallFstatat final : public SyscallNode {
                        int flags_);
 
         struct stat *GetStatBuf(const EpochList& epoch);
+};
+
+
+// getdents
+class SyscallGetdents final : public SyscallNode {
+    typedef std::function<bool(const int *,
+                               bool *,
+                               int *,
+                               struct linux_dirent64 **,
+                               size_t *,
+                               bool *)> ArggenFunc;
+    typedef std::function<void(const int *, ssize_t)> RcsaveFunc;
+
+    private:
+        ValuePool<int> fd;
+        ValuePool<struct linux_dirent64 *> dirp;
+        ValuePool<size_t> count;
+
+        ValuePool<struct linux_dirent64 *> internal_dirp;
+        std::unordered_set<struct linux_dirent64 *> pre_alloced_dirps;
+
+        ArggenFunc arggen_func;
+        RcsaveFunc rcsave_func;
+
+        long SyscallSync(const EpochList& epoch);
+        void PrepUringSqe(int epoch_sum, struct io_uring_sqe *sqe);
+        void PrepUpoolSqe(int epoch_sum, ThreadPoolSQEntry *sqe);
+        void ReflectResult(const EpochList& epoch);
+
+        bool GenerateArgs(const EpochList& epoch);
+        void RemoveOneEpoch(const EpochList& epoch);
+        void ResetValuePools();
+
+    public:
+        SyscallGetdents() = delete;
+        SyscallGetdents(unsigned node_id, std::string name, SCGraph *scgraph,
+                        const std::unordered_set<int>& assoc_dims,
+                        ArggenFunc arggen_func, RcsaveFunc rcsave_func,
+                        size_t pre_alloc_buf_size);
+        ~SyscallGetdents();
+
+        friend std::ostream& operator<<(std::ostream& s,
+                                        const SyscallGetdents& n);
+
+        void CheckArgs(const EpochList& epoch,
+                       int fd_,
+                       void *dirp_,
+                       size_t count_);
+
+        struct linux_dirent64 *GetDirpBuf(const EpochList& epoch);
 };
 
 

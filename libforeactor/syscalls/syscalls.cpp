@@ -6,6 +6,7 @@
 #include <string.h>
 #include <fcntl.h>
 #include <unistd.h>
+#include <dirent.h>
 #include <sys/types.h>
 #include <sys/stat.h>
 #include <sys/sysmacros.h>
@@ -867,7 +868,7 @@ bool SyscallFstat::GenerateArgs(const EpochList& epoch) {
     bool link_ = false;
     int fd_;
     struct stat *buf_;
-    bool buf_ready;
+    bool buf_ready = false;
     if (!arggen_func(epoch.RawArray(), &link_, &fd_, &buf_, &buf_ready))
         return false;
     link.Set(epoch, link_);
@@ -1025,7 +1026,7 @@ bool SyscallFstatat::GenerateArgs(const EpochList& epoch) {
     const char *pathname_;
     struct stat *buf_;
     int flags_;
-    bool buf_ready;
+    bool buf_ready = false;
     if (!arggen_func(epoch.RawArray(), &link_, &dirfd_, &pathname_, &buf_,
                      &flags_, &buf_ready)) {
         return false;
@@ -1108,6 +1109,156 @@ void SyscallFstatat::CheckArgs(const EpochList& epoch,
 
 struct stat *SyscallFstatat::GetStatBuf(const EpochList& epoch) {
     return buf.Get(epoch);
+}
+
+
+//////////////
+// getdents //
+//////////////
+
+SyscallGetdents::SyscallGetdents(unsigned node_id, std::string name,
+                                 SCGraph *scgraph,
+                                 const std::unordered_set<int>& assoc_dims,
+                                 ArggenFunc arggen_func,
+                                 RcsaveFunc rcsave_func,
+                                 size_t pre_alloc_buf_size)
+        : SyscallNode(node_id, name, SC_GETDENTS, /*pure_sc*/ true,
+                      scgraph, assoc_dims),
+          fd(assoc_dims), dirp(assoc_dims), count(assoc_dims),
+          internal_dirp(assoc_dims), arggen_func(arggen_func),
+          rcsave_func(rcsave_func) {
+    assert(arggen_func != nullptr);
+    // at most can have pre_issue_depth + 1 internal buffers simultaneously
+    // in use
+    for (int i = 0; i < scgraph->pre_issue_depth + 1; ++i) {
+        pre_alloced_dirps.insert(reinterpret_cast<struct linux_dirent64 *>(
+            new char[pre_alloc_buf_size]));
+    }
+}
+
+SyscallGetdents::~SyscallGetdents() {
+    for (auto internal_dirp : pre_alloced_dirps) {
+        if (internal_dirp != nullptr)
+            delete[] reinterpret_cast<char *>(internal_dirp);
+    }
+}
+
+std::ostream& operator<<(std::ostream& s, const SyscallGetdents& n) {
+    s << "SyscallGetdents{";
+    n.PrintCommonInfo(s);
+    s << ",fd=" << StreamStr(n.fd) << ","
+      << "dirp=" << StreamStr(n.dirp) << ","
+      << "count=" << StreamStr(n.count) << "}";
+    return s;
+}
+
+long SyscallGetdents::SyscallSync(const EpochList& epoch) {
+    return posix::getdents(fd.Get(epoch),
+                           dirp.Get(epoch),
+                           count.Get(epoch));
+}
+
+void SyscallGetdents::PrepUringSqe(int epoch_sum, struct io_uring_sqe *sqe) {
+    PANIC_IF(true, "io_uring backend does not support getdents syscall yet");
+}
+
+void SyscallGetdents::PrepUpoolSqe(int epoch_sum, ThreadPoolSQEntry *sqe) {
+    sqe->sc_type = SC_GETDENTS;
+    sqe->fd = fd.Get(epoch_sum);
+    sqe->buf = reinterpret_cast<uint64_t>(dirp.Get(epoch_sum));
+    sqe->dirp_count = count.Get(epoch_sum);
+}
+
+void SyscallGetdents::ReflectResult(const EpochList& epoch) {
+    assert(dirp.Has(epoch));
+    if (internal_dirp.Has(epoch))
+        memcpy(dirp.Get(epoch), internal_dirp.Get(epoch), rc.Get(epoch));
+}
+
+bool SyscallGetdents::GenerateArgs(const EpochList& epoch) {
+    assert(!stage.Has(epoch) || stage.Get(epoch) == STAGE_NOTREADY);
+
+    bool link_ = false;
+    int fd_;
+    struct linux_dirent64 *dirp_;
+    size_t count_;
+    bool buf_ready = false;
+    if (!arggen_func(epoch.RawArray(), &link_, &fd_, &dirp_, &count_,
+                     &buf_ready)) {
+        return false;
+    }
+    link.Set(epoch, link_);
+
+    if (!fd.Has(epoch))
+        fd.Set(epoch, fd_);
+    if (buf_ready && !dirp.Has(epoch))
+        dirp.Set(epoch, dirp_);
+    if (!count.Has(epoch))
+        count.Set(epoch, count_);
+    assert(fd_ == fd.Get(epoch));
+    if (buf_ready)
+        assert(dirp_ == dirp.Get(epoch));
+    assert(count_ == count.Get(epoch));
+
+    // use internal buffer if true destination buffer not ready yet
+    if (!buf_ready) {
+        if ((!internal_dirp.Has(epoch)) ||
+            internal_dirp.Get(epoch) == nullptr) {
+            assert(pre_alloced_dirps.size() > 0);
+            internal_dirp.Set(epoch,
+                pre_alloced_dirps.extract(pre_alloced_dirps.cbegin()).value());
+        }
+    }
+
+    stage.Set(epoch, STAGE_ARGREADY);
+    return true;
+}
+
+void SyscallGetdents::RemoveOneEpoch(const EpochList& epoch) {
+    if (rcsave_func != nullptr)
+        rcsave_func(epoch.RawArray(), static_cast<ssize_t>(rc.Get(epoch)));
+
+    RemoveOneFromCommonPools(epoch);
+    fd.Remove(epoch);
+    dirp.Remove(epoch);
+    count.Remove(epoch);
+    if (internal_dirp.Has(epoch))
+        internal_dirp.Remove(epoch, /*move_into*/ &pre_alloced_dirps);
+}
+
+void SyscallGetdents::ResetValuePools() {
+    ResetCommonPools();
+    fd.Reset();
+    dirp.Reset();
+    count.Reset();
+    internal_dirp.Reset(/*move_into*/ &pre_alloced_dirps);
+}
+
+void SyscallGetdents::CheckArgs(const EpochList& epoch,
+                                int fd_,
+                                void *dirp_,
+                                size_t count_) {
+    TIMER_START(scgraph->timer_check_args);
+    if (!stage.Has(epoch) || stage.Get(epoch) == STAGE_NOTREADY) {
+        if (!fd.Has(epoch))
+            fd.Set(epoch, fd_);
+        if (!dirp.Has(epoch))
+            dirp.Set(epoch, reinterpret_cast<struct linux_dirent64 *>(dirp_));
+        if (!count.Has(epoch))
+            count.Set(epoch, count_);
+        stage.Set(epoch, STAGE_ARGREADY);
+    } else if (!dirp.Has(epoch)) {
+        // previously used internal buffer
+        dirp.Set(epoch, reinterpret_cast<struct linux_dirent64 *>(dirp_));
+    }
+    assert(fd_ == fd.Get(epoch));
+    assert(dirp_ == dirp.Get(epoch));
+    assert(count_ == count.Get(epoch));
+    TIMER_PAUSE(scgraph->timer_check_args);
+}
+
+struct linux_dirent64 *SyscallGetdents::GetDirpBuf(const EpochList& epoch) {
+    return dirp.Get(epoch);
 }
 
 

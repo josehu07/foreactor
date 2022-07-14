@@ -28,8 +28,7 @@ DECL_POSIX_FN(lseek);
 DECL_POSIX_FN(__fxstat);
 DECL_POSIX_FN(__fxstatat);
 DECL_POSIX_FN(statx);
-// FIND_POSIX_FN(opendir);
-// FIND_POSIX_FN(fdopendir);
+DECL_POSIX_FN(getdents64);
 
 #undef DECL_POSIX_FN
 
@@ -44,6 +43,12 @@ DECL_POSIX_FN(statx);
 [[maybe_unused]] static int fstatat(int dirfd, const char *pathname,
                                     struct stat *buf, int flags) {
     return __fxstatat(_STAT_VER, dirfd, pathname, buf, flags);
+}
+
+
+// glibc only provides getdents64. We make a wrapper for the name getdents.
+[[maybe_unused]] static ssize_t getdents(int fd, void *dirp, size_t count) {
+    return getdents64(fd, dirp, count);
 }
 
 

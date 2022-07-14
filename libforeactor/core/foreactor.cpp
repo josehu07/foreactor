@@ -4,6 +4,7 @@
 #include <stdbool.h>
 #include <fcntl.h>
 #include <unistd.h>
+#include <dirent.h>
 #include <sys/types.h>
 #include <sys/stat.h>
 
@@ -341,6 +342,32 @@ void foreactor_AddSyscallFstatat(unsigned graph_id,
     scgraph->AddNode(node, is_start);
 }
 
+void foreactor_AddSyscallGetdents(unsigned graph_id,
+                                  unsigned node_id,
+                                  const char *name,
+                                  const int *assoc_dims,
+                                  size_t assoc_dims_len,
+                                  bool (*arggen_func)(const int *,
+                                                      bool *,
+                                                      int *,
+                                                      struct linux_dirent64 **,
+                                                      size_t *,
+                                                      bool *),  // buf_ready?
+                                  void (*rcsave_func)(const int *, ssize_t),
+                                  size_t pre_alloc_buf_size,
+                                  bool is_start) {
+    SCGraph *scgraph = GetSCGraphFromId(graph_id);
+    std::unordered_set<int> assoc_dims_set =
+        MakeAssocDimsSet(assoc_dims, assoc_dims_len);
+
+    PanicIfNodeExists(scgraph, graph_id, node_id);
+    SyscallGetdents *node = new SyscallGetdents(node_id, std::string(name),
+                                                scgraph, assoc_dims_set,
+                                                arggen_func, rcsave_func,
+                                                pre_alloc_buf_size);
+    scgraph->AddNode(node, is_start);
+}
+
 
 void foreactor_SyscallSetNext(unsigned graph_id, unsigned node_id,
                               unsigned next_id, bool weak_edge) {
@@ -429,6 +456,22 @@ struct stat *foreactor_FstatatGetResultBuf(unsigned graph_id, unsigned node_id,
 
     const EpochList epoch(scgraph->total_dims, epoch_);
     return fstatat_node->GetStatBuf(epoch);
+}
+
+struct linux_dirent64 *foreactor_GetdentsGetResultBuf(unsigned graph_id,
+                                                      unsigned node_id,
+                                                      const int *epoch_) {
+    SCGraph *scgraph = GetSCGraphFromId(graph_id);
+    
+    SCGraphNode *node = GetNodeFromId(scgraph, graph_id, node_id);
+    PANIC_IF(node->node_type != NODE_SC_PURE,
+             "node_id %u is not a pure SyscallNode\n", node_id);
+    SyscallGetdents *getdents_node = static_cast<SyscallGetdents *>(node);
+    PANIC_IF(getdents_node->sc_type != SC_GETDENTS,
+             "node_id %u is not a getdents node\n", node_id);
+
+    const EpochList epoch(scgraph->total_dims, epoch_);
+    return getdents_node->GetDirpBuf(epoch);
 }
 
 char *foreactor_PreadRefInternalBuf(unsigned graph_id, unsigned node_id,
