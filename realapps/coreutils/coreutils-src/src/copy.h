@@ -323,4 +323,17 @@ bool chown_failure_ok (struct cp_options const *)
   _GL_ATTRIBUTE_NONNULL () _GL_ATTRIBUTE_PURE;
 mode_t cached_umask (void);
 
+/* [foreactor] for interception */
+bool sparse_copy (int src_fd, int dest_fd, char **abuf, size_t buf_size,
+                  size_t hole_size, bool punch_holes, bool allow_reflink,
+                  char const *src_name, char const *dst_name,
+                  uintmax_t max_n_read, off_t *total_n_read,
+                  bool *last_write_made_hole);
+bool sparse_copy_my (int src_fd, int dest_fd, char **abuf, size_t buf_size,
+                     size_t hole_size, bool punch_holes, bool allow_reflink,
+                     char const *src_name, char const *dst_name,
+                     uintmax_t max_n_read, off_t *total_n_read,
+                     bool *last_write_made_hole);
+void inform_src_file_size (size_t src_file_size);
+
 #endif

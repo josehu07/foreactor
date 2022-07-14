@@ -44,6 +44,9 @@ def run_cp_single(libforeactor, workdir, use_foreactor, backend=None,
         envs["SQE_ASYNC_FLAG_0"] = "yes"
 
     cmd = [CP_BIN, "--reflink=never", "--sparse=never"]
+    if use_foreactor:
+        # concurrent background I/O works better with readahead turned off
+        cmd.append("--fadvise=random")
     
     indir = f"{workdir}/indir"
     outdir = f"{workdir}/outdir"

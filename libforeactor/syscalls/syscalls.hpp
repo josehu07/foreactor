@@ -438,18 +438,18 @@ class SyscallGetdents final : public SyscallNode {
     typedef std::function<bool(const int *,
                                bool *,
                                int *,
-                               struct linux_dirent64 **,
+                               struct dirent64 **,
                                size_t *,
                                bool *)> ArggenFunc;
     typedef std::function<void(const int *, ssize_t)> RcsaveFunc;
 
     private:
         ValuePool<int> fd;
-        ValuePool<struct linux_dirent64 *> dirp;
+        ValuePool<struct dirent64 *> dirp;
         ValuePool<size_t> count;
 
-        ValuePool<struct linux_dirent64 *> internal_dirp;
-        std::unordered_set<struct linux_dirent64 *> pre_alloced_dirps;
+        ValuePool<struct dirent64 *> internal_dirp;
+        std::unordered_set<struct dirent64 *> pre_alloced_dirps;
 
         ArggenFunc arggen_func;
         RcsaveFunc rcsave_func;
@@ -479,7 +479,7 @@ class SyscallGetdents final : public SyscallNode {
                        void *dirp_,
                        size_t count_);
 
-        struct linux_dirent64 *GetDirpBuf(const EpochList& epoch);
+        struct dirent64 *GetDirpBuf(const EpochList& epoch);
 };
 
 

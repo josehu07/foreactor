@@ -44,6 +44,7 @@
 #include "xfts.h"
 #include "xstrtol.h"
 #include "xstrtol-error.h"
+#include "du.h"
 
 extern bool fts_debug;
 
@@ -485,7 +486,8 @@ mount_point_in_fts_cycle (FTSENT const *ent)
    that and accumulates per-directory totals based on changes in
    the depth of the current entry.  It returns true on success.  */
 
-static bool
+/* [foreactor] for interception */
+bool
 process_file (FTS *fts, FTSENT *ent)
 {
   bool ok = true;
@@ -675,7 +677,8 @@ process_file (FTS *fts, FTSENT *ent)
    BIT_FLAGS controls how fts works.
    Return true if successful.  */
 
-static bool
+/* [foreactor] for interception */
+bool
 du_files (char **files, int bit_flags)
 {
   bool ok = true;
@@ -706,7 +709,8 @@ du_files (char **files, int bit_flags)
             }
           FTS_CROSS_CHECK (fts);
 
-          ok &= process_file (fts, ent);
+          /* [foreactor] for interception */
+          ok &= process_file_my (fts, ent);
         }
 
       if (fts_close (fts) != 0)
@@ -1120,7 +1124,8 @@ main (int argc, char **argv)
       else
         {
           temp_argv[0] = file_name;
-          ok &= du_files (temp_argv, bit_flags);
+          /* [foreactor] for interception */
+          ok &= du_files_my (temp_argv, bit_flags);
         }
     }
  argv_iter_done:

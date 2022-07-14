@@ -68,8 +68,7 @@ void ThreadPool::HandleSQEntry(const SQEntry& sqe, CQEntry& cqe) {
         break;
     case SC_GETDENTS:
         cqe.rc = posix::getdents(sqe.fd,
-                                 reinterpret_cast<struct linux_dirent64 *>(
-                                    sqe.buf),
+                                 reinterpret_cast<struct dirent64 *>(sqe.buf),
                                  sqe.dirp_count);
         break;
     default:

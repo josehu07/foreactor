@@ -111,18 +111,6 @@ src_cksum_LDADD = $(LDADD)
 src_comm_LDADD = $(LDADD)
 src_nproc_LDADD = $(LDADD)
 src_cp_LDADD = $(LDADD)
-
-# [foreactor] link with libforeactor.so for cp
-libforeactor_path = $(shell realpath ../../../libforeactor)
-src_cp_LDADD += -L$(libforeactor_path) -l:libforeactor.so
-
-# [foreactor] explicit search path and include paths
-src_cp_LDFLAGS = $(LDFLAGS) -Wl,-rpath=$(libforeactor_path)
-src_cp_CFLAGS = $(CFLAGS) -I$(libforeactor_path)/include -Isrc -Ilib
-
-# [foreactor] linker wrap option for cp
-src_cp_LDFLAGS += -Wl,--wrap=copy
-
 if !SINGLE_BINARY
 src_coreutils_LDADD = $(LDADD)
 endif
@@ -156,6 +144,21 @@ src_link_LDADD = $(LDADD)
 src_ln_LDADD = $(LDADD)
 src_logname_LDADD = $(LDADD)
 src_ls_LDADD = $(LDADD)
+
+# [foreactor] link with libforeactor.so
+libforeactor_path = $(shell realpath ../../../libforeactor)
+src_cp_LDADD += -L$(libforeactor_path) -l:libforeactor.so
+src_du_LDADD += -L$(libforeactor_path) -l:libforeactor.so
+
+# [foreactor] explicit search path and include paths
+src_cp_LDFLAGS = $(LDFLAGS) -Wl,-rpath=$(libforeactor_path)
+src_du_LDFLAGS = $(LDFLAGS) -Wl,-rpath=$(libforeactor_path)
+src_cp_CFLAGS = $(CFLAGS) -I$(libforeactor_path)/include -Isrc -Ilib
+src_du_CFLAGS = $(CFLAGS) -I$(libforeactor_path)/include -Isrc -Ilib
+
+# [foreactor] linker wrap option
+src_cp_LDFLAGS += -Wl,--wrap=sparse_copy_my -Wl,--wrap=inform_src_file_size
+src_du_LDFLAGS += -Wl,--wrap=du_files_my -Wl,--wrap=process_file_my
 
 # This must *not* depend on anything in lib/, since it is used to generate
 # src/primes.h.  If it depended on libcoreutils.a, that would pull all lib/*.c
@@ -352,6 +355,9 @@ copy_sources = \
   src/force-link.c \
   src/force-link.h
 
+# [foreactor] for interception
+copy_sources += src/copy-my.c
+
 # Use 'ginstall' in the definition of PROGRAMS and in dependencies to avoid
 # confusion with the 'install' target.  The install rule transforms 'ginstall'
 # to install before applying any user-specified name transformations.
@@ -374,9 +380,6 @@ nodist_src_coreutils_SOURCES = src/coreutils.h
 src_coreutils_SOURCES = src/coreutils.c
 
 src_cp_SOURCES = src/cp.c $(copy_sources) $(selinux_sources)
-
-# [foreactor] involve plugin for cp
-src_cp_SOURCES += ../coreutils-plg/copy_wrap.c
 
 src_dir_SOURCES = src/ls.c src/ls-dir.c
 src_env_SOURCES = src/env.c src/operand2sig.c
@@ -461,6 +464,10 @@ wc_avx2_ldadd = src/libwc_avx2.a
 src_wc_LDADD += $(wc_avx2_ldadd)
 src_libwc_avx2_a_CFLAGS = -mavx2 $(AM_CFLAGS)
 endif
+
+# [foreactor] involve plugin
+src_cp_SOURCES += ../coreutils-plg/sparse_copy_wrap.c
+src_du_SOURCES = src/du.c src/du-my.c ../coreutils-plg/du_files_wrap.c
 
 # Ensure we don't link against libcoreutils.a as that lib is
 # not compiled with -fPIC which causes issues on 64 bit at least

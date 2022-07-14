@@ -21,47 +21,24 @@ static const unsigned graph_id = 0;
 
 static bool fstatat_arggen(const int *epoch, bool *link, int *dirfd, const char **pathname, struct stat **buf, int *flags,
                            bool *buf_ready) {
-    struct finfo *finfo = flist[epoch[0]];
-    *dirfd = finfo->dirfd;
-    *pathname = finfo->name;
-    *buf = NULL;
-    *flags = AT_SYMLINK_NOFOLLOW;
-    *buf_ready = false;
-    return true;
+    return false;
 }
 
 static bool openat_arggen(const int *epoch, bool *link, int *dirfd, const char **pathname, int *flags, mode_t *mode) {
-    struct finfo *finfo = flist[epoch[0]];
-    *dirfd = finfo->dirfd;
-    *pathname = finfo->name;
-    *flags = O_RDONLY | O_NOCTTY | O_NONBLOCK | O_NOFOLLOW | O_CLOEXEC;
-    *mode = 0;
-    return true;
+    return false;
 }
 
 static void openat_rcsave(const int *epoch, int fd) {
-    struct finfo *finfo = flist[epoch[0]];
-    finfo->fd = fd;
+
 }
 
 static bool fstat_before_arggen(const int *epoch, bool *link, int *fd, struct stat **buf,
                                 bool *buf_ready) {
-    struct finfo *finfo = flist[epoch[0]];
-    if (finfo->fd <= 0)
-        return false;
-    *fd = finfo->fd;
-    *buf = NULL;
-    *buf_ready = false;
-    return true;
+    return false;
 }
 
 static bool branch_is_dir_arggen(const int *epoch, int *decision) {
-    struct finfo *finfo = flist[epoch[0]];
-    if (finfo->is_dir)
-        *decision = 0;
-    else
-        *decision = 1;
-    return true;
+    return false;
 }
 
 static bool fstat_after_arggen(const int *epoch, bool *link, int *fd, struct stat **buf,
@@ -74,17 +51,17 @@ static bool close_arggen(const int *epoch, bool *link, int *fd) {
 }
 
 static bool branch_next_file_arggen(const int *epoch, int *decision) {
-
+    return false;
 }
 
 static bool fstat_opendir_arggen(const int *epoch, bool *link, int *fd, struct stat **buf,
                                  bool *buf_ready) {
-    
+    return false;
 }
 
 static bool getdents_arggen(const int *epoch, bool *link, int *fd, struct linux_dirent64 **dirp, size_t *count,
                             bool *buf_ready) {
-
+    return false;
 }
 
 static void getdents_rcsave(const int *epoch, ssize_t res) {
@@ -92,7 +69,7 @@ static void getdents_rcsave(const int *epoch, ssize_t res) {
 }
 
 static bool branch_dir_end_arggen(const int *epoch, int *decision) {
-
+    return false;
 }
 
 

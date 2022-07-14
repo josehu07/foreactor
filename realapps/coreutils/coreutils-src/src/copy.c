@@ -234,7 +234,9 @@ create_hole (int fd, char const *name, bool punch_holes, off_t size)
    Set *LAST_WRITE_MADE_HOLE to true if the final operation on
    DEST_FD introduced a hole.  Set *TOTAL_N_READ to the number of
    bytes read.  */
-static bool
+
+/* [foreactor] for interception */
+bool
 sparse_copy (int src_fd, int dest_fd, char **abuf, size_t buf_size,
              size_t hole_size, bool punch_holes, bool allow_reflink,
              char const *src_name, char const *dst_name,
@@ -1348,6 +1350,9 @@ copy_reg (char const *src_name, char const *dst_name,
             buf_size = blcm;
         }
 
+      /* [foreactor] inform source file size */
+      inform_src_file_size (src_open_sb.st_size);
+
       off_t n_read;
       bool wrote_hole_at_eof = false;
       if (! (
@@ -1360,12 +1365,13 @@ copy_reg (char const *src_name, char const *dst_name,
                            src_name, dst_name)
              :
 #endif
-               sparse_copy (source_desc, dest_desc, &buf, buf_size,
-                            make_holes ? hole_size : 0,
-                            x->sparse_mode == SPARSE_ALWAYS,
-                            x->reflink_mode != REFLINK_NEVER,
-                            src_name, dst_name, UINTMAX_MAX, &n_read,
-                            &wrote_hole_at_eof)))
+             /* [foreactor] for interception */
+               sparse_copy_my (source_desc, dest_desc, &buf, buf_size,
+                               make_holes ? hole_size : 0,
+                               x->sparse_mode == SPARSE_ALWAYS,
+                               x->reflink_mode != REFLINK_NEVER,
+                               src_name, dst_name, UINTMAX_MAX, &n_read,
+                               &wrote_hole_at_eof)))
         {
           return_val = false;
           goto close_src_and_dst_desc;

@@ -350,7 +350,7 @@ void foreactor_AddSyscallGetdents(unsigned graph_id,
                                   bool (*arggen_func)(const int *,
                                                       bool *,
                                                       int *,
-                                                      struct linux_dirent64 **,
+                                                      struct dirent64 **,
                                                       size_t *,
                                                       bool *),  // buf_ready?
                                   void (*rcsave_func)(const int *, ssize_t),
@@ -458,9 +458,9 @@ struct stat *foreactor_FstatatGetResultBuf(unsigned graph_id, unsigned node_id,
     return fstatat_node->GetStatBuf(epoch);
 }
 
-struct linux_dirent64 *foreactor_GetdentsGetResultBuf(unsigned graph_id,
-                                                      unsigned node_id,
-                                                      const int *epoch_) {
+struct dirent64 *foreactor_GetdentsGetResultBuf(unsigned graph_id,
+                                                unsigned node_id,
+                                                const int *epoch_) {
     SCGraph *scgraph = GetSCGraphFromId(graph_id);
     
     SCGraphNode *node = GetNodeFromId(scgraph, graph_id, node_id);

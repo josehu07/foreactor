@@ -4,9 +4,9 @@
 ![top-lang](https://img.shields.io/github/languages/top/josehu07/foreactor)
 ![license](https://img.shields.io/github/license/josehu07/foreactor)
 
-Foreactor is a library that enables asynchronous I/O (or more generally, asynchronous syscalls) in C/C++ applications transparently. Foreactor allows the integration of an asynchronous execution backend, e.g. the recent Linux kernel `io_uring` or a user-level thread pool, into an application with no modification to the application's original source code.
+Foreactor is a library that enables asynchronous I/O (or more generally, asynchronous syscalls) in C/C++ applications transparently. Foreactor allows the integration of an asynchronous execution backend, e.g. the recent Linux kernel `io_uring` or a user-level thread pool, into an application with little modification to the application's original source code.
 
-This is done by describing the application's critical functions (e.g., LevelDB's `Version::Get`) as **syscall graphs** (SCGraphs), a formal abstraction we propose. Such graph abstraction captures the original execution order of syscalls to be issued by the function and their mutual dependencies. If the library gets `LD_PRELOAD`ed when running the application, it automatically intercepts those wrapped functions as well as POSIX syscalls, and pre-issues proper syscalls ahead of time if the syscall graph says it is safe and beneficial to do so.
+This is done by describing the application's critical functions (e.g., LevelDB's `Version::Get`) as **syscall graphs** (SCGraphs), a formal abstraction we propose. Such graph abstraction captures the original execution order of syscalls to be issued by the function and their mutual dependencies. If the library gets `LD_PRELOAD`ed when running the application, it automatically intercepts those wrapped functions as well as POSIX glibc calls, and pre-issues proper syscalls ahead of time if the syscall graph says it is safe and beneficial to do so.
 
 TODO paper cite info? =)
 
@@ -226,8 +226,8 @@ TODO complete tutorial
 ## References
 
 - ALICE
-- io_uring, ScyllaDB
-- eBPF, AnyCall, BPF for Storage
-- MultiCall, FlexSC
 - MAGE
+- io_uring, ScyllaDB
+- eBPF, AnyCall, XRP
+- MultiCall, FlexSC
 - ...

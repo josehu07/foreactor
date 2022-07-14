@@ -1,0 +1,16 @@
+digraph SCGraph {
+  graph [fontname="helvetica"];
+  node  [fontname="helvetica"];
+  edge  [fontname="helvetica"];
+  start [shape=plaintext];
+  start -> read_src;
+  end [shape=plaintext];
+  read_src -> stop_loop;
+  stop_loop [shape=diamond,label="stop_loop?"];
+  stop_loop -> end [arrowhead=empty];
+  stop_loop -> write_dst [arrowhead=empty];
+  write_dst [shape=box,style=bold];
+  write_dst -> continue;
+  continue [shape=diamond,label="continue?"];
+  continue:e -> read_src:e [arrowhead=empty,dir=both,arrowtail=odot];
+}

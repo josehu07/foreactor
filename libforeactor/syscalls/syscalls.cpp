@@ -1131,7 +1131,7 @@ SyscallGetdents::SyscallGetdents(unsigned node_id, std::string name,
     // at most can have pre_issue_depth + 1 internal buffers simultaneously
     // in use
     for (int i = 0; i < scgraph->pre_issue_depth + 1; ++i) {
-        pre_alloced_dirps.insert(reinterpret_cast<struct linux_dirent64 *>(
+        pre_alloced_dirps.insert(reinterpret_cast<struct dirent64 *>(
             new char[pre_alloc_buf_size]));
     }
 }
@@ -1180,7 +1180,7 @@ bool SyscallGetdents::GenerateArgs(const EpochList& epoch) {
 
     bool link_ = false;
     int fd_;
-    struct linux_dirent64 *dirp_;
+    struct dirent64 *dirp_;
     size_t count_;
     bool buf_ready = false;
     if (!arggen_func(epoch.RawArray(), &link_, &fd_, &dirp_, &count_,
@@ -1243,13 +1243,13 @@ void SyscallGetdents::CheckArgs(const EpochList& epoch,
         if (!fd.Has(epoch))
             fd.Set(epoch, fd_);
         if (!dirp.Has(epoch))
-            dirp.Set(epoch, reinterpret_cast<struct linux_dirent64 *>(dirp_));
+            dirp.Set(epoch, reinterpret_cast<struct dirent64 *>(dirp_));
         if (!count.Has(epoch))
             count.Set(epoch, count_);
         stage.Set(epoch, STAGE_ARGREADY);
     } else if (!dirp.Has(epoch)) {
         // previously used internal buffer
-        dirp.Set(epoch, reinterpret_cast<struct linux_dirent64 *>(dirp_));
+        dirp.Set(epoch, reinterpret_cast<struct dirent64 *>(dirp_));
     }
     assert(fd_ == fd.Get(epoch));
     assert(dirp_ == dirp.Get(epoch));
@@ -1257,7 +1257,7 @@ void SyscallGetdents::CheckArgs(const EpochList& epoch,
     TIMER_PAUSE(scgraph->timer_check_args);
 }
 
-struct linux_dirent64 *SyscallGetdents::GetDirpBuf(const EpochList& epoch) {
+struct dirent64 *SyscallGetdents::GetDirpBuf(const EpochList& epoch) {
     return dirp.Get(epoch);
 }
 
