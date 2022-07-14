@@ -194,28 +194,6 @@ Run:
 ```
 </details>
 
-<details>
-<summary>Git v2.36.0-rc0</summary>
-
-| Function | Note |
-| :-: | :- |
-| `TODO` | TODO |
-
-Build:
-
-```bash
-cd realapps/git
-sudo apt install libcurl4-openssl-dev
-make
-```
-
-Run:
-
-```bash
-# TODO
-```
-</details>
-
 
 ## Making a New Plugin
 
