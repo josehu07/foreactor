@@ -8,24 +8,26 @@ import argparse
 
 CP_PREPARE_PY = "./scripts/cp-prepare.py"
 CP_BENCHER_PY = "./scripts/cp-bencher.py"
+CP_PLOTTER_PY = "./scripts/cp-plotter.py"
 
 CP_FILE_SIZES = {
-    "8M":   8 * 1024 * 1024,
-    "32M":  32 * 1024 * 1024,
-    "128M": 128 * 1024 * 1024,
+    "64M":  64   * 1024 * 1024,
+    "256M": 256  * 1024 * 1024,
+    "1G":   1024 * 1024 * 1024,
 }
 CP_NUM_FILES = 4
 
 DU_PREPARE_PY = "./scripts/du-prepare.py"
 DU_BENCHER_PY = "./scripts/du-bencher.py"
+DU_PLOTTER_PY = "./scripts/du-plotter.py"
 
-DU_NUM_DIRS = 10
 DU_FILE_COUNTS = {
-    "1k": 1000,
-    "3k": 3000,
-    "5k": 5000,
+    "3k":  3  * 1000,
+    "6k":  6  * 1000,
+    "12k": 12 * 1000,
 }
-DU_FILE_SIZE = 5
+DU_NUM_DIRS = 4
+DU_FILE_SIZE = 10
 
 BACKENDS = ["io_uring_default", "io_uring_sqe_async"]
 PRE_ISSUE_DEPTH_LIST = [2, 4, 8, 16, 32, 64]
@@ -150,25 +152,26 @@ def check_arg_given(parser, args, argname):
         exit(1)
 
 def main():
-    parser = argparse.ArgumentParser(description="Run all cp copy experiments")
+    parser = argparse.ArgumentParser(description="Run all coreutils experiments")
     parser.add_argument('-m', dest='mode', required=True,
-                        help="cp-prepare|cp-bencher|du-prepare|du-bencher")
-    parser.add_argument('-d', dest='workdir_prefix', required=True,
-                        help="absolute path prefix of workdir")
+                        help="cp-prepare|cp-bencher|cp-plotter|"
+                             "du-prepare|du-bencher|du-plotter")
+    parser.add_argument('-d', dest='workdir_prefix', required=False,
+                        help="required for prepare/bencher; absolute path prefix of workdirs")
     parser.add_argument('-l', dest='libforeactor', required=False,
                         help="required for bencher; absolute path to libforeactor.so")
     parser.add_argument('-r', dest='results_dir', required=False,
-                        help="required for bencher; directory to hold result logs")
+                        help="required for bencher/plotter; directory to hold result logs")
     args = parser.parse_args()
     
     # change to the directory containing this script
     script_dir = os.path.dirname(os.path.realpath(__file__))
     os.chdir(script_dir)
 
-    check_dir_exists(args.workdir_prefix)
-
     if args.mode == "cp-prepare":
+        check_arg_given(parser, args, "workdir_prefix")
         check_file_exists(CP_PREPARE_PY)
+        check_dir_exists(args.workdir_prefix)
         prepare_all_cp(args.workdir_prefix, CP_FILE_SIZES, CP_NUM_FILES)
 
     elif args.mode == "cp-bencher":
@@ -179,8 +182,16 @@ def main():
         run_all_cp(args.libforeactor, args.results_dir, args.workdir_prefix,
                    CP_FILE_SIZES, CP_NUM_FILES, BACKENDS, PRE_ISSUE_DEPTH_LIST)
 
+    elif args.mode == "cp-plotter":
+        check_arg_given(parser, args, "results_dir")
+        check_file_exists(CP_PLOTTER_PY)
+        check_dir_exists(args.results_dir)
+        pass
+
     elif args.mode == "du-prepare":
+        check_arg_given(parser, args, "workdir_prefix")
         check_file_exists(DU_PREPARE_PY)
+        check_dir_exists(args.workdir_prefix)
         prepare_all_du(args.workdir_prefix, DU_NUM_DIRS, DU_FILE_COUNTS,
                        DU_FILE_SIZE)
 
@@ -191,6 +202,12 @@ def main():
         prepare_dir(args.results_dir, False)
         run_all_du(args.libforeactor, args.results_dir, args.workdir_prefix,
                    DU_NUM_DIRS, DU_FILE_COUNTS, BACKENDS, PRE_ISSUE_DEPTH_LIST)
+
+    elif args.mode == "du-plotter":
+        check_arg_given(parser, args, "results_dir")
+        check_file_exists(DU_PLOTTER_PY)
+        check_dir_exists(args.results_dir)
+        pass
 
     else:
         print(f"Error: unrecognized mode {args.mode}")

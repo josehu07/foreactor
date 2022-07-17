@@ -123,37 +123,17 @@ An application can have multiple wrapped functions, each corresponding to a sepa
 </details>
 
 
-## Listed Applications
+## Patched Applications
 
 This repository contains a collection of applications that involve functions suitable to be wrapped by foreactor and benefit from asynchrony. We have written plugins for some of them. The plugins code can be found under `realapps/appname/appname-plg/`.
-
-<details>
-<summary>LevelDB v1.23</summary>
-
-| Function | Note |
-| :-: | :- |
-| `Version::Get` | Chained `pread`s with possible `open`s and early exits |
-
-Build:
-
-```bash
-cd realapps/leveldb
-make
-```
-
-Run:
-
-```bash
-python3 run-all.py -h   # TODO better instructions
-```
-</details>
 
 <details>
 <summary>GNU Coreutils v9.1</summary>
 
 | Function | Note |
 | :-: | :- |
-| `cp sparse_copy` | Standard loop of `read`-`write`s of 128KiB chunks |
+| `cp sparse_copy` | Regular loop of `read`-`write`s of 128KiB chunks |
+| `du du_files` | Regular loop of `fstatat`s on files in a directory |
 
 Build:
 
@@ -172,19 +152,25 @@ Run:
 </details>
 
 <details>
-<summary>GNU Tar v1.34</summary>
+<summary>LevelDB v1.23</summary>
 
 | Function | Note |
 | :-: | :- |
-| `TODO` | TODO |
+| `Version::Get` | Chained `pread`s with possible `open`s and early exits |
 
 Build:
 
 ```bash
-cd realapps/tar
-sudo apt install automake texinfo
-make reconf
+cd realapps/leveldb
 make
+```
+
+Download YCSB (to any path):
+
+```bash
+sudo apt install sysstat default-jre
+curl -O --location https://github.com/brianfrankcooper/YCSB/releases/download/0.17.0/ycsb-0.17.0.tar.gz
+tar xfvz ycsb-0.17.0.tar.gz
 ```
 
 Run:
@@ -214,11 +200,11 @@ TODO complete tutorial
 
 ## TODO List
 
+- [ ] current async I/O study
+- [ ] serious related work study
+- [ ] readme & website doc
 - [ ] smarter pre_issue_depth
 - [ ] internal buffer GC
-- [ ] serious related work study
-- [ ] current async I/O study
-- [ ] readme & website doc
 - [ ] compiler CFG mapping
 - [ ] support other static langs
 

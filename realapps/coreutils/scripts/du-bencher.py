@@ -97,7 +97,7 @@ def run_exprs(libforeactor, workdir, output_log, backend, pre_issue_depth_list):
 
 
 def main():
-    parser = argparse.ArgumentParser(description="du copy benchmark driver")
+    parser = argparse.ArgumentParser(description="du stat benchmark driver")
     parser.add_argument('-l', dest='libforeactor', required=True,
                         help="absolute path to libforeactor.so")
     parser.add_argument('-d', dest='workdir', required=True,
@@ -110,10 +110,8 @@ def main():
                         help="pre_issue_depth to try")
     args = parser.parse_args()
 
-    if args.backend == "thread_pool":
-        print(f"Error: thread pool backend does not support link feature yet")
-        exit(1)
-    elif args.backend != "io_uring_default" and args.backend != "io_uring_sqe_async":
+    if args.backend != "io_uring_default" and args.backend != "io_uring_sqe_async" \
+       and args.backend != "thread_pool":
         print(f"Error: unrecognized backend {args.backend}")
         exit(1)
 

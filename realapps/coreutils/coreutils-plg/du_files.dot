@@ -1,0 +1,12 @@
+digraph SCGraph {
+  graph [fontname="helvetica"];
+  node  [fontname="helvetica"];
+  edge  [fontname="helvetica"];
+  start [shape=plaintext];
+  start -> fstatat;
+  end [shape=plaintext];
+  fstatat -> next_file;
+  next_file [shape=diamond,label="next_file?"];
+  next_file:e -> fstatat:e [arrowhead=empty,dir=both,arrowtail=odot];
+  next_file -> end [arrowhead=empty];
+}
