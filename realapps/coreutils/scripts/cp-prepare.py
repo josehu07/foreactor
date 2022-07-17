@@ -6,19 +6,15 @@ import shutil
 import argparse
 
 
-def check_dir_exists(dir_path):
-    if not os.path.isdir(dir_path):
-        print(f"Error: directory {dir_path} does not exist")
-        exit(1)
-
-def prepare_empty_dir(dir_path):
+def prepare_dir(dir_path, empty=False):
     if os.path.isdir(dir_path):
-        for file in os.listdir(dir_path):
-            path = os.path.join(dir_path, file)
-            try:
-                shutil.rmtree(path)
-            except OSError:
-                os.remove(path)
+        if empty:
+            for file in os.listdir(dir_path):
+                path = os.path.join(dir_path, file)
+                try:
+                    shutil.rmtree(path)
+                except OSError:
+                    os.remove(path)
     else:
         os.mkdir(dir_path)
 
@@ -48,9 +44,9 @@ def main():
                         help="number of files per run")
     args = parser.parse_args()
 
-    check_dir_exists(args.workdir)
-    prepare_empty_dir(f"{args.workdir}/indir")
-    prepare_empty_dir(f"{args.workdir}/outdir")
+    prepare_dir(args.workdir, True)
+    prepare_dir(f"{args.workdir}/indir", True)
+    prepare_dir(f"{args.workdir}/outdir", True)
 
     make_cp_files(args.workdir, args.file_size, args.num_files)
 

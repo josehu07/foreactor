@@ -78,6 +78,9 @@ static char sccsid[] = "@(#)fts.c       8.6 (Berkeley) 8/14/94";
 # include "same-inode.h"
 #endif
 
+/* [foreactor] for adding pause/resume stubs */
+#include <foreactor.h>
+
 #include <dirent.h>
 #ifndef _D_EXACT_NAMLEN
 # define _D_EXACT_NAMLEN(dirent) strlen ((dirent)->d_name)
@@ -901,6 +904,8 @@ fts_read (register FTS *sp)
                         sp->fts_child = NULL;
                 }
 
+                /* [foreactor] avoid interception */
+                foreactor_PauseCurrentSCGraph();
                 /*
                  * Cd to the subdirectory.
                  *
@@ -935,6 +940,7 @@ fts_read (register FTS *sp)
                 }
                 p = sp->fts_child;
                 sp->fts_child = NULL;
+                foreactor_ResumeCurrentSCGraph();
                 goto name;
         }
 
@@ -946,6 +952,8 @@ next:   tmp = p;
            read in a new batch.  */
         if (p->fts_link == NULL && p->fts_parent->fts_dirp)
           {
+            /* [foreactor] avoid interception */
+            foreactor_PauseCurrentSCGraph();
             p = tmp->fts_parent;
             sp->fts_cur = p;
             sp->fts_path[p->fts_pathlen] = '\0';
@@ -956,6 +964,7 @@ next:   tmp = p;
                   return NULL;
                 goto cd_dot_dot;
               }
+            foreactor_ResumeCurrentSCGraph();
 
             free(tmp);
             goto name;
@@ -1051,6 +1060,8 @@ cd_dot_dot:
         /* NUL terminate the file name.  */
         sp->fts_path[p->fts_pathlen] = '\0';
 
+        /* [foreactor] avoid interception */
+        foreactor_PauseCurrentSCGraph();
         /*
          * Return to the parent directory.  If at a root node, restore
          * the initial working directory.  If we came through a symlink,
@@ -1073,6 +1084,7 @@ cd_dot_dot:
                 p->fts_errno = errno;
                 SET(FTS_STOP);
         }
+        foreactor_ResumeCurrentSCGraph();
 
         /* If the directory causes a cycle, preserve the FTS_DC flag and keep
            the corresponding dev/ino pair in the hash table.  It is going to be
@@ -1554,9 +1566,12 @@ mem1:                           saved_errno = errno;
                         goto break_without_closedir;
                 }
         }
-
+        
+        /* [foreactor] avoid interception */
+        // foreactor_PauseCurrentSCGraph();
         if (cur->fts_dirp)
                 closedir_and_clear(cur->fts_dirp);
+        // foreactor_ResumeCurrentSCGraph();
 
  break_without_closedir:
 

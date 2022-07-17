@@ -71,9 +71,11 @@ def run_ycsbcli_single(libforeactor, dbdir, trace, mem_limit, drop_caches,
         envs["QUEUE_0"] = str(URING_QUEUE)
         envs["SQE_ASYNC_FLAG_0"] = "yes"
     else:
-        num_uthreads = pre_issue_depth      # use uthreads == depth
+        num_uthreads = pre_issue_depth
         if num_uthreads <= 0:
             num_uthreads = 1
+        elif num_uthreads > 16:
+            num_uthreads = 16
         envs["UTHREADS_0"] = str(num_uthreads)
 
     cmd = [YCSBCLI_BIN, "-d", dbdir, "-f", trace, "--bg_compact_off",

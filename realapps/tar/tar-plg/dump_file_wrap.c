@@ -4,6 +4,7 @@
 #include <stdio.h>
 #include <unistd.h>
 #include <assert.h>
+#include <dirent.h>
 #include <sys/types.h>
 #include <foreactor.h>
 
@@ -59,7 +60,7 @@ static bool fstat_opendir_arggen(const int *epoch, bool *link, int *fd, struct s
     return false;
 }
 
-static bool getdents_arggen(const int *epoch, bool *link, int *fd, struct linux_dirent64 **dirp, size_t *count,
+static bool getdents_arggen(const int *epoch, bool *link, int *fd, struct dirent64 **dirp, size_t *count,
                             bool *buf_ready) {
     return false;
 }

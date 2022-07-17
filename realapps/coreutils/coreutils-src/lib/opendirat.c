@@ -50,5 +50,6 @@ opendirat (int dir_fd, char const *dir, int extra_flags, int *pnew_fd)
       close (new_fd);
       errno = fdopendir_errno;
     }
+  
   return dirp;
 }

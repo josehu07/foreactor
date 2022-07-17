@@ -6846,6 +6846,11 @@ EXTRA_DIST += lib/yesno.h
 ## end   gnulib module yesno
 
 
+# [foreactor] find libforeactor
+libforeactor_path ?= $(shell realpath ../../../libforeactor)
+lib_libcoreutils_a_CFLAGS += -I$(libforeactor_path)/include
+
+
 mostlyclean-local: mostlyclean-generic
 	@for dir in '' $(MOSTLYCLEANDIRS); do \
 	  if test -n "$$dir" && test -d $$dir; then \

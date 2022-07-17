@@ -71,7 +71,7 @@ std::ostream& operator<<(std::ostream& s, const SCGraphNode& n) {
         break;
     default:
         s << "SCGraphNode{" << n.node_id
-          << ",name='" << n.name << "''}";
+          << ",'" << n.name << "'}";
     }
     return s;
 }
@@ -98,7 +98,7 @@ SyscallNode::SyscallNode(unsigned node_id, std::string name,
 
 
 void SyscallNode::PrintCommonInfo(std::ostream& s) const {
-    s << node_id << ",name='" << name << "'"
+    s << node_id << ",'" << name << "'"
       << ",next=" << next_node << ",edge=" << edge_type
       << ",stage=" << stage << ",rc=" << rc << ",link=" << link;
 }
@@ -442,7 +442,7 @@ BranchNode::BranchNode(unsigned node_id, std::string name, size_t num_children,
 
 std::ostream& operator<<(std::ostream& s, const BranchNode& n) {
     s << "BranchNode{" << n.node_id
-      << ",name='" << n.name << "'"
+      << ",'" << n.name << "'"
       << ",decision=" << n.decision
       << ",children=[";
     for (size_t i = 0; i < n.children.size(); ++i) {

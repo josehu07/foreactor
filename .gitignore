@@ -10,9 +10,15 @@ liburing/
 
 microbench/microbench
 
-demoapps/demo-cpp/demo_dbdir/
+demoapps/demo-c/demo
 demoapps/demo-cpp/demo
+demoapps/demo-cpp/demo_dbdir/
 
-leveldb/leveldb-src/build/
-leveldb/leveldb-src/out/
-leveldb/ycsbcli
+realapps/leveldb/leveldb-src/build/
+realapps/leveldb/leveldb-src/out/
+realapps/leveldb/ycsbcli
+realapps/leveldb/workloads
+realapps/leveldb/results
+
+realapps/coreutils/results
+realapps/tar/results

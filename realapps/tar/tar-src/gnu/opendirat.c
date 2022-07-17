@@ -25,6 +25,9 @@
 #include <fcntl--.h>
 #include <unistd.h>
 
+/* [foreactor] for adding pause/resume stubs */
+#include <foreactor.h>
+
 /* Relative to DIR_FD, open the directory DIR, passing EXTRA_FLAGS to
    the underlying openat call.  On success, store into *PNEW_FD the
    underlying file descriptor of the newly opened directory and return
@@ -39,6 +42,8 @@ opendirat (int dir_fd, char const *dir, int extra_flags, int *pnew_fd)
                     | O_NONBLOCK | extra_flags);
   int new_fd = openat (dir_fd, dir, open_flags);
 
+  /* [foreactor] avoid interception */
+  // foreactor_PauseCurrentSCGraph();
   if (new_fd < 0)
     return NULL;
   DIR *dirp = fdopendir (new_fd);
@@ -50,5 +55,7 @@ opendirat (int dir_fd, char const *dir, int extra_flags, int *pnew_fd)
       close (new_fd);
       errno = fdopendir_errno;
     }
+  // foreactor_ResumeCurrentSCGraph();
+
   return dirp;
 }

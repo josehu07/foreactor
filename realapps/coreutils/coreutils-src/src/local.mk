@@ -81,6 +81,10 @@ nodist_src_libver_a_SOURCES = src/version.c src/version.h
 # Tell the linker to omit references to unused shared libraries.
 AM_LDFLAGS = $(IGNORE_UNUSED_LIBRARIES_CFLAGS)
 
+# [foreactor] explicit search path and include paths
+AM_LDFLAGS += -Wl,-rpath=$(libforeactor_path)
+AM_CFLAGS += -I$(libforeactor_path)/include
+
 # Extra libraries needed by more than one program.  Will be updated later.
 copy_ldadd =
 remove_ldadd =
@@ -93,6 +97,10 @@ remove_ldadd =
 # Similarly for $(LIB_MBRTOWC).
 LDADD = src/libver.a lib/libcoreutils.a $(LIBINTL) $(LIB_MBRTOWC) \
   lib/libcoreutils.a
+
+# [foreactor] link with libforeactor.so
+libforeactor_path ?= $(shell realpath ../../../libforeactor)
+LDADD += -L$(libforeactor_path) -l:libforeactor.so
 
 # First, list all programs, to make listing per-program libraries easier.
 # See [ below.
@@ -144,21 +152,6 @@ src_link_LDADD = $(LDADD)
 src_ln_LDADD = $(LDADD)
 src_logname_LDADD = $(LDADD)
 src_ls_LDADD = $(LDADD)
-
-# [foreactor] link with libforeactor.so
-libforeactor_path = $(shell realpath ../../../libforeactor)
-src_cp_LDADD += -L$(libforeactor_path) -l:libforeactor.so
-src_du_LDADD += -L$(libforeactor_path) -l:libforeactor.so
-
-# [foreactor] explicit search path and include paths
-src_cp_LDFLAGS = $(LDFLAGS) -Wl,-rpath=$(libforeactor_path)
-src_du_LDFLAGS = $(LDFLAGS) -Wl,-rpath=$(libforeactor_path)
-src_cp_CFLAGS = $(CFLAGS) -I$(libforeactor_path)/include -Isrc -Ilib
-src_du_CFLAGS = $(CFLAGS) -I$(libforeactor_path)/include -Isrc -Ilib
-
-# [foreactor] linker wrap option
-src_cp_LDFLAGS += -Wl,--wrap=sparse_copy_my -Wl,--wrap=inform_src_file_size
-src_du_LDFLAGS += -Wl,--wrap=du_files_my -Wl,--wrap=process_file_my
 
 # This must *not* depend on anything in lib/, since it is used to generate
 # src/primes.h.  If it depended on libcoreutils.a, that would pull all lib/*.c
@@ -339,6 +332,10 @@ src_sort_LDADD += $(LIBPMULTITHREAD)
 
 # for pthread_sigmask
 src_sort_LDADD += $(LIB_PTHREAD_SIGMASK)
+
+# [foreactor] linker wrap option
+src_cp_LDFLAGS = $(AM_LDFLAGS) -Wl,--wrap=sparse_copy_my -Wl,--wrap=inform_src_file_size
+src_du_LDFLAGS = $(AM_LDFLAGS) -Wl,--wrap=du_files_my -Wl,--wrap=process_file_my
 
 # Get the release year from lib/version-etc.c.
 RELEASE_YEAR = \

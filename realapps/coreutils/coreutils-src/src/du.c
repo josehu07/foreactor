@@ -46,6 +46,9 @@
 #include "xstrtol-error.h"
 #include "du.h"
 
+/* [foreactor] for adding pause/resume stubs */
+#include <foreactor.h>
+
 extern bool fts_debug;
 
 /* The official name of this program (e.g., no 'g' prefix).  */
@@ -657,6 +660,8 @@ process_file (FTS *fts, FTSENT *ent)
      do let its size contribute to the total. */
   duinfo_add (&tot_dui, &dui);
 
+  /* [foreactor] avoid interception */
+  foreactor_PauseCurrentSCGraph();
   if ((IS_DIR_TYPE (info) && level <= max_depth)
       || (opt_all && level <= max_depth)
       || level == 0)
@@ -668,6 +673,7 @@ process_file (FTS *fts, FTSENT *ent)
           : v >= opt_threshold)
         print_size (&dui_to_print, file);
     }
+  foreactor_ResumeCurrentSCGraph();
 
   return ok;
 }
@@ -713,11 +719,14 @@ du_files (char **files, int bit_flags)
           ok &= process_file_my (fts, ent);
         }
 
+      /* [foreactor] avoid interception */
+      foreactor_PauseCurrentSCGraph();
       if (fts_close (fts) != 0)
         {
           error (0, errno, _("fts_close failed"));
           ok = false;
         }
+      foreactor_ResumeCurrentSCGraph();
     }
 
   return ok;

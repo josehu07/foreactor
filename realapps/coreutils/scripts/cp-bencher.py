@@ -7,8 +7,9 @@ import argparse
 
 
 CP_BIN = "./coreutils-src/src/cp"
+CP_GRAPH_ID = 0
 
-URING_QUEUE = 64
+URING_QUEUE = 512
 
 NUM_ITERS = 20
 
@@ -35,18 +36,18 @@ def run_cp_single(libforeactor, workdir, use_foreactor, backend=None,
     envs = os.environ.copy()
     envs["LD_PRELOAD"] = libforeactor
     envs["USE_FOREACTOR"] = "yes" if use_foreactor else "no"
-    envs["DEPTH_0"] = str(pre_issue_depth)
+    envs[f"DEPTH_{CP_GRAPH_ID}"] = str(pre_issue_depth)
     if backend == "io_uring_default":
-        envs["QUEUE_0"] = str(URING_QUEUE)
-        envs["SQE_ASYNC_FLAG_0"] = "no"
+        envs[f"QUEUE_{CP_GRAPH_ID}"] = str(URING_QUEUE)
+        envs[f"SQE_ASYNC_FLAG_{CP_GRAPH_ID}"] = "no"
     else:
-        envs["QUEUE_0"] = str(URING_QUEUE)
-        envs["SQE_ASYNC_FLAG_0"] = "yes"
+        envs[f"QUEUE_{CP_GRAPH_ID}"] = str(URING_QUEUE)
+        envs[f"SQE_ASYNC_FLAG_{CP_GRAPH_ID}"] = "yes"
 
     cmd = [CP_BIN, "--reflink=never", "--sparse=never"]
-    if use_foreactor:
-        # concurrent background I/O works better with readahead turned off
-        cmd.append("--fadvise=random")
+    # concurrent background I/O sometimes works better with readahead turned off
+    # if use_foreactor:
+    #     cmd.append("--fadvise=random")
     
     indir = f"{workdir}/indir"
     outdir = f"{workdir}/outdir"
@@ -61,7 +62,7 @@ def run_cp_single(libforeactor, workdir, use_foreactor, backend=None,
     cmd.append(f"{outdir}/")
 
     secs_before = query_timestamp_sec()
-    subprocess.run(cmd, check=True, env=envs)
+    subprocess.run(cmd, check=True, capture_output=True, env=envs)
     secs_after = query_timestamp_sec()
 
     return (secs_after - secs_before) / num_files   # return value is secs/file
