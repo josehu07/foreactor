@@ -2,6 +2,7 @@
 #include <fstream>
 #include <string>
 #include <tuple>
+#include <unordered_map>
 #include <unordered_set>
 #include <stdexcept>
 #include <assert.h>
@@ -46,7 +47,7 @@ void SCGraph::UnregisterSCGraph() {
 SCGraph::SCGraph(unsigned graph_id, unsigned total_dims, IOEngine *engine,
                  int pre_issue_depth)
         : graph_id(graph_id), total_dims(total_dims), nodes{},
-          pre_issue_depth(pre_issue_depth),
+          pre_issue_depth(pre_issue_depth), no_interception_set{},
           graph_built(false), engine(engine),
           num_prepared(0), prepared_distance(-1),
           initial_frontier(nullptr), frontier(nullptr),
@@ -152,6 +153,15 @@ void SCGraph::AddNode(SCGraphNode *node, bool is_start) {
         initial_frontier = node;
         DEBUG("inited frontier -> %p\n", frontier);
     }
+}
+
+
+void SCGraph::AddNonInterceptionType(SyscallType sc_type) {
+    no_interception_set.insert(sc_type);
+}
+
+bool SCGraph::IsInNonInterceptionSet(SyscallType sc_type) {
+    return no_interception_set.contains(sc_type);
 }
 
 

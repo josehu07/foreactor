@@ -66,7 +66,8 @@ int open(const char *pathname, int flags, ...) {
         va_end(arg);
     }
 
-    if (active_scgraph == nullptr) {
+    if (active_scgraph == nullptr ||
+        active_scgraph->IsInNonInterceptionSet(SC_OPEN)) {
         DEBUG("posix::open(\"%s\", %d, %u)\n", pathname, flags, mode);
         return posix::open(pathname, flags, mode);
     } else {
@@ -103,7 +104,8 @@ int openat(int dirfd, const char *pathname, int flags, ...) {
         va_end(arg);
     }
 
-    if (active_scgraph == nullptr) {
+    if (active_scgraph == nullptr ||
+        active_scgraph->IsInNonInterceptionSet(SC_OPENAT)) {
         DEBUG("posix::openat(%d, \"%s\", %d, %u)\n",
               dirfd, pathname, flags, mode);
         return posix::openat(dirfd, pathname, flags, mode);
@@ -134,7 +136,8 @@ int openat64(int dirfd, const char *pathname, int flags, ...) {
 
 
 int close(int fd) {
-    if (active_scgraph == nullptr) {
+    if (active_scgraph == nullptr ||
+        active_scgraph->IsInNonInterceptionSet(SC_CLOSE)) {
         DEBUG("posix::close(%d)\n", fd);
         return posix::close(fd);
     } else {
@@ -151,7 +154,8 @@ int close(int fd) {
 
 
 ssize_t pread(int fd, void *buf, size_t count, off_t offset) {
-    if (active_scgraph == nullptr) {
+    if (active_scgraph == nullptr ||
+        active_scgraph->IsInNonInterceptionSet(SC_PREAD)) {
         DEBUG("posix::pread(%d, %p, %lu, %ld)\n", fd, buf, count, offset);
         return posix::pread(fd, buf, count, offset);
     } else {
@@ -180,7 +184,8 @@ ssize_t read(int fd, void *buf, size_t count) {
 
 
 ssize_t pwrite(int fd, const void *buf, size_t count, off_t offset) {
-    if (active_scgraph == nullptr) {
+    if (active_scgraph == nullptr ||
+        active_scgraph->IsInNonInterceptionSet(SC_PWRITE)) {
         DEBUG("posix::pwrite(%d, %p, %lu, %ld)\n", fd, buf, count, offset);
         return posix::pwrite(fd, buf, count, offset);
     } else {
@@ -209,7 +214,8 @@ ssize_t write(int fd, const void *buf, size_t count) {
 
 
 off_t lseek(int fd, off_t offset, int whence) {
-    if (active_scgraph == nullptr) {
+    if (active_scgraph == nullptr ||
+        active_scgraph->IsInNonInterceptionSet(SC_LSEEK)) {
         DEBUG("posix::lseek(%d, %ld, %d)\n", fd, offset, whence);
         return posix::lseek(fd, offset, whence);
     } else {
@@ -230,7 +236,8 @@ off64_t lseek64(int fd, off64_t offset, int whence) {
 
 
 int __fxstat([[maybe_unused]] int ver, int fd, struct stat *buf) {
-    if (active_scgraph == nullptr) {
+    if (active_scgraph == nullptr ||
+        active_scgraph->IsInNonInterceptionSet(SC_FSTAT)) {
         DEBUG("posix::fstat(%d, %p)\n", fd, buf);
         return posix::fstat(fd, buf);
     } else {
@@ -251,7 +258,8 @@ int __fxstat64([[maybe_unused]] int ver, int fd, struct stat64 *buf) {
 
 int __fxstatat([[maybe_unused]] int ver, int dirfd, const char *pathname,
                struct stat *buf, int flags) {
-    if (active_scgraph == nullptr) {
+    if (active_scgraph == nullptr ||
+        active_scgraph->IsInNonInterceptionSet(SC_FSTATAT)) {
         DEBUG("posix::fstatat(%d, \"%s\", %p, %d)\n",
               dirfd, pathname, buf, flags);
         return posix::fstatat(dirfd, pathname, buf, flags);
@@ -276,7 +284,8 @@ int __fxstatat64([[maybe_unused]] int ver, int dirfd, const char *pathname,
 
 
 ssize_t getdents64(int fd, void *dirp, size_t count) {
-    if (active_scgraph == nullptr) {
+    if (active_scgraph == nullptr ||
+        active_scgraph->IsInNonInterceptionSet(SC_GETDENTS)) {
         DEBUG("posix::getdents(%d, %p, %lu)\n", fd, dirp, count);
         return posix::getdents(fd, dirp, count);
     } else {
@@ -290,6 +299,9 @@ ssize_t getdents64(int fd, void *dirp, size_t count) {
         return static_cast<ssize_t>(node->Issue(*epoch));
     }
 }
+
+// TODO: add `fdopendir()` & `readdir()` interception as they are more
+// commonly-used POSIX library calls.
 
 
 }

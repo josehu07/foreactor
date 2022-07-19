@@ -505,6 +505,52 @@ void foreactor_PreadPutInternalBuf(unsigned graph_id, unsigned node_id,
 }
 
 
+void foreactor_IgnoreSyscallOpen(unsigned graph_id) {
+    SCGraph *scgraph = GetSCGraphFromId(graph_id);
+    scgraph->AddNonInterceptionType(SC_OPEN);
+}
+
+void foreactor_IgnoreSyscallOpenat(unsigned graph_id) {
+    SCGraph *scgraph = GetSCGraphFromId(graph_id);
+    scgraph->AddNonInterceptionType(SC_OPENAT);
+}
+
+void foreactor_IgnoreSyscallClose(unsigned graph_id) {
+    SCGraph *scgraph = GetSCGraphFromId(graph_id);
+    scgraph->AddNonInterceptionType(SC_CLOSE);
+}
+
+void foreactor_IgnoreSyscallPread(unsigned graph_id) {
+    SCGraph *scgraph = GetSCGraphFromId(graph_id);
+    scgraph->AddNonInterceptionType(SC_PREAD);
+}
+
+void foreactor_IgnoreSyscallPwrite(unsigned graph_id) {
+    SCGraph *scgraph = GetSCGraphFromId(graph_id);
+    scgraph->AddNonInterceptionType(SC_PWRITE);
+}
+
+void foreactor_IgnoreSyscallLseek(unsigned graph_id) {
+    SCGraph *scgraph = GetSCGraphFromId(graph_id);
+    scgraph->AddNonInterceptionType(SC_LSEEK);
+}
+
+void foreactor_IgnoreSyscallFstat(unsigned graph_id) {
+    SCGraph *scgraph = GetSCGraphFromId(graph_id);
+    scgraph->AddNonInterceptionType(SC_FSTAT);
+}
+
+void foreactor_IgnoreSyscallFstatat(unsigned graph_id) {
+    SCGraph *scgraph = GetSCGraphFromId(graph_id);
+    scgraph->AddNonInterceptionType(SC_FSTATAT);
+}
+
+void foreactor_IgnoreSyscallGetdents(unsigned graph_id) {
+    SCGraph *scgraph = GetSCGraphFromId(graph_id);
+    scgraph->AddNonInterceptionType(SC_GETDENTS);
+}
+
+
 void foreactor_EnterSCGraph(unsigned graph_id) {
     if (UseForeactor) {
         if (active_scgraph == nullptr) {

@@ -6,6 +6,7 @@ import argparse
 
 
 YCSBCLI_BIN = "./ycsbcli"
+GET_GRAPH_ID = 0
 
 URING_QUEUE = 32
 CGROUP_NAME = "leveldb_group"
@@ -63,20 +64,20 @@ def run_ycsbcli_single(libforeactor, dbdir, trace, mem_limit, drop_caches,
     envs = os.environ.copy()
     envs["LD_PRELOAD"] = libforeactor
     envs["USE_FOREACTOR"] = "yes" if use_foreactor else "no"
-    envs["DEPTH_0"] = str(pre_issue_depth)
+    envs[f"DEPTH_{GET_GRAPH_ID}"] = str(pre_issue_depth)
     if backend == "io_uring_default":
-        envs["QUEUE_0"] = str(URING_QUEUE)
-        envs["SQE_ASYNC_FLAG_0"] = "no"
+        envs[f"QUEUE_{GET_GRAPH_ID}"] = str(URING_QUEUE)
+        envs[f"SQE_ASYNC_FLAG_{GET_GRAPH_ID}"] = "no"
     elif backend == "io_uring_sqe_async":
-        envs["QUEUE_0"] = str(URING_QUEUE)
-        envs["SQE_ASYNC_FLAG_0"] = "yes"
+        envs[f"QUEUE_{GET_GRAPH_ID}"] = str(URING_QUEUE)
+        envs[f"SQE_ASYNC_FLAG_{GET_GRAPH_ID}"] = "yes"
     else:
         num_uthreads = pre_issue_depth
         if num_uthreads <= 0:
             num_uthreads = 1
         elif num_uthreads > 16:
             num_uthreads = 16
-        envs["UTHREADS_0"] = str(num_uthreads)
+        envs[f"UTHREADS_{GET_GRAPH_ID}"] = str(num_uthreads)
 
     cmd = [YCSBCLI_BIN, "-d", dbdir, "-f", trace, "--bg_compact_off",
            "--no_fill_cache"]

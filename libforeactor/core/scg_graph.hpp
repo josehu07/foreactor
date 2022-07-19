@@ -1,11 +1,13 @@
 #include <tuple>
 #include <unordered_map>
+#include <unordered_set>
 #include <assert.h>
 
 #include "debug.hpp"
 #include "timer.hpp"
 #include "io_engine.hpp"
 #include "scg_nodes.hpp"
+#include "syscalls.hpp"
 #include "value_pool.hpp"
 
 
@@ -38,6 +40,9 @@ class SCGraph {
         // How many syscalls we try to issue ahead of time.
         // Must be no larger than the length of SQ of uring.
         const int pre_issue_depth = 0;
+
+        // Set of syscall types that should be ignored when intercepted.
+        std::unordered_set<SyscallType> no_interception_set;
 
         // Register this SCGraph as active on my thread. The SCGraph must have
         // been initialized and associated with the given IOUring queue pair.
@@ -107,6 +112,10 @@ class SCGraph {
 
         // Add a new node into graph -- used at graph building.
         void AddNode(SCGraphNode *node, bool is_start = false);
+
+        // Setting & checking for non-interception syscall types.
+        void AddNonInterceptionType(SyscallType sc_type);
+        bool IsInNonInterceptionSet(SyscallType sc_type);
 
         // Get current frontier node and frontier epoch.
         // NodeT must be one of those listed in syscalls.hpp.

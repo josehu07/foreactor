@@ -245,6 +245,18 @@ void foreactor_PreadPutInternalBuf(unsigned graph_id, unsigned node_id,
                                    const int *epoch_);
 
 
+// Syscall type non-interception bypass settings.
+void foreactor_IgnoreSyscallOpen(unsigned graph_id);
+void foreactor_IgnoreSyscallOpenat(unsigned graph_id);
+void foreactor_IgnoreSyscallClose(unsigned graph_id);
+void foreactor_IgnoreSyscallPread(unsigned graph_id);
+void foreactor_IgnoreSyscallPwrite(unsigned graph_id);
+void foreactor_IgnoreSyscallLseek(unsigned graph_id);
+void foreactor_IgnoreSyscallFstat(unsigned graph_id);
+void foreactor_IgnoreSyscallFstatat(unsigned graph_id);
+void foreactor_IgnoreSyscallGetdents(unsigned graph_id);
+
+
 // Called upon entering/leaving a hijacked app function.
 void foreactor_EnterSCGraph(unsigned graph_id);
 void foreactor_LeaveSCGraph(unsigned graph_id);

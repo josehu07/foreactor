@@ -286,6 +286,9 @@ static void BuildSCGraph() {
     foreactor_BranchAppendChild(graph_id, 5, 0, 0);
     foreactor_BranchAppendEndNode(graph_id, 5);
 
+    foreactor_IgnoreSyscallFstat(graph_id);
+    foreactor_IgnoreSyscallFstatat(graph_id);
+
     foreactor_SetSCGraphBuilt(graph_id);
 
     // foreactor_DumpDotImg(graph_id, "version_get");
