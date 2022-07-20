@@ -11,26 +11,35 @@ CP_BENCHER_PY = "./scripts/cp-bencher.py"
 CP_PLOTTER_PY = "./scripts/cp-plotter.py"
 
 CP_FILE_SIZES = {
+    "16M":  16   * 1024 * 1024,
+    "32M":  32   * 1024 * 1024,
     "64M":  64   * 1024 * 1024,
+    "128M": 128  * 1024 * 1024,
     "256M": 256  * 1024 * 1024,
-    "1G":   1024 * 1024 * 1024,
 }
 CP_NUM_FILES = 4
+
+CP_FIGURES = ["avgtime"]
+CP_BACKENDS = ["io_uring_default"]
+CP_PRE_ISSUE_DEPTH_LIST = [4, 8, 16, 32, 64]
 
 DU_PREPARE_PY = "./scripts/du-prepare.py"
 DU_BENCHER_PY = "./scripts/du-bencher.py"
 DU_PLOTTER_PY = "./scripts/du-plotter.py"
 
 DU_FILE_COUNTS = {
+    "1k":  1  * 1000,
     "3k":  3  * 1000,
-    "6k":  6  * 1000,
-    "12k": 12 * 1000,
+    "5k":  5  * 1000,
+    "7k":  7  * 1000,
+    "9k":  9  * 1000,
 }
 DU_NUM_DIRS = 4
 DU_FILE_SIZE = 10
 
-BACKENDS = ["io_uring_default", "io_uring_sqe_async"]
-PRE_ISSUE_DEPTH_LIST = [2, 4, 8, 16, 32, 64]
+DU_FIGURES = ["avgtime"]
+DU_BACKENDS = ["io_uring_sqe_async"]
+DU_PRE_ISSUE_DEPTH_LIST = [4, 8, 16, 32, 64]
 
 
 def check_file_exists(path):
@@ -144,6 +153,34 @@ def run_all_du(libforeactor, results_dir, workdir_prefix, num_dirs,
             print(output.rstrip())
 
 
+def run_plot_cp(results_dir, figure):
+    cmd = ["python3", CP_PLOTTER_PY, "-m", figure, "-r", results_dir,
+           "-o", f"{results_dir}/cp"]
+
+    result = subprocess.run(cmd, check=True, capture_output=True)
+    output = result.stdout.decode('ascii')
+    return output
+
+def plot_all_cp(results_dir, figures):
+    for figure in figures:
+        run_plot_cp(results_dir, figure)
+        print(f"PLOT {figure}")
+
+
+def run_plot_du(results_dir, figure):
+    cmd = ["python3", DU_PLOTTER_PY, "-m", figure, "-r", results_dir,
+           "-o", f"{results_dir}/du"]
+
+    result = subprocess.run(cmd, check=True, capture_output=True)
+    output = result.stdout.decode('ascii')
+    return output
+
+def plot_all_du(results_dir, figures):
+    for figure in figures:
+        run_plot_du(results_dir, figure)
+        print(f"PLOT {figure}")
+
+
 def check_arg_given(parser, args, argname):
     assert type(argname) == str
     if not hasattr(args, argname) or getattr(args, argname) is None:
@@ -180,13 +217,15 @@ def main():
         check_file_exists(CP_BENCHER_PY)
         prepare_dir(args.results_dir, False)
         run_all_cp(args.libforeactor, args.results_dir, args.workdir_prefix,
-                   CP_FILE_SIZES, CP_NUM_FILES, BACKENDS, PRE_ISSUE_DEPTH_LIST)
+                   CP_FILE_SIZES, CP_NUM_FILES, CP_BACKENDS,
+                   CP_PRE_ISSUE_DEPTH_LIST)
 
     elif args.mode == "cp-plotter":
         check_arg_given(parser, args, "results_dir")
         check_file_exists(CP_PLOTTER_PY)
         check_dir_exists(args.results_dir)
-        pass
+        plot_all_cp(args.results_dir, CP_FIGURES)
+        # configs to plot are controlled in the plotter script
 
     elif args.mode == "du-prepare":
         check_arg_given(parser, args, "workdir_prefix")
@@ -201,13 +240,15 @@ def main():
         check_file_exists(DU_BENCHER_PY)
         prepare_dir(args.results_dir, False)
         run_all_du(args.libforeactor, args.results_dir, args.workdir_prefix,
-                   DU_NUM_DIRS, DU_FILE_COUNTS, BACKENDS, PRE_ISSUE_DEPTH_LIST)
+                   DU_NUM_DIRS, DU_FILE_COUNTS, DU_BACKENDS,
+                   DU_PRE_ISSUE_DEPTH_LIST)
 
     elif args.mode == "du-plotter":
         check_arg_given(parser, args, "results_dir")
         check_file_exists(DU_PLOTTER_PY)
         check_dir_exists(args.results_dir)
-        pass
+        plot_all_du(args.results_dir, DU_FIGURES)
+        # configs to plot are controlled in the plotter script
 
     else:
         print(f"Error: unrecognized mode {args.mode}")

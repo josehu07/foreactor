@@ -9,48 +9,58 @@ import matplotlib.cm as cm
 from matplotlib.colors import Normalize
 
 
-def read_ycsbrun_us(input_logs_dir, value_size, num_l0_tables, backend, mem_percentage,
+def read_avgtime_ms(results_dir, num_files, file_size, backend,
                     pre_issue_depth_str):
-    with open(f"{input_logs_dir}/result-{value_size}-{num_l0_tables}-ycsbrun-"
-              f"{backend}-mem_{mem_percentage}.log") as flog:
+    with open(f"{results_dir}/cp-{file_size}-{num_files}-" + \
+              f"{backend}.log") as flog:
         while True:
             line = flog.readline().strip()
             if line[:line.index(':')] == pre_issue_depth_str:
-                avg_us = float(line.split()[4])
-                return avg_us
+                avg_ms = float(line.split()[2])
+                return avg_ms
 
-def plot_ycsbrun_bars(results, db_setups, output_prefix, title):
-    plt.rcParams.update({'font.size': 16})
-    # plt.rcParams.update({'figure.figsize': (20, 7)})
-    plt.rcParams.update({'figure.figsize': (12, 7)})
+def plot_avgtime_bars(results, file_sizes, output_prefix):
+    plt.rcParams.update({'font.size': 18})
+    plt.rcParams.update({'figure.figsize': (20, 7)})
 
-    norm = Normalize(vmin=-5, vmax=20)
+    norm = Normalize(vmin=0, vmax=100)
     orig_color = "steelblue"
+    orig_hatch = '//'
     cmaps = {
-        "io_uring_sqe_async": cm.BuGn,
-        "thread_pool": cm.OrRd,
+        # "io_uring_default": cm.BuGn,
+        "io_uring_default": cm.OrRd,
+        "io_uring_sqe_async": cm.OrRd,
     }
+    edge_color = "black"
 
     for idx, config in enumerate(results.keys()):
-        xs = list(map(lambda x: x * (len(results)+2) + idx, range(len(db_setups))))
+        xs = list(map(lambda x: x * (len(results)+1.2) + idx,
+                      range(len(file_sizes))))
         ys = results[config]
 
         color = orig_color
-
+        hatch = orig_hatch
+        label = config
         if config != "original":
             segs = config.split('-')
             backend, pre_issue_depth = segs[0], int(segs[1])
             color = cmaps[backend](norm(pre_issue_depth))
+            hatch = ''
+            label = f"foreactor-io_uring-{pre_issue_depth}"
         
-        plt.bar(xs, ys, width=0.7, label=config, color=color, zorder=3)
+        plt.bar(xs, ys, width=1, label=label, color=color, hatch=hatch,
+                        edgecolor=edge_color, zorder=3)
 
-    plt.xlabel("Database Image")
-    plt.ylabel("Avg. Time per Get (us)")
+        for x, y in zip(xs, ys):
+            plt.text(x, y, f"{y:.1f}", ha="center", va="bottom",
+                           fontsize=12)
 
-    plt.title(f"{title}")
+    plt.xlabel("File size (bytes)")
+    plt.ylabel("Completion time of cp (ms)")
 
-    xticks = list(map(lambda x: x * (len(results)+2) + (len(results)/2), range(len(db_setups))))
-    plt.xticks(xticks, db_setups)
+    xticks = list(map(lambda x: x * (len(results)+1.2) + (len(results)/2),
+                  range(len(file_sizes))))
+    plt.xticks(xticks, file_sizes)
 
     plt.grid(axis='y', zorder=1)
 
@@ -58,47 +68,48 @@ def plot_ycsbrun_bars(results, db_setups, output_prefix, title):
 
     plt.tight_layout()
 
-    plt.savefig(f"{output_prefix}-ycsbrun-{title}.png", dpi=120)
+    plt.savefig(f"{output_prefix}-avgtime.png", dpi=200)
     plt.close()
-    print(f"PLOT ycsbrun-{title}")
 
-def handle_avgtime(input_logs_dir, output_prefix):
-    file_sizes = ["128M", "512M", "2G"]
-    num_files = 4
-    backends = ["io_uring_default", "io_uring_sqe_async"]
-    pre_issue_depth_list = [2, 4, 8, 16, 32]
+    print(f"PLOT avgtime")
 
-    for file_size in file_sizes:
-        results = {"original": []}
+def handle_avgtime(results_dir, output_prefix):
+    NUM_FILES = 4
+    FILE_SIZES = ["16M", "32M", "64M", "128M", "256M"]
+    BACKENDS = ["io_uring_default"]
+    PRE_ISSUE_DEPTH_LIST = [4, 16, 64]
 
-        avg_us = read_avgtime_us(input_logs_dir, value_size, num_l0_tables,
-                                 backends[0], mem_percentage, "orig")
-        results["original"].append(avg_us)
+    results = {"original": []}
 
-        for backend in backends:
-            for pre_issue_depth in pre_issue_depth_list:
+    for file_size in FILE_SIZES:
+        avg_ms = read_avgtime_ms(results_dir, NUM_FILES, file_size,
+                                 BACKENDS[0], "orig")
+        results["original"].append(avg_ms)
+
+        for backend in BACKENDS:
+            for pre_issue_depth in PRE_ISSUE_DEPTH_LIST:
                 config = f"{backend}-{pre_issue_depth}"
                 if config not in results:
                     results[config] = []
-                avg_us = read_ycsbrun_us(input_logs_dir, value_size, num_l0_tables,
-                                         backend, mem_percentage, str(pre_issue_depth))
-                results[config].append(avg_us)
+                avg_ms = read_avgtime_ms(results_dir, NUM_FILES, file_size,
+                                         backend, str(pre_issue_depth))
+                results[config].append(avg_ms)
 
-        plot_ycsbrun_bars(results, db_setups, output_prefix, f"mem_{mem_percentage}")
+    plot_avgtime_bars(results, FILE_SIZES, output_prefix)
 
 
 def main():
-    parser = argparse.ArgumentParser(description="cp copy result plotting")
+    parser = argparse.ArgumentParser(description="cp stat result plotting")
     parser.add_argument('-m', dest='mode', required=True,
-                        help="which figures to plot: avgtime")
-    parser.add_argument('-i', dest='input_logs_dir', required=True,
-                        help="input logs directory")
+                        help="which figure(s) to plot: avgtime")
+    parser.add_argument('-r', dest='results_dir', required=True,
+                        help="input result logs directory")
     parser.add_argument('-o', dest='output_prefix', required=True,
                         help="output plot filename prefix")
     args = parser.parse_args()
 
     if args.mode == 'avgtime':
-        handle_avgtime(args.input_logs_dir, args.output_prefix)
+        handle_avgtime(args.results_dir, args.output_prefix)
     else:
         print(f'Error: mode {args.mode} unrecognized')
         exit(1)

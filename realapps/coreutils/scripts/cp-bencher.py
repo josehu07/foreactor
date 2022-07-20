@@ -11,7 +11,7 @@ CP_GRAPH_ID = 0
 
 URING_QUEUE = 512
 
-NUM_ITERS = 20
+NUM_ITERS = 30
 
 
 def check_file_exists(path):
@@ -46,9 +46,9 @@ def run_cp_single(libforeactor, workdir, use_foreactor, backend=None,
 
     cmd = [CP_BIN, "--reflink=never", "--sparse=never"]
     # concurrent background I/O sometimes works better with readahead turned off
-    # if use_foreactor:
-    #     cmd.append("--fadvise=random")
-    
+    if use_foreactor:
+        cmd.append("--fadvise=random")
+
     indir = f"{workdir}/indir"
     outdir = f"{workdir}/outdir"
 
@@ -74,22 +74,23 @@ def run_cp_iters(num_iters, libforeactor, workdir, use_foreactor, backend=None,
         avg_secs = run_cp_single(libforeactor, workdir, use_foreactor, backend,
                                  pre_issue_depth)
         result_avg_secs += avg_secs
-    return result_avg_secs / num_iters
+    avg_ms = (result_avg_secs / num_iters) * 1000
+    return avg_ms
 
 
 def run_exprs(libforeactor, workdir, output_log, backend, pre_issue_depth_list):
     num_iters = NUM_ITERS
 
     with open(output_log, 'w') as fout:
-        avg_secs = run_cp_iters(num_iters, libforeactor, workdir, False)
-        result = f" orig: avg {avg_secs:.3f} s"
+        avg_ms = run_cp_iters(num_iters, libforeactor, workdir, False)
+        result = f" orig: avg {avg_ms:.3f} ms"
         fout.write(result + '\n')
         print(result)
 
         for pre_issue_depth in pre_issue_depth_list:
-            avg_secs = run_cp_iters(num_iters, libforeactor, workdir, True,
-                                    backend, pre_issue_depth)
-            result = f" {pre_issue_depth:4d}: avg {avg_secs:.3f} s"
+            avg_ms = run_cp_iters(num_iters, libforeactor, workdir, True,
+                                  backend, pre_issue_depth)
+            result = f" {pre_issue_depth:4d}: avg {avg_ms:.3f} ms"
             fout.write(result + '\n')
             print(result)
 

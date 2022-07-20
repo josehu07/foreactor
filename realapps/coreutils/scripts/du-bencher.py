@@ -11,7 +11,7 @@ DU_GRAPH_ID = 1
 
 URING_QUEUE = 512
 
-NUM_ITERS = 20
+NUM_ITERS = 30
 
 
 def check_file_exists(path):
