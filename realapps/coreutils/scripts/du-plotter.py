@@ -19,6 +19,7 @@ def read_avgtime_ms(results_dir, num_dirs, file_count, backend,
                 avg_ms = float(line.split()[2])
                 return avg_ms
 
+
 def plot_avgtime_bars(results, file_counts, output_prefix):
     plt.rcParams.update({'font.size': 18})
     plt.rcParams.update({'figure.figsize': (20, 7)})

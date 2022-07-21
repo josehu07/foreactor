@@ -11,9 +11,9 @@ BENCHER_PY = "./scripts/bencher.py"
 PLOTTER_PY = "./scripts/plotter.py"
 
 VALUE_SIZES = {
-    # "1K":   1024,
+    "1K":   1024,
     # "2K":   2 * 1024,
-    # "4K":   4 * 1024,
+    "4K":   4 * 1024,
     # "8K":   8 * 1024,
     "16K":  16 * 1024,
     # "32K":  32 * 1024,
@@ -21,14 +21,15 @@ VALUE_SIZES = {
     # "128K": 128 * 1024,
     "256K": 256 * 1024,
     # "512K": 512 * 1024,
-    "1M":   1024 * 1024,
+    # "1M":   1024 * 1024,
 }
-# NUMS_L0_TABLES = [8, 12]
 NUMS_L0_TABLES = [12]
 
-BACKENDS = ["io_uring_default", "io_uring_sqe_async", "thread_pool"]
+BACKENDS = ["io_uring_default", "io_uring_sqe_async"]
 PRE_ISSUE_DEPTH_LIST = [4, 8, 12, 15]
 MEM_PERCENTAGES = [100, 80, 60, 40, 20]
+
+GET_FIGURES = ["mem_ratio", "req_size", "heat_map", "controlled"]
 
 
 def check_file_exists(path):
@@ -160,6 +161,20 @@ def run_all_ycsbrun(libforeactor, workloads_dir, results_dir, dbdir_prefix,
                     print(output.rstrip())
 
 
+def run_plotter(results_dir, figure):
+    cmd = ["python3", PLOTTER_PY, "-m", figure, "-r", results_dir,
+           "-o", f"{results_dir}/ldb"]
+
+    result = subprocess.run(cmd, check=True, capture_output=True)
+    output = result.stdout.decode('ascii')
+    return output
+
+def plot_all_figs(results_dir, figures):
+    for figure in figures:
+        run_plotter(results_dir, figure)
+        print(f"PLOT {figure}")
+
+
 def check_arg_given(parser, args, argname):
     assert type(argname) == str
     if not hasattr(args, argname) or getattr(args, argname) is None:
@@ -220,7 +235,8 @@ def main():
         check_arg_given(parser, args, "results_dir")
         check_file_exists(PLOTTER_PY)
         check_dir_exists(args.results_dir)
-        pass
+        plot_all_figs(args.results_dir, GET_FIGURES)
+        # configs to plot are controlled in the plotter script
 
     else:
         print(f"Error: unrecognized mode {args.mode}")

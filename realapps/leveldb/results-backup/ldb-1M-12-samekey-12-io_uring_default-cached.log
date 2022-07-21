@@ -1,0 +1,5 @@
+ orig: sum 220274.333 avg 2224.993 us 15.000 MB_read
+    4: sum 393989.333 avg 3979.690 us 15.000 MB_read
+    8: sum 399543.000 avg 4035.790 us 15.000 MB_read
+   12: sum 426548.667 avg 4308.573 us 14.667 MB_read
+   15: sum 456673.000 avg 4612.857 us 14.333 MB_read
