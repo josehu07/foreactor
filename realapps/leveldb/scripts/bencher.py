@@ -11,7 +11,7 @@ GET_GRAPH_ID = 0
 URING_QUEUE = 32
 CGROUP_NAME = "leveldb_group"
 
-CACHED_ITERS = 3
+CACHED_ITERS = 10
 DROP_CACHES_ITERS = 1
 
 
@@ -95,7 +95,7 @@ def run_ycsbcli_single(libforeactor, dbdir, trace, mem_limit, drop_caches,
 
 def get_us_result_from_output(output):
     in_timing_section = False
-    sum_us, avg_us = None, None
+    sum_us, avg_us, p99_us = None, None, None
 
     for line in output.split('\n'):
         line = line.strip()
@@ -105,31 +105,36 @@ def get_us_result_from_output(output):
             sum_us = float(line.split()[1])
         elif in_timing_section and line.startswith("avg"):
             avg_us = float(line.split()[1])
+        elif in_timing_section and line.startswith("p99"):
+            p99_us = float(line.split()[1])
             break
 
-    return (sum_us, avg_us)
+    return (sum_us, avg_us, p99_us)
 
 def run_ycsbcli_iters(num_iters, libforeactor, dbdir, trace, mem_limit,
                       drop_caches, use_foreactor, backend=None,
                       pre_issue_depth=0):
-    result_sum_us, result_avg_us = 0., 0.
+    result_sum_us, result_avg_us, result_p99_us = 0., 0., 0.
     result_mb_read = 0.
     for i in range(num_iters):
         output, mb_read = run_ycsbcli_single(libforeactor, dbdir, trace, mem_limit,
                                              drop_caches, use_foreactor, backend,
                                              pre_issue_depth)
-        sum_us, avg_us = get_us_result_from_output(output)
+        sum_us, avg_us, p99_us = get_us_result_from_output(output)
         assert mb_read >= 0
         assert sum_us is not None
         assert avg_us is not None
+        assert p99_us is not None
         result_sum_us += sum_us
         result_avg_us += avg_us
+        result_p99_us += p99_us
         result_mb_read += mb_read
 
     result_sum_us /= num_iters
     result_avg_us /= num_iters
+    result_p99_us /= num_iters
     result_mb_read /= num_iters
-    return result_sum_us, result_avg_us, result_mb_read
+    return result_sum_us, result_avg_us, result_p99_us, result_mb_read
 
 
 def run_exprs(libforeactor, dbdir, trace, mem_limit, drop_caches,
@@ -137,19 +142,21 @@ def run_exprs(libforeactor, dbdir, trace, mem_limit, drop_caches,
     num_iters = CACHED_ITERS if not drop_caches else DROP_CACHES_ITERS
 
     with open(output_log, 'w') as fout:
-        sum_us, avg_us, mb_read = run_ycsbcli_iters(num_iters, libforeactor, dbdir,
-                                                    trace, mem_limit, drop_caches,
-                                                    False)
-        result = f" orig: sum {sum_us:.3f} avg {avg_us:.3f} us {mb_read:.3f} MB_read"
+        sum_us, avg_us, p99_us, mb_read = run_ycsbcli_iters(num_iters, libforeactor,
+                                                            dbdir, trace, mem_limit,
+                                                            drop_caches, False)
+        result = f" orig: sum {sum_us:.3f} avg {avg_us:.3f} p99 {p99_us:.3f} us" + \
+                 f" {mb_read:.3f} MB_read"
         fout.write(result + '\n')
         print(result)
 
         for pre_issue_depth in pre_issue_depth_list:
-            sum_us, avg_us, mb_read = run_ycsbcli_iters(num_iters, libforeactor, dbdir,
-                                                        trace, mem_limit, drop_caches,
-                                                        True, backend, pre_issue_depth)
-            result = f" {pre_issue_depth:4d}: sum {sum_us:.3f} avg {avg_us:.3f} us" + \
-                     f" {mb_read:.3f} MB_read"
+            sum_us, avg_us, p99_us, mb_read = run_ycsbcli_iters(num_iters, libforeactor,
+                                                                dbdir, trace, mem_limit,
+                                                                drop_caches, True,
+                                                                backend, pre_issue_depth)
+            result = f" {pre_issue_depth:4d}: sum {sum_us:.3f} avg {avg_us:.3f}" + \
+                     f" p99 {p99_us:.3f} us {mb_read:.3f} MB_read"
             fout.write(result + '\n')
             print(result)
 

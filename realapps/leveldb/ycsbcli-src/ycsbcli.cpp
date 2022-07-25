@@ -5,6 +5,8 @@
 #include <thread>
 #include <limits>
 #include <algorithm>
+#include <thread>
+#include <future>
 #include <unistd.h>
 #include <string.h>
 #include <math.h>
@@ -173,12 +175,69 @@ do_ycsb(leveldb::DB *db, const std::vector<ycsb_req_t>& reqs,
     return cnt;
 }
 
+/** Worker thread func for multithreaded exper. */
+static void
+worker_thread_func(leveldb::DB *db, const std::vector<ycsb_req_t>& reqs,
+                   const std::string value, bool drop_caches,
+                   bool print_block_info, size_t id,
+                   std::vector<double>& ops_per_sec,
+                   std::future<void> init_barrier) {
+    // signal main thread for startup complete
+    init_barrier.set_value();
+
+    // call do_ycsb()
+    std::vector<double> microsecs;
+    uint cnt = do_ycsb(db, reqs, value, drop_caches, print_block_info,
+                       microsecs);
+    
+    // calculate my throughput in ops/sec
+    double sum_us = 0.;
+    for (auto& us ; microsecs)
+        sum_us += us;
+    double ops = static_cast<double>(cnt) * 1e6 / sum_us;
+    assert(id >= 0);
+    ops_per_sec[id] = ops;
+
+
+}
+
+/** Main coordinator thread if in multithreaded exper. */
+static std::vector<double>
+do_ycsb_multithreaded(leveldb::DB *db, const std::vector<ycsb_req_t>& reqs,
+                      const std::string value, bool drop_caches,
+                      bool print_block_info, size_t num_threads) {
+    // take a read-only snapshot shared across threads
+    read_options.snapshot = db->GetSnapshot();
+
+    // spawn the desired number of worker threads, each applying the whole
+    // trace once
+    std::vector<double> ops_per_sec;
+    std::vector<std::thread> workers;
+    std::vector<std::future<void>> init_barriers;
+    for (size_t id = 0; id < num_threads; ++id) {
+        std::promise<void> init_barrier;
+        init_barriers.push_back(init_barrier.get_future());
+        ops_per_sec.push_back(0.);
+        workers.emplace_back(worker_thread_func, db, reqs, value, drop_caches,
+                             print_block_info, id, ops_per_sec,
+                             std::move(init_barrier));
+    }
+
+    // signal the void promise to start them working
+    
+
+    db->ReleaseSnapshot(read_options.snapshot);
+    read_options.snapshot = nullptr;
+
+    return std::move(ops_per_sec);
+}
+
 
 int
 main(int argc, char *argv[])
 {
     std::string db_location, ycsb_filename;
-    size_t value_size, memtable_limit, filesize_limit;
+    size_t value_size, memtable_limit, filesize_limit, num_threads;
     bool help, write_sync, bg_compact_off, no_fill_cache, drop_caches, print_block_info, wait_before_close;
 
     cxxopts::Options cmd_args("leveldb ycsb trace exec client");
@@ -187,6 +246,7 @@ main(int argc, char *argv[])
             ("d,directory", "directory of db", cxxopts::value<std::string>(db_location)->default_value("./dbdir"))
             ("v,value_size", "size of value", cxxopts::value<size_t>(value_size)->default_value("64"))
             ("f,ycsb", "YCSB trace filename", cxxopts::value<std::string>(ycsb_filename)->default_value(""))
+            ("t,multithread", "if > 1, do multithreading on read-only snapshot", cxxopts::value<size_t>(num_threads)->default_value("1"))
             ("mlim", "memtable size limit", cxxopts::value<size_t>(memtable_limit)->default_value("4194304"))
             ("flim", "sstable filesize limit", cxxopts::value<size_t>(filesize_limit)->default_value("2097152"))
             ("write_sync", "force write sync", cxxopts::value<bool>(write_sync)->default_value("false"))
@@ -214,6 +274,11 @@ main(int argc, char *argv[])
     read_options.fill_cache = !no_fill_cache;
     read_options.print_block_info = print_block_info;
 
+    if (num_threads == 0) {
+        std::cerr << "Error: number of threads given is zero" << std::endl;
+        exit(1);
+    }
+
     // Read in YCSB workload trace.
     std::vector<ycsb_req_t> ycsb_reqs;
     if (!ycsb_filename.empty()) {
@@ -221,6 +286,11 @@ main(int argc, char *argv[])
         std::string opcode;
         std::string key;
         while (input >> opcode >> key) {
+            if (num_threads > 1 && opcode != "READ" && opcode != "SCAN") {
+                std::cerr << "Error: can only do read-only ops when"
+                          << " multithreaded" << std::endl;
+                exit(1);
+            }
             ycsb_op_t op = opcode == "READ"   ? READ
                          : opcode == "INSERT" ? INSERT
                          : opcode == "UPDATE" ? UPDATE
@@ -248,49 +318,76 @@ main(int argc, char *argv[])
                                    bg_compact_off);
 
     // Execute the actions of the YCSB trace.
-    std::vector<double> microsecs;
-    uint cnt = do_ycsb(db, ycsb_reqs, value, drop_caches, print_block_info, microsecs);
-    std::cout << "Finished " << cnt << " requests." << std::endl << std::endl;
+    if (num_threads == 1) {
+        // no multithread flag, apply trace directly on open DB object
+        std::vector<double> microsecs;
+        uint cnt = do_ycsb(db, ycsb_reqs, value, drop_caches, print_block_info, microsecs);
+        std::cout << "Finished " << cnt << " requests." << std::endl << std::endl;
 
-    // Print timing info.
-    if (cnt > 0) {
-        assert(microsecs.size() == cnt);
-        std::sort(microsecs.begin(), microsecs.end());
+        // print timing info
+        if (microsecs.size() > 0) {
+            std::sort(microsecs.begin(), microsecs.end());
 
-        std::cout << "Sorted time elapsed:";
-        for (double& us : microsecs)
-            std::cout << " " << us;
-        std::cout << std::endl << std::endl;
+            std::cout << "Sorted time elapsed:";
+            for (double& us : microsecs)
+                std::cout << " " << us;
+            std::cout << std::endl << std::endl;
 
-        double sum_us = 0.;
-        for (double& us : microsecs)
-            sum_us += us;
-        double min_us = microsecs.front();
-        double max_us = microsecs.back();
-        double avg_us = sum_us / microsecs.size();
-
-        std::cout << "Time elapsed stats:" << std::endl
-                  << "  sum  " << sum_us << " us" << std::endl
-                  << "  avg  " << avg_us << " us" << std::endl
-                  << "  max  " << max_us << " us" << std::endl
-                  << "  min  " << min_us << " us" << std::endl << std::endl;
-
-        if (microsecs.size() > 1) {
-            std::cout << "Removing top-1 outlier:" << std::endl;
-            microsecs.erase(microsecs.end() - 1, microsecs.end());
-
-            sum_us = 0.;
+            double sum_us = 0.;
             for (double& us : microsecs)
                 sum_us += us;
-            min_us = microsecs.front();
-            max_us = microsecs.back();
-            avg_us = sum_us / microsecs.size();
+            double min_us = microsecs.front();
+            double max_us = microsecs.back();
+            double avg_us = sum_us / microsecs.size();
 
-            std::cout << "  sum  " << sum_us << " us" << std::endl
+            std::cout << "Time elapsed stats:" << std::endl
+                      << "  sum  " << sum_us << " us" << std::endl
                       << "  avg  " << avg_us << " us" << std::endl
                       << "  max  " << max_us << " us" << std::endl
-                      << "  min  " << min_us << " us" << std::endl;
+                      << "  min  " << min_us << " us" << std::endl << std::endl;
+
+            if (microsecs.size() > 1) {
+                std::cout << "Removing top-1 outlier:" << std::endl;
+                microsecs.erase(microsecs.end() - 1, microsecs.end());
+
+                sum_us = 0.;
+                for (double& us : microsecs)
+                    sum_us += us;
+                min_us = microsecs.front();
+                max_us = microsecs.back();
+                avg_us = sum_us / microsecs.size();
+                size_t p99_idx = microsecs.size() * 99 / 100;
+                double p99_us = microsecs.at(p99_idx);
+
+                std::cout << "  sum  " << sum_us << " us" << std::endl
+                          << "  avg  " << avg_us << " us" << std::endl
+                          << "  p99  " << p99_us << " us" << std::endl
+                          << "  max  " << max_us << " us" << std::endl
+                          << "  min  " << min_us << " us" << std::endl;
+            }
         }
+
+    } else {
+        // multithreaded case, make a read-only snapshot and spawn child threads
+        // to execute the trace on the snapshot
+        assert(num_threads > 1);
+        std::vector<double> ops_per_sec = do_ycsb_multithreaded(db, ycsb_reqs, value,
+                                                                drop_caches,
+                                                                print_block_info,
+                                                                num_threads);
+        assert(ops_per_sec.size() == num_threads);
+        std::cout << "Finished multithreaded." << std::endl << std::endl;
+
+        // print the overall elapsed microseconds
+        double sum_ops_per_sec = 0.;
+        for (double& ops : ops_per_sec)
+            sum_ops_per_sec += ops;
+        double avg_ops_per_sec = sum_ops_per_sec / num_threads;
+
+        std::cout << "Throughput stats:" << std::endl
+                  << "  sum  " << sum_ops_per_sec << " ops/sec" << std::endl
+                  << "  avg  " << avg_ops_per_sec << " ops/sec" << std::endl << std::endl;
+        
     }
 
     // Force compaction of everything in memory.

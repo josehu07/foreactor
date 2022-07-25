@@ -108,7 +108,7 @@ def take_trace_records(ftrace, tmpfile, num_records):
             num_taken += 1
 
 def make_db_image(dbdir, ycsb_bin, ycsb_workload, value_size, memtable_limit,
-                  filesize_limit, num_l0_tables, output_prefix):
+                  filesize_limit, num_l0_tables, ycsb_distribution, output_prefix):
     # clean up old files
     if os.path.isdir(dbdir):
         for file in os.listdir(dbdir):
@@ -123,8 +123,9 @@ def make_db_image(dbdir, ycsb_bin, ycsb_workload, value_size, memtable_limit,
     # generate the mega YCSB load trace
     max_num_records = approx_num_records_per_l0_table * num_l0_tables * 25
     ycsb_output = run_ycsb_bin(ycsb_bin, "load", ycsb_workload,
-                               ["-p", f"recordcount={max_num_records}"])
-    mega_trace = f"{output_prefix}-{num_l0_tables}-mega.txt"
+                               ["-p", f"recordcount={max_num_records}",
+                                "-p", f"requestdistribution={ycsb_distribution}"])
+    mega_trace = f"{output_prefix}-mega.txt"
     convert_trace(ycsb_output, mega_trace)
 
     num_records = 0
@@ -230,37 +231,39 @@ def get_level_workload_key(stats, dbdir, level, last_l0_key):
         return last_key_max_seen
 
 def generate_workloads(stats, dbdir, ycsb_bin, ycsb_workload, num_records,
-                       num_l0_tables, output_prefix):
-    print("Workload keys --")
+                       ycsb_distribution, output_prefix, gen_samekey_workloads):
+    if gen_samekey_workloads:
+        print("Workload keys --")
 
-    # generate workload of reading the key that approximately triggers N preads
-    l0_workload_keys = get_l0_workload_keys(stats, dbdir)
-    for idx, l0_key in enumerate(l0_workload_keys):
-        n = idx + 1
-        with open(f"{output_prefix}-{num_l0_tables}-samekey-{n}.txt", 'w') as ftxt:
-            for i in range(SAMEKEY_NUMOPS_PER_RUN):
-                ftxt.write(f"READ {l0_key}\n")
-        print(f" {n}: {l0_key}")
-    last_l0_key = l0_workload_keys[-1]
+        # generate workload of reading the key that approximately triggers N preads
+        l0_workload_keys = get_l0_workload_keys(stats, dbdir)
+        for idx, l0_key in enumerate(l0_workload_keys):
+            n = idx + 1
+            with open(f"{output_prefix}-samekey-{n}.txt", 'w') as ftxt:
+                for i in range(SAMEKEY_NUMOPS_PER_RUN):
+                    ftxt.write(f"READ {l0_key}\n")
+            print(f" {n}: {l0_key}")
+        last_l0_key = l0_workload_keys[-1]
 
-    # for deeper levels, pick the smallest key larger than the last l0 key
-    level = 1
-    deepest_level = get_deepest_level(stats)
-    while level <= deepest_level:
-        level_key = get_level_workload_key(stats, dbdir, level, last_l0_key)
-        n = len(l0_workload_keys) + level
-        with open(f"{output_prefix}-{num_l0_tables}-samekey-{n}.txt", 'w') as ftxt:
-            for i in range(SAMEKEY_NUMOPS_PER_RUN):
-                ftxt.write(f"READ {level_key}\n")
-        print(f" {n}: {level_key}")
-        level += 1
+        # for deeper levels, pick the smallest key larger than the last l0 key
+        level = 1
+        deepest_level = get_deepest_level(stats)
+        while level <= deepest_level:
+            level_key = get_level_workload_key(stats, dbdir, level, last_l0_key)
+            n = len(l0_workload_keys) + level
+            with open(f"{output_prefix}-samekey-{n}.txt", 'w') as ftxt:
+                for i in range(SAMEKEY_NUMOPS_PER_RUN):
+                    ftxt.write(f"READ {level_key}\n")
+            print(f" {n}: {level_key}")
+            level += 1
 
-    # finally, generate the general YCSB run trace
+    # generate the general YCSB run trace
     num_operations = num_records * YCSBRUN_NUMOPS_SCALE
     ycsb_output = run_ycsb_bin(ycsb_bin, "run", ycsb_workload,
                                ["-p", f"recordcount={num_records}",
-                                "-p", f"operationcount={num_operations}"])
-    run_trace = f"{output_prefix}-{num_l0_tables}-ycsbrun.txt"
+                                "-p", f"operationcount={num_operations}",
+                                "-p", f"requestdistribution={ycsb_distribution}"])
+    run_trace = f"{output_prefix}-ycsbrun.txt"
     convert_trace(ycsb_output, run_trace)
 
 
@@ -276,8 +279,12 @@ def main():
                         help="value size in bytes")
     parser.add_argument('-t', dest='num_l0_tables', required=True, type=int,
                         help="target number of L0 tables")
+    parser.add_argument('-z', dest='ycsb_distribution', required=True,
+                        help="request distribution: zipfian|uniform")
     parser.add_argument('-o', dest='output_prefix', required=True,
                         help="path prefix of output workloads")
+    parser.add_argument('--gen_samekey', dest='gen_samekey', action='store_true',
+                        help="if given, also generate samekey workloads")
     parser.add_argument('--mlim', dest='mlim', required=False, type=int,
                         default=4194304, help="memtable size limit")
     parser.add_argument('--flim', dest='flim', required=False, type=int,
@@ -289,11 +296,20 @@ def main():
     check_file_exists(YCSBCLI_BIN)
     check_file_exists(LEVELDBUTIL_BIN)
 
+    if args.num_l0_tables < 8 or args.num_l0_tables > 12:
+        print(f"Error: number of L0 tables must be within [8, 12]")
+        exit(1)
+    if args.ycsb_distribution != "zipfian" and args.ycsb_distribution != "uniform":
+        print(f"Error: YCSB distribution {args.ycsb_distribution} not recognized")
+        exit(1)
+
     stats, num_records = make_db_image(args.dbdir, args.ycsb_bin, args.ycsb_workload,
                                        args.value_size, args.mlim, args.flim,
-                                       args.num_l0_tables, args.output_prefix)
+                                       args.num_l0_tables, args.ycsb_distribution,
+                                       args.output_prefix)
     generate_workloads(stats, args.dbdir, args.ycsb_bin, args.ycsb_workload,
-                       num_records, args.num_l0_tables, args.output_prefix)
+                       num_records, args.ycsb_distribution, args.output_prefix,
+                       args.gen_samekey)
 
 if __name__ == "__main__":
     main()
