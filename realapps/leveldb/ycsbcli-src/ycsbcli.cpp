@@ -223,8 +223,9 @@ do_ycsb_multithreaded(leveldb::DB *db, const std::vector<ycsb_req_t>& reqs,
                              std::move(init_barrier));
     }
 
-    // signal the void promise to start them working
-    
+    // wait for everyone finishes initialization
+    for (auto&& init_barrier : init_barriers)
+        init_barrier.wait();
 
     db->ReleaseSnapshot(read_options.snapshot);
     read_options.snapshot = nullptr;
