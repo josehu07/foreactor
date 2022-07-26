@@ -32,6 +32,16 @@ def read_ycsbrun_us(results_dir, value_size, num_l0_tables, ycsb_distribution,
                 p99_us = float(line.split()[6])
                 return avg_us, p99_us
 
+def read_multithread_ops(results_dir, value_size, num_l0_tables, ycsb_distribution,
+                         num_threads, backend, mem_percentage, pre_issue_depth_str):
+    with open(f"{results_dir}/ldb-{value_size}-{num_l0_tables}-{ycsb_distribution}-"
+              f"ycsbrun-{backend}-mem_{mem_percentage}-threads_{num_threads}.log") as flog:
+        while True:
+            line = flog.readline().strip()
+            if line[:line.index(':')] == pre_issue_depth_str:
+                sum_ops = float(line.split()[2])
+                return sum_ops
+
 def read_timer_fractions(results_dir, segments, value_size, num_l0_tables,
                          ycsb_distribution, backend, mem_percentage,
                          pre_issue_depth_str):
@@ -415,6 +425,39 @@ def handle_controlled(results_dir, output_prefix):
                         output_prefix, f"controlled-req_{value_size}")
 
 
+def plot_multithread(results, num_threads, output_prefix, title_suffix):
+    pass    # TODO
+
+def handle_multithread(results_dir, output_prefix):
+    VALUE_SIZE_ABBR = "16K"
+    NUM_L0_TABLES = 12
+    YCSB_DISTRIBUTION = "uniform"
+    BACKEND = "io_uring_sqe_async"
+    PRE_ISSUE_DEPTH_LIST = [8, 15]
+    MEM_PERCENTAGE = 100
+    NUMS_THREADS = [2, 4, 8]
+
+    results = {"original": []}
+
+    for num_threads in NUMS_THREADS:
+        sum_ops = read_multithread_ops(results_dir, VALUE_SIZE_ABBR,
+                                       NUM_L0_TABLES, YCSB_DISTRIBUTION,
+                                       num_threads, BACKEND, MEM_PERCENTAGE,
+                                       "orig")
+        results["original"].append(sum_ops)
+
+        for pre_issue_depth in PRE_ISSUE_DEPTH_LIST:
+            if str(pre_issue_depth) not in results:
+                results[str(pre_issue_depth)] = []
+            sum_ops = read_multithread_ops(results_dir, VALUE_SIZE_ABBR,
+                                           NUM_L0_TABLES, YCSB_DISTRIBUTION,
+                                           num_threads, BACKEND, MEM_PERCENTAGE,
+                                           str(pre_issue_depth))
+            results[str(pre_issue_depth)].append(sum_ops)
+
+    plot_multithread(results, num_threads, output_prefix, f"multithread")
+
+
 def plot_breakdown(fractions_map, segments_us_map, segments, output_prefix,
                    title_suffix):
     pass    # TODO
@@ -452,7 +495,8 @@ def handle_breakdown(results_dir, output_prefix):
 def main():
     parser = argparse.ArgumentParser(description="LevelDB result plotting")
     parser.add_argument('-m', dest='mode', required=True,
-                        help="mem_ratio|req_size|heat_map|controlled|breakdown")
+                        help="mem_ratio|req_size|heat_map|controlled|" + \
+                             "breakdown|multithread")
     parser.add_argument('-r', dest='results_dir', required=True,
                         help="input result logs directory")
     parser.add_argument('-o', dest='output_prefix', required=True,
@@ -469,6 +513,8 @@ def main():
         handle_heat_map(args.results_dir, args.output_prefix)
     elif args.mode == 'controlled':
         handle_controlled(args.results_dir, args.output_prefix)
+    elif args.mode == 'multithread':
+        handle_multithread(args.results_dir, args.output_prefix)
     elif args.mode == 'breakdown':
         handle_breakdown(args.results_dir, args.output_prefix)
     else:

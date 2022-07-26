@@ -23,31 +23,35 @@ VALUE_SIZES = {
     # "512K": 512 * 1024,
     # "1M":   1024 * 1024,
 }
+NUMS_L0_TABLES = [12]
+YCSB_DISTRIBUTIONS = ["zipfian", "uniform"]
+
 VALUE_SIZES_FOR_SAMEKEY = {
     "16K":  16 * 1024,
 }
-VALUE_SIZE_ABBR_FOR_BREAKDOWN = "16K"
-
-NUMS_L0_TABLES = [12]
 NUMS_L0_TABLES_FOR_SAMEKEY = [12]
-NUM_L0_TABLES_FOR_BREAKDOWN = 12
-
-YCSB_DISTRIBUTIONS = ["zipfian", "uniform"]
 YCSB_DISTRIBUTIONS_FOR_SAMEKEY = ["uniform"]
-YCSB_DISTRIBUTION_FOR_BREAKDOWN = "uniform"
 
 # BACKENDS = ["io_uring_sqe_async", "thread_pool"]
 BACKENDS = ["io_uring_sqe_async"]
-BACKEND_FOR_BREAKDOWN = "io_uring_sqe_async"
-
 # PRE_ISSUE_DEPTH_LIST = [4, 8, 12, 15]
 PRE_ISSUE_DEPTH_LIST = [8, 15]
-
 MEM_PERCENTAGES = [100, 80, 60, 40, 20]
+
+VALUE_SIZE_ABBR_FOR_BREAKDOWN = "16K"
+NUM_L0_TABLES_FOR_BREAKDOWN = 12
+YCSB_DISTRIBUTION_FOR_BREAKDOWN = "uniform"
+BACKEND_FOR_BREAKDOWN = "io_uring_sqe_async"
 MEM_PERCENTAGE_FOR_BREAKDOWN = 60
 
-# GET_FIGURES = ["mem_ratio", "req_size", "heat_map", "controlled"]
-GET_FIGURES = ["mem_ratio", "req_size", "heat_map"]
+VALUE_SIZE_ABBR_FOR_MULTITHREAD = "16K"
+NUM_L0_TABLES_FOR_MULTITHREAD = 12
+YCSB_DISTRIBUTION_FOR_MULTITHREAD = "uniform"
+BACKEND_FOR_MULTITHREAD = "io_uring_sqe_async"
+MEM_PERCENTAGE_FOR_MULTITHREAD = 100
+MULTITHREAD_NUMS_THREADS = [2, 4, 8]
+
+GET_FIGURES = ["mem_ratio", "req_size", "heat_map", "multithread"]
 GET_BREAKDOWN_FIGURES = ["breakdown"]
 
 
@@ -117,15 +121,16 @@ def get_dbdir_bytes(dbdir):
     return size_bytes
 
 def run_bench(libforeactor, dbdir, workload, output_log, backend,
-              pre_issue_depth_list, drop_caches, mem_percentage=100):
+              pre_issue_depth_list, drop_caches, mem_percentage=100,
+              num_threads=1):
     cmd = ["python3", BENCHER_PY, "-l", libforeactor, "-d", dbdir,
-           "-f", workload, "-o", output_log, "-b", backend]
+           "-f", workload, "-o", output_log, "-b", backend, "-t", str(num_threads)]
     if drop_caches:
         cmd.append("--drop_caches")
     
     assert mem_percentage > 0 and mem_percentage <= 100
     mem_bytes = int(get_dbdir_bytes(dbdir) * mem_percentage / 100)
-    cmd += ["--mem_limit", str(mem_bytes)]
+    cmd += ["-m", str(mem_bytes)]
 
     cmd += list(map(lambda d: str(d), pre_issue_depth_list))
 
@@ -181,7 +186,7 @@ def run_bench_ycsbrun(libforeactor, workloads_dir, results_dir, dbdir_prefix,
     output_log = f"{results_dir}/ldb-{value_size_abbr}-{num_l0_tables}-" + \
                  f"{ycsb_distribution}-ycsbrun-{backend}-mem_{mem_percentage}.log"
     return run_bench(libforeactor, dbdir, workload, output_log, backend,
-                     pre_issue_depth_list, False, mem_percentage)
+                     pre_issue_depth_list, False, mem_percentage=mem_percentage)
 
 def run_all_ycsbrun(libforeactor, workloads_dir, results_dir, dbdir_prefix,
                     value_sizes, nums_l0_tables, ycsb_distributions, backends,
@@ -203,18 +208,34 @@ def run_all_ycsbrun(libforeactor, workloads_dir, results_dir, dbdir_prefix,
                         print(output.rstrip())
 
 
-def run_plotter(results_dir, figure):
-    cmd = ["python3", PLOTTER_PY, "-m", figure, "-r", results_dir,
-           "-o", f"{results_dir}/ldb"]
+def run_bench_multithread(libforeactor, workloads_dir, results_dir, dbdir_prefix,
+                          value_size_abbr, num_l0_tables, ycsb_distribution,
+                          backend, pre_issue_depth_list, mem_percentage,
+                          num_threads):
+    dbdir = f"{dbdir_prefix}/leveldb_{value_size_abbr}_{num_l0_tables}_" + \
+            f"{ycsb_distribution}"
+    workload = f"{workloads_dir}/trace-{value_size_abbr}-{num_l0_tables}-" + \
+               f"{ycsb_distribution}-ycsbrun.txt"
+    output_log = f"{results_dir}/ldb-{value_size_abbr}-{num_l0_tables}-" + \
+                 f"{ycsb_distribution}-ycsbrun-{backend}-mem_{mem_percentage}-" + \
+                 f"threads_{num_threads}.log"
+    return run_bench(libforeactor, dbdir, workload, output_log, backend,
+                     pre_issue_depth_list, False, mem_percentage=mem_percentage,
+                     num_threads=num_threads)
 
-    result = subprocess.run(cmd, check=True, capture_output=True)
-    output = result.stdout.decode('ascii')
-    return output
-
-def plot_all_figs(results_dir, figures):
-    for figure in figures:
-        run_plotter(results_dir, figure)
-        print(f"PLOT {figure}")
+def run_all_multithread(libforeactor, workloads_dir, results_dir, dbdir_prefix,
+                        value_size_abbr, num_l0_tables, ycsb_distribution,
+                        backend, pre_issue_depth_list, mem_percentage, nums_threads):
+    for num_threads in nums_threads:
+        output = run_bench_multithread(libforeactor, workloads_dir, results_dir,
+                                       dbdir_prefix, value_size_abbr, num_l0_tables,
+                                       ycsb_distribution, backend,
+                                       pre_issue_depth_list, mem_percentage,
+                                       num_threads)
+        print(f"RUN {value_size_abbr} {num_l0_tables} " + \
+              f"{ycsb_distribution} ycsbrun {backend} " + \
+              f"mem_{mem_percentage} threads_{num_threads}")
+        print(output.rstrip())
 
 
 def run_bench_with_timer(libforeactor, workloads_dir, results_dir, dbdir_prefix,
@@ -229,8 +250,25 @@ def run_bench_with_timer(libforeactor, workloads_dir, results_dir, dbdir_prefix,
     output_log = f"{results_dir}/ldb-{value_size_abbr}-{num_l0_tables}-" + \
                  f"{ycsb_distribution}-ycsbrun-{backend}-mem_{mem_percentage}-" + \
                  f"with_timer.log"
-    return run_bench(libforeactor, dbdir, workload, output_log, backend,
-                     pre_issue_depth_list, False, mem_percentage)
+    run_bench(libforeactor, dbdir, workload, output_log, backend,
+              pre_issue_depth_list, False, mem_percentage=mem_percentage)
+    print(f"RUN {value_size_abbr} {num_l0_tables} " + \
+          f"{ycsb_distribution} ycsbrun {backend} " + \
+          f"mem_{mem_percentage} with_timer")
+
+
+def run_plotter(results_dir, figure):
+    cmd = ["python3", PLOTTER_PY, "-m", figure, "-r", results_dir,
+           "-o", f"{results_dir}/ldb"]
+
+    result = subprocess.run(cmd, check=True, capture_output=True)
+    output = result.stdout.decode('ascii')
+    return output
+
+def plot_all_figs(results_dir, figures):
+    for figure in figures:
+        run_plotter(results_dir, figure)
+        print(f"PLOT {figure}")
 
 
 def check_arg_given(parser, args, argname):
@@ -290,6 +328,11 @@ def main():
         run_all_samekey(args.libforeactor, args.workloads_dir, args.results_dir,
                         args.dbdir_prefix, VALUE_SIZES_FOR_SAMEKEY, NUMS_L0_TABLES_FOR_SAMEKEY,
                         YCSB_DISTRIBUTIONS_FOR_SAMEKEY, BACKENDS, PRE_ISSUE_DEPTH_LIST)
+        run_all_multithread(args.libforeactor, args.workloads_dir, args.results_dir,
+                            args.dbdir_prefix, VALUE_SIZE_ABBR_FOR_MULTITHREAD,
+                            NUM_L0_TABLES_FOR_MULTITHREAD, YCSB_DISTRIBUTION_FOR_MULTITHREAD,
+                            BACKEND_FOR_MULTITHREAD, PRE_ISSUE_DEPTH_LIST,
+                            MEM_PERCENTAGE_FOR_MULTITHREAD, MULTITHREAD_NUMS_THREADS)
 
     elif args.mode == "plotter":
         check_arg_given(parser, args, "results_dir")
