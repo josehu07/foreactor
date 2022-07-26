@@ -111,7 +111,7 @@ leveldb_stats(leveldb::DB *db)
 
 /** Run/load YCSB workload on a leveldb instance. */
 static uint
-do_ycsb(leveldb::DB *db, const std::vector<ycsb_req_t>& reqs,
+do_ycsb(leveldb::DB *db, const std::vector<ycsb_req_t> *reqs,
         const std::string value, bool drop_caches, bool print_block_info,
         std::vector<double>& microsecs)
 {
@@ -120,7 +120,7 @@ do_ycsb(leveldb::DB *db, const std::vector<ycsb_req_t>& reqs,
     std::string read_buf;
     read_buf.reserve(value.length());
 
-    for (auto& req : reqs) {
+    for (auto& req : *reqs) {
         auto time_start = std::chrono::high_resolution_clock::now();
         switch (req.op) {
             case INSERT:
@@ -177,17 +177,17 @@ do_ycsb(leveldb::DB *db, const std::vector<ycsb_req_t>& reqs,
 
 /** Worker thread func for multithreaded exper. */
 static void
-worker_thread_func(leveldb::DB *db, const std::vector<ycsb_req_t>& reqs,
+worker_thread_func(leveldb::DB *db, const std::vector<ycsb_req_t> *reqs,
                    const std::string value, bool drop_caches,
                    bool print_block_info, size_t id,
-                   std::vector<double>& ops_per_sec,
-                   std::promise<void> init_barrier,
-                   std::shared_future<void> start_barrier) {
+                   std::vector<double> *ops_per_sec,
+                   std::promise<void> init_promise,
+                   std::shared_future<void> start_future) {
     // signal main thread for startup complete
-    init_barrier.set_value();
+    init_promise.set_value();
 
     // wait on signal to start the work
-    start_barrier.wait();
+    start_future.wait();
 
     // call do_ycsb()
     std::vector<double> microsecs;
@@ -199,13 +199,12 @@ worker_thread_func(leveldb::DB *db, const std::vector<ycsb_req_t>& reqs,
     for (auto& us : microsecs)
         sum_us += us;
     double ops = static_cast<double>(cnt) * 1e6 / sum_us;
-    assert(id >= 0);
-    ops_per_sec[id] = ops;
+    ops_per_sec->at(id) = ops;
 }
 
 /** Main coordinator thread if in multithreaded exper. */
 static std::vector<double>
-do_ycsb_multithreaded(leveldb::DB *db, const std::vector<ycsb_req_t>& reqs,
+do_ycsb_multithreaded(leveldb::DB *db, const std::vector<ycsb_req_t> *reqs,
                       const std::string value, bool drop_caches,
                       bool print_block_info, size_t num_threads) {
     // take a read-only snapshot shared across threads
@@ -215,24 +214,24 @@ do_ycsb_multithreaded(leveldb::DB *db, const std::vector<ycsb_req_t>& reqs,
     // trace once
     std::vector<double> ops_per_sec;
     std::vector<std::thread> workers;
-    std::vector<std::future<void>> init_barriers;
-    std::promise<void> start_barrier;
+    std::vector<std::future<void>> init_futures;
+    std::promise<void> start_promise;
+    std::shared_future<void> start_future(start_promise.get_future());
     for (size_t id = 0; id < num_threads; ++id) {
-        std::promise<void> init_barrier;
-        init_barriers.push_back(init_barrier.get_future());
+        std::promise<void> init_promise;
+        init_futures.push_back(init_promise.get_future());
         ops_per_sec.push_back(0.);
         workers.emplace_back(worker_thread_func, db, reqs, value, drop_caches,
-                             print_block_info, id, ops_per_sec,
-                             std::move(init_barrier),
-                             start_barrier.get_future());
+                             print_block_info, id, &ops_per_sec,
+                             std::move(init_promise), start_future);
     }
 
     // wait for everyone to finish starting up
-    for (auto&& init_barrier : init_barriers)
-        init_barrier.wait();
+    for (auto&& init_future : init_futures)
+        init_future.wait();
 
     // signal everyone to start the work
-    start_barrier.set_value();
+    start_promise.set_value();
 
     // wait for all workers to complete their job
     for (auto&& worker : workers)
@@ -241,7 +240,7 @@ do_ycsb_multithreaded(leveldb::DB *db, const std::vector<ycsb_req_t>& reqs,
     db->ReleaseSnapshot(read_options.snapshot);
     read_options.snapshot = nullptr;
 
-    return std::move(ops_per_sec);
+    return ops_per_sec;
 }
 
 
@@ -250,7 +249,7 @@ main(int argc, char *argv[])
 {
     std::string db_location, ycsb_filename;
     size_t value_size, memtable_limit, filesize_limit, num_threads;
-    bool help, write_sync, bg_compact_off, no_fill_cache, drop_caches, print_block_info, wait_before_close;
+    bool help, write_sync, bg_compact_off, no_fill_cache, drop_caches, print_block_info, print_stat_exit, wait_before_close;
 
     cxxopts::Options cmd_args("leveldb ycsb trace exec client");
     cmd_args.add_options()
@@ -266,6 +265,7 @@ main(int argc, char *argv[])
             ("no_fill_cache", "no block cache for gets", cxxopts::value<bool>(no_fill_cache)->default_value("false"))
             ("drop_caches", "do drop_caches between ops", cxxopts::value<bool>(drop_caches)->default_value("false"))
             ("print_block_info", "for distribution accounting", cxxopts::value<bool>(print_block_info)->default_value("false"))
+            ("print_stat_exit", "only print stats and exit", cxxopts::value<bool>(print_stat_exit)->default_value("false"))
             ("wait_before_close", "ensure memtable compacted", cxxopts::value<bool>(wait_before_close)->default_value("false"));
     auto result = cmd_args.parse(argc, argv);
 
@@ -293,33 +293,35 @@ main(int argc, char *argv[])
 
     // Read in YCSB workload trace.
     std::vector<ycsb_req_t> ycsb_reqs;
-    if (!ycsb_filename.empty()) {
-        std::ifstream input(ycsb_filename);
-        std::string opcode;
-        std::string key;
-        while (input >> opcode >> key) {
-            if (num_threads > 1 && opcode != "READ" && opcode != "SCAN") {
-                std::cerr << "Error: can only do read-only ops when"
-                          << " multithreaded" << std::endl;
-                exit(1);
+    if (!print_stat_exit) {
+        if (!ycsb_filename.empty()) {
+            std::ifstream input(ycsb_filename);
+            std::string opcode;
+            std::string key;
+            while (input >> opcode >> key) {
+                if (num_threads > 1 && opcode != "READ" && opcode != "SCAN") {
+                    std::cerr << "Error: can only do read-only ops when"
+                              << " multithreaded" << std::endl;
+                    exit(1);
+                }
+                ycsb_op_t op = opcode == "READ"   ? READ
+                             : opcode == "INSERT" ? INSERT
+                             : opcode == "UPDATE" ? UPDATE
+                             : opcode == "SCAN"   ? SCAN : UNKNOWN;
+                size_t scan_len = 0;
+                if (op == SCAN)
+                    input >> scan_len;
+                ycsb_reqs.push_back(ycsb_req_t { .op=op, .key=key, .scan_len=scan_len });
             }
-            ycsb_op_t op = opcode == "READ"   ? READ
-                         : opcode == "INSERT" ? INSERT
-                         : opcode == "UPDATE" ? UPDATE
-                         : opcode == "SCAN"   ? SCAN : UNKNOWN;
-            size_t scan_len = 0;
-            if (op == SCAN)
-                input >> scan_len;
-            ycsb_reqs.push_back(ycsb_req_t { .op=op, .key=key, .scan_len=scan_len });
+        } else {
+            std::cerr << "Error: must give YCSB trace filename" << std::endl;
+            printf("%s", cmd_args.help().c_str());
+            exit(1);
         }
-    } else {
-        std::cerr << "Error: must give YCSB trace filename" << std::endl;
-        printf("%s", cmd_args.help().c_str());
-        exit(1);
-    }
-    if (ycsb_reqs.size() == 0) {
-        std::cerr << "Error: given YCSB trace file has no valid lines" << std::endl;
-        exit(1);
+        if (ycsb_reqs.size() == 0) {
+            std::cerr << "Error: given YCSB trace file has no valid lines" << std::endl;
+            exit(1);
+        }
     }
 
     // Generate value.
@@ -329,11 +331,17 @@ main(int argc, char *argv[])
     leveldb::DB *db = leveldb_open(db_location, memtable_limit, filesize_limit,
                                    bg_compact_off);
 
+    if (print_stat_exit) {
+        leveldb_stats(db);
+        leveldb_close(db);
+        return 0;
+    }
+
     // Execute the actions of the YCSB trace.
     if (num_threads == 1) {
         // no multithread flag, apply trace directly on open DB object
         std::vector<double> microsecs;
-        uint cnt = do_ycsb(db, ycsb_reqs, value, drop_caches, print_block_info, microsecs);
+        uint cnt = do_ycsb(db, &ycsb_reqs, value, drop_caches, print_block_info, microsecs);
         std::cout << "Finished " << cnt << " requests." << std::endl << std::endl;
 
         // print timing info
@@ -368,14 +376,16 @@ main(int argc, char *argv[])
                 min_us = microsecs.front();
                 max_us = microsecs.back();
                 avg_us = sum_us / microsecs.size();
-                size_t p99_idx = microsecs.size() * 99 / 100;
-                double p99_us = microsecs.at(p99_idx);
+                size_t p999_idx = microsecs.size() * 999 / 1000;
+                if (p999_idx == microsecs.size() - 1)
+                    p999_idx -= 1;
+                double p999_us = microsecs.at(p999_idx);
 
-                std::cout << "  sum  " << sum_us << " us" << std::endl
-                          << "  avg  " << avg_us << " us" << std::endl
-                          << "  p99  " << p99_us << " us" << std::endl
-                          << "  max  " << max_us << " us" << std::endl
-                          << "  min  " << min_us << " us" << std::endl;
+                std::cout << "  sum  "  << sum_us  << " us" << std::endl
+                          << "  avg  "  << avg_us  << " us" << std::endl
+                          << "  p999  " << p999_us << " us" << std::endl
+                          << "  max  "  << max_us  << " us" << std::endl
+                          << "  min  "  << min_us  << " us" << std::endl;
             }
         }
 
@@ -383,7 +393,7 @@ main(int argc, char *argv[])
         // multithreaded case, make a read-only snapshot and spawn child threads
         // to execute the trace on the snapshot
         assert(num_threads > 1);
-        std::vector<double> ops_per_sec = do_ycsb_multithreaded(db, ycsb_reqs, value,
+        std::vector<double> ops_per_sec = do_ycsb_multithreaded(db, &ycsb_reqs, value,
                                                                 drop_caches,
                                                                 print_block_info,
                                                                 num_threads);

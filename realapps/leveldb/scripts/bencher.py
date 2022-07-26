@@ -58,7 +58,8 @@ def get_iostat_bio_mb_read():
 
 
 def run_ycsbcli_single(libforeactor, dbdir, trace, mem_limit, drop_caches,
-                       use_foreactor, backend=None, pre_issue_depth=0):
+                       use_foreactor, backend=None, pre_issue_depth=0,
+                       num_threads=1):
     os.system("sudo sync; sudo sh -c 'echo 3 > /proc/sys/vm/drop_caches'")
 
     envs = os.environ.copy()
@@ -79,8 +80,8 @@ def run_ycsbcli_single(libforeactor, dbdir, trace, mem_limit, drop_caches,
             num_uthreads = 16
         envs[f"UTHREADS_{GET_GRAPH_ID}"] = str(num_uthreads)
 
-    cmd = [YCSBCLI_BIN, "-d", dbdir, "-f", trace, "--bg_compact_off",
-           "--no_fill_cache"]
+    cmd = [YCSBCLI_BIN, "-d", dbdir, "-f", trace, "-t", str(num_threads),
+           "--bg_compact_off", "--no_fill_cache"]
     if drop_caches:
         cmd.append("--drop_caches")
     if mem_limit != "none":
@@ -96,7 +97,7 @@ def run_ycsbcli_single(libforeactor, dbdir, trace, mem_limit, drop_caches,
 
 def get_us_result_from_output(output):
     in_timing_section = False
-    sum_us, avg_us, p99_us = None, None, None
+    sum_us, avg_us, p999_us = None, None, None
 
     for line in output.split('\n'):
         line = line.strip()
@@ -106,57 +107,57 @@ def get_us_result_from_output(output):
             sum_us = float(line.split()[1])
         elif in_timing_section and line.startswith("avg"):
             avg_us = float(line.split()[1])
-        elif in_timing_section and line.startswith("p99"):
-            p99_us = float(line.split()[1])
+        elif in_timing_section and line.startswith("p999"):
+            p999_us = float(line.split()[1])
             break
 
-    return (sum_us, avg_us, p99_us)
+    return (sum_us, avg_us, p999_us)
 
 def run_ycsbcli_iters(num_iters, libforeactor, dbdir, trace, mem_limit,
                       drop_caches, use_foreactor, backend=None,
                       pre_issue_depth=0):
-    result_sum_us, result_avg_us, result_p99_us = 0., 0., 0.
+    result_sum_us, result_avg_us, result_p999_us = 0., 0., 0.
     result_mb_read = 0.
     for i in range(num_iters):
         output, mb_read = run_ycsbcli_single(libforeactor, dbdir, trace, mem_limit,
                                              drop_caches, use_foreactor, backend=backend,
                                              pre_issue_depth=pre_issue_depth)
-        sum_us, avg_us, p99_us = get_us_result_from_output(output)
+        sum_us, avg_us, p999_us = get_us_result_from_output(output)
         assert mb_read >= 0
         assert sum_us is not None
         assert avg_us is not None
-        assert p99_us is not None
+        assert p999_us is not None
         result_sum_us += sum_us
         result_avg_us += avg_us
-        result_p99_us += p99_us
+        result_p999_us += p999_us
         result_mb_read += mb_read
 
     result_sum_us /= num_iters
     result_avg_us /= num_iters
-    result_p99_us /= num_iters
+    result_p999_us /= num_iters
     result_mb_read /= num_iters
-    return result_sum_us, result_avg_us, result_p99_us, result_mb_read
+    return result_sum_us, result_avg_us, result_p999_us, result_mb_read
 
 def run_exprs(libforeactor, dbdir, trace, mem_limit, drop_caches,
               output_log, backend, pre_issue_depth_list):
     num_iters = CACHED_ITERS if not drop_caches else DROP_CACHES_ITERS
 
     with open(output_log, 'w') as fout:
-        sum_us, avg_us, p99_us, mb_read = run_ycsbcli_iters(num_iters, libforeactor,
-                                                            dbdir, trace, mem_limit,
-                                                            drop_caches, False)
-        result = f" orig: sum {sum_us:.3f} avg {avg_us:.3f} p99 {p99_us:.3f} us" + \
+        sum_us, avg_us, p999_us, mb_read = run_ycsbcli_iters(num_iters, libforeactor,
+                                                             dbdir, trace, mem_limit,
+                                                             drop_caches, False)
+        result = f" orig: sum {sum_us:.3f} avg {avg_us:.3f} p999 {p999_us:.3f} us" + \
                  f" {mb_read:.3f} MB_read"
         fout.write(result + '\n')
         print(result)
 
         for pre_issue_depth in pre_issue_depth_list:
-            sum_us, avg_us, p99_us, mb_read = run_ycsbcli_iters(num_iters, libforeactor,
-                                                                dbdir, trace, mem_limit,
-                                                                drop_caches, True,
-                                                                backend, pre_issue_depth)
+            sum_us, avg_us, p999_us, mb_read = run_ycsbcli_iters(num_iters, libforeactor,
+                                                                 dbdir, trace, mem_limit,
+                                                                 drop_caches, True,
+                                                                 backend, pre_issue_depth)
             result = f" {pre_issue_depth:4d}: sum {sum_us:.3f} avg {avg_us:.3f}" + \
-                     f" p99 {p99_us:.3f} us {mb_read:.3f} MB_read"
+                     f" p999 {p999_us:.3f} us {mb_read:.3f} MB_read"
             fout.write(result + '\n')
             print(result)
 
@@ -239,7 +240,7 @@ def main():
     parser.add_argument('--drop_caches', dest='drop_caches', action='store_true',
                         help="do drop_caches per request")
     parser.add_argument('pre_issue_depths', metavar='D', type=int, nargs='+',
-                        help="pre_issue_depth to try")
+                        help="list of pre_issue_depth to try")
     args = parser.parse_args()
 
     if args.backend != "io_uring_default" and args.backend != "io_uring_sqe_async" \

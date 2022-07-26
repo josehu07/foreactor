@@ -9,8 +9,18 @@ import argparse
 YCSBCLI_BIN = "./ycsbcli"
 LEVELDBUTIL_BIN = "./leveldb-src/build/leveldbutil"
 
+TARGET_DATABASE_VOLUME = 10 * 1024 * 1024 * 1024    # make ~10GB per database image
+TARGET_WORKLOAD_VOLUME = 100 * 1024 * 1024          # read out ~100MB per workload
+
+YCSB_LOAD_WORKLOAD = "c"
+YCSB_RUN_WORKLOADS = ["a", "b", "c"]
+YCSB_RUN_DISTRIBUTIONS = ["zipfian", "uniform"]
+
 SAMEKEY_NUMOPS_PER_RUN = 100
-YCSBRUN_NUMOPS_SCALE = 1
+
+NUM_L0_TABLES = 12
+
+NUM_RECORDS_FILENAME = "num_init_records.txt"
 
 
 def check_file_exists(path):
@@ -18,13 +28,23 @@ def check_file_exists(path):
         print(f"Error: {path} does not exist")
         exit(1)
 
+def check_dir_exists(dir_path):
+    if not os.path.isdir(dir_path):
+        print(f"Error: directory {dir_path} does not exist")
+        exit(1)
+
 
 def run_ycsbcli(dbdir, trace, value_size, memtable_limit, filesize_limit,
-                bg_compact_off):
-    cmd = [YCSBCLI_BIN, "-d", dbdir, "-v", str(value_size), "-f", trace,
-           "--wait_before_close"]
-    if bg_compact_off:
-        cmd.append("--bg_compact_off")
+                bg_compact_off, print_stat_exit=False):
+    if print_stat_exit:
+        cmd = [YCSBCLI_BIN, "-d", dbdir, "--print_stat_exit"]
+    else:
+        cmd = [YCSBCLI_BIN, "-d", dbdir, "-v", str(value_size), "-f", trace,
+               "--mlim", str(memtable_limit), "--flim", str(filesize_limit),
+               "--wait_before_close"]
+        if bg_compact_off:
+            cmd.append("--bg_compact_off")
+        
     result = subprocess.run(cmd, check=True, capture_output=True)
     output = result.stdout.decode('ascii')
     return output
@@ -74,18 +94,18 @@ def get_full_stat_section(output):
     return '\n'.join(stat_lines)
 
 
-def run_ycsb_bin(ycsb_bin, ycsb_action, ycsb_workload, extra_args=[]):
+def run_ycsb_bin(ycsb_bin, ycsb_action, ycsb_workload, extra_args, out_file):
     cmd = [ycsb_bin, ycsb_action, "basic", "-P", ycsb_workload]
     cmd += extra_args
-    cmd += ["-p", "fieldlength=1"]
+    cmd += ["-p", "fieldcount=1", "-p", "fieldlength=1"]
 
-    result = subprocess.run(cmd, check=True, capture_output=True)
-    output = result.stdout.decode('ascii')
-    return output
+    with open(out_file, 'w') as fout:
+        result = subprocess.run(cmd, check=True, stdout=fout,
+                                stderr=subprocess.STDOUT)
 
 def convert_trace(ycsb_output, output_trace):
-    with open(output_trace, 'w') as fout:
-        for line in ycsb_output.split('\n'):
+    with open(ycsb_output, 'r') as fin, open(output_trace, 'w') as fout:
+        for line in fin:
             segs = line.strip().split()
             if len(segs) < 1:
                 continue
@@ -107,8 +127,8 @@ def take_trace_records(ftrace, tmpfile, num_records):
             ftmp.write(line.strip() + '\n')
             num_taken += 1
 
-def make_db_image(dbdir, ycsb_bin, ycsb_workload, value_size, memtable_limit,
-                  filesize_limit, num_l0_tables, ycsb_distribution, output_prefix):
+def make_db_image(dbdir, tmpdir, ycsb_bin, ycsb_workload, value_size,
+                  memtable_limit, filesize_limit, output_prefix):
     # clean up old files
     if os.path.isdir(dbdir):
         for file in os.listdir(dbdir):
@@ -118,41 +138,40 @@ def make_db_image(dbdir, ycsb_bin, ycsb_workload, value_size, memtable_limit,
             except OSError:
                 os.remove(path)
 
+    approx_num_records = TARGET_DATABASE_VOLUME // value_size
     approx_num_records_per_l0_table = memtable_limit // value_size
 
     # generate the mega YCSB load trace
-    max_num_records = approx_num_records_per_l0_table * num_l0_tables * 25
-    ycsb_output = run_ycsb_bin(ycsb_bin, "load", ycsb_workload,
-                               ["-p", f"recordcount={max_num_records}",
-                                "-p", f"requestdistribution={ycsb_distribution}"])
-    mega_trace = f"{output_prefix}-mega.txt"
-    convert_trace(ycsb_output, mega_trace)
+    max_num_records = int(approx_num_records * 1.2)
+    tmpfile_ycsb = f"{tmpdir}/leveldb_prepare.tmp1.txt"
+    tmpfile_mega = f"{tmpdir}/leveldb_prepare.tmp2.txt"
+    run_ycsb_bin(ycsb_bin, "load", ycsb_workload,
+                 ["-p", f"recordcount={max_num_records}"], tmpfile_ycsb)
+    convert_trace(tmpfile_ycsb, tmpfile_mega)
 
     num_records = 0
-    with open(mega_trace, 'r') as ftrace:
-        tmpfile = "/tmp/makedb.tmp.txt"
+    with open(tmpfile_mega, 'r') as ftrace:
+        tmpfile_load = f"{tmpdir}/leveldb_prepare.tmp3.txt"
 
         # load sufficient number of records to form the base image
-        num_base_records = approx_num_records_per_l0_table * num_l0_tables * 20
-        take_trace_records(ftrace, tmpfile, num_base_records)
-        output = run_ycsbcli(dbdir, tmpfile, value_size, memtable_limit,
-                             filesize_limit, False)
-        num_records += num_base_records
+        take_trace_records(ftrace, tmpfile_load, approx_num_records)
+        output = run_ycsbcli(dbdir, tmpfile_load, value_size,
+                             memtable_limit, filesize_limit, False)
+        num_records = approx_num_records
 
         # repeatedly feed in samples of records, while turning off background
-        # compaction of everything except memtable, until the desired number of
-        # level-0 tables is reached
-        while get_num_l0_tables(output) < num_l0_tables:
+        # compaction of everything except memtable, until the desired dynamic
+        # number of level-0 tables is reached
+        while get_num_l0_tables(output) < NUM_L0_TABLES:
             num_new_records = approx_num_records_per_l0_table // 2
-            take_trace_records(ftrace, tmpfile, num_new_records)
-            output = run_ycsbcli(dbdir, tmpfile, value_size, memtable_limit,
-                                 filesize_limit, True)
+            take_trace_records(ftrace, tmpfile_load, num_new_records)
+            output = run_ycsbcli(dbdir, tmpfile_load, value_size,
+                                 memtable_limit, filesize_limit, True)
             num_records += num_new_records
-
-        stats = get_full_stat_section(output)
-        print(stats)
-
-        return stats, num_records
+    
+    # store the number of initial records in a special file for convenience
+    with open(f"{dbdir}/{NUM_RECORDS_FILENAME}", 'w') as fnum:
+        fnum.write(str(num_records))
 
 
 def run_leveldbutil(dbdir, filenum):
@@ -230,17 +249,27 @@ def get_level_workload_key(stats, dbdir, level, last_l0_key):
     else:
         return last_key_max_seen
 
-def generate_workloads(stats, dbdir, ycsb_bin, ycsb_workload, num_records,
+def get_init_num_records(dbdir):
+    with open(f"{dbdir}/{NUM_RECORDS_FILENAME}", 'r') as fnum:
+        return int(fnum.read().strip())
+
+def generate_workloads(dbdir, tmpdir, ycsb_bin, ycsb_run_workloads, value_size,
                        ycsb_distribution, output_prefix, gen_samekey_workloads):
+    stats = get_full_stat_section(
+        run_ycsbcli(dbdir, "dummy", value_size, 0, 0, True, True))
+    num_records = get_init_num_records(dbdir)
+
     if gen_samekey_workloads:
         print("Workload keys --")
+        samekey_trace = lambda n: f"{output_prefix}-samekey-{n}.txt"
 
         # generate workload of reading the key that approximately triggers N preads
+        # through level 0
         l0_workload_keys = get_l0_workload_keys(stats, dbdir)
         for idx, l0_key in enumerate(l0_workload_keys):
             n = idx + 1
-            with open(f"{output_prefix}-samekey-{n}.txt", 'w') as ftxt:
-                for i in range(SAMEKEY_NUMOPS_PER_RUN):
+            with open(samekey_trace(n), 'w') as ftxt:
+                for _ in range(SAMEKEY_NUMOPS_PER_RUN):
                     ftxt.write(f"READ {l0_key}\n")
             print(f" {n}: {l0_key}")
         last_l0_key = l0_workload_keys[-1]
@@ -251,38 +280,38 @@ def generate_workloads(stats, dbdir, ycsb_bin, ycsb_workload, num_records,
         while level <= deepest_level:
             level_key = get_level_workload_key(stats, dbdir, level, last_l0_key)
             n = len(l0_workload_keys) + level
-            with open(f"{output_prefix}-samekey-{n}.txt", 'w') as ftxt:
-                for i in range(SAMEKEY_NUMOPS_PER_RUN):
+            with open(samekey_trace(n), 'w') as ftxt:
+                for _ in range(SAMEKEY_NUMOPS_PER_RUN):
                     ftxt.write(f"READ {level_key}\n")
             print(f" {n}: {level_key}")
             level += 1
 
-    # generate the general YCSB run trace
-    num_operations = num_records * YCSBRUN_NUMOPS_SCALE
-    ycsb_output = run_ycsb_bin(ycsb_bin, "run", ycsb_workload,
-                               ["-p", f"recordcount={num_records}",
-                                "-p", f"operationcount={num_operations}",
-                                "-p", f"requestdistribution={ycsb_distribution}"])
-    run_trace = f"{output_prefix}-ycsbrun.txt"
-    convert_trace(ycsb_output, run_trace)
+    tmpfile = f"{tmpdir}/leveldb_prepare.tmp3.txt"
+    num_operations = TARGET_WORKLOAD_VOLUME // value_size
+    for ycsb_workload in ycsb_run_workloads:
+        workload_name = ycsb_workload[-1:]      # last character of property filename
+        run_ycsb_bin(ycsb_bin, "run", ycsb_workload,
+                     ["-p", f"recordcount={num_records}",
+                      "-p", f"operationcount={num_operations}",
+                      "-p", f"requestdistribution={ycsb_distribution}"], tmpfile)
+        run_trace = f"{output_prefix}-ycsb-{workload_name}-{ycsb_distribution}.txt"
+        convert_trace(tmpfile, run_trace)
 
 
 def main():
     parser = argparse.ArgumentParser(description="LevelDB database image setup")
     parser.add_argument('-d', dest='dbdir', required=True,
                         help="dbdir of LevelDB")
-    parser.add_argument('-y', dest='ycsb_bin', required=True,
-                        help="path to YCSB binary")
-    parser.add_argument('-w', dest='ycsb_workload', required=True,
-                        help="base YCSB workload property file")
+    parser.add_argument('-t', dest='tmpdir', required=True,
+                        help="directory to hold temp files, space >= 10GB")
+    parser.add_argument('-y', dest='ycsb_dir', required=True,
+                        help="path to official YCSB directory")
     parser.add_argument('-v', dest='value_size', required=True, type=int,
                         help="value size in bytes")
-    parser.add_argument('-t', dest='num_l0_tables', required=True, type=int,
-                        help="target number of L0 tables")
-    parser.add_argument('-z', dest='ycsb_distribution', required=True,
-                        help="request distribution: zipfian|uniform")
     parser.add_argument('-o', dest='output_prefix', required=True,
                         help="path prefix of output workloads")
+    parser.add_argument('--skip_load', dest='skip_load', action='store_true',
+                        help="if given, skip loading and only generate workloads")
     parser.add_argument('--gen_samekey', dest='gen_samekey', action='store_true',
                         help="if given, also generate samekey workloads")
     parser.add_argument('--mlim', dest='mlim', required=False, type=int,
@@ -291,25 +320,28 @@ def main():
                         default=2097152, help="sstable filesize limit")
     args = parser.parse_args()
 
-    check_file_exists(args.ycsb_bin)
-    check_file_exists(args.ycsb_workload)
+    check_dir_exists(args.tmpdir)
+    check_dir_exists(args.ycsb_dir)
+
+    ycsb_bin = f"{args.ycsb_dir}/bin/ycsb"
+    load_workload = f"{args.ycsb_dir}/workloads/workload{YCSB_LOAD_WORKLOAD}"
+    run_workloads = [f"{args.ycsb_dir}/workloads/workload{r}" \
+                     for r in YCSB_RUN_WORKLOADS]
+    check_file_exists(load_workload)
+    for run_workload in run_workloads:
+        check_file_exists(run_workload)
+    
     check_file_exists(YCSBCLI_BIN)
     check_file_exists(LEVELDBUTIL_BIN)
 
-    if args.num_l0_tables < 8 or args.num_l0_tables > 12:
-        print(f"Error: number of L0 tables must be within [8, 12]")
-        exit(1)
-    if args.ycsb_distribution != "zipfian" and args.ycsb_distribution != "uniform":
-        print(f"Error: YCSB distribution {args.ycsb_distribution} not recognized")
-        exit(1)
+    if not args.skip_load:
+        make_db_image(args.dbdir, args.tmpdir, ycsb_bin, load_workload,
+                      args.value_size, args.mlim, args.flim, args.output_prefix)
 
-    stats, num_records = make_db_image(args.dbdir, args.ycsb_bin, args.ycsb_workload,
-                                       args.value_size, args.mlim, args.flim,
-                                       args.num_l0_tables, args.ycsb_distribution,
-                                       args.output_prefix)
-    generate_workloads(stats, args.dbdir, args.ycsb_bin, args.ycsb_workload,
-                       num_records, args.ycsb_distribution, args.output_prefix,
-                       args.gen_samekey)
+    for ycsb_distribution in YCSB_RUN_DISTRIBUTIONS:
+        generate_workloads(args.dbdir, args.tmpdir, ycsb_bin, run_workloads,
+                           args.value_size, ycsb_distribution,
+                           args.output_prefix, args.gen_samekey)
 
 if __name__ == "__main__":
     main()

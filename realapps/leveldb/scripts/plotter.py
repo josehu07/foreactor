@@ -65,8 +65,8 @@ def read_timer_fractions(results_dir, segments, value_size, num_l0_tables,
 
 def plot_grouped_bars(results, x_list, x_label, y_label, output_prefix,
                       title_suffix):
-    plt.rcParams.update({'font.size': 18})
-    plt.rcParams.update({'figure.figsize': (20, 7)})
+    plt.rcParams.update({'font.size': 16})
+    plt.rcParams.update({'figure.figsize': (15, 7)})
 
     norm = Normalize(vmin=5, vmax=20)
     orig_color = "steelblue"
@@ -100,7 +100,7 @@ def plot_grouped_bars(results, x_list, x_label, y_label, output_prefix,
 
         for x, y in zip(xs, ys):
             plt.text(x, y, f"{y:.1f}", ha="center", va="bottom",
-                           fontsize=11)
+                           fontsize=10, rotation=15)
 
     plt.xlabel(x_label)
     plt.ylabel(y_label)
@@ -123,7 +123,7 @@ def handle_mem_ratio(results_dir, output_prefix):
     VALUE_SIZES = ["16K"]
     MEM_PERCENTAGES = [20, 40, 60, 80, 100]
     NUM_L0_TABLES = 12
-    YCSB_DISTRIBUTIONS = ["zipfian", "uniform"]
+    YCSB_DISTRIBUTION = "uniform"
     BACKENDS = ["io_uring_sqe_async"]
     PRE_ISSUE_DEPTH_LIST = [8, 15]
 
@@ -131,37 +131,36 @@ def handle_mem_ratio(results_dir, output_prefix):
         results = {"original": []}
         x_list = []
         
-        for ycsb_distribution in YCSB_DISTRIBUTIONS:
-            for mem_percentage in MEM_PERCENTAGES:
-                x_list.append(f"{ycsb_distribution}-{mem_percentage}")
+        for mem_percentage in MEM_PERCENTAGES:
+            x_list.append(str(mem_percentage))
 
-                avg_us, _ = read_ycsbrun_us(results_dir, value_size, NUM_L0_TABLES,
-                                            ycsb_distribution, BACKENDS[0],
-                                            mem_percentage, "orig")
-                results["original"].append(avg_us)
+            avg_us, _ = read_ycsbrun_us(results_dir, value_size, NUM_L0_TABLES,
+                                        YCSB_DISTRIBUTION, BACKENDS[0],
+                                        mem_percentage, "orig")
+            results["original"].append(avg_us)
 
-                for backend in BACKENDS:
-                    for pre_issue_depth in PRE_ISSUE_DEPTH_LIST:
-                        config = f"{backend}-{pre_issue_depth}"
-                        if config not in results:
-                            results[config] = []
-                        avg_us, _ = read_ycsbrun_us(results_dir, value_size,
-                                                    NUM_L0_TABLES,
-                                                    ycsb_distribution, backend,
-                                                    mem_percentage,
-                                                    str(pre_issue_depth))
-                        results[config].append(avg_us)
+            for backend in BACKENDS:
+                for pre_issue_depth in PRE_ISSUE_DEPTH_LIST:
+                    config = f"{backend}-{pre_issue_depth}"
+                    if config not in results:
+                        results[config] = []
+                    avg_us, _ = read_ycsbrun_us(results_dir, value_size,
+                                                NUM_L0_TABLES,
+                                                YCSB_DISTRIBUTION, backend,
+                                                mem_percentage,
+                                                str(pre_issue_depth))
+                    results[config].append(avg_us)
 
         plot_grouped_bars(results, x_list,
-                          "Request distribution - Available memory vs. database volume (%)",
+                          "Available memory vs. database volume (%)",
                           "Avg. time per Get request (us)",
                           output_prefix, f"mem_ratio-req_{value_size}")
 
 def handle_req_size(results_dir, output_prefix):
     VALUE_SIZES = ["1K", "4K", "16K", "64K", "256K"]
-    MEM_PERCENTAGES = [60]
+    MEM_PERCENTAGES = [20]
     NUM_L0_TABLES = 12
-    YCSB_DISTRIBUTIONS = ["zipfian", "uniform"]
+    YCSB_DISTRIBUTION = "uniform"
     BACKENDS = ["io_uring_sqe_async"]
     PRE_ISSUE_DEPTH_LIST = [8, 15]
 
@@ -169,37 +168,36 @@ def handle_req_size(results_dir, output_prefix):
         results = {"original": []}
         x_list = []
 
-        for ycsb_distribution in YCSB_DISTRIBUTIONS:
-            for value_size in VALUE_SIZES:
-                x_list.append(f"{ycsb_distribution}-{value_size}")
+        for value_size in VALUE_SIZES:
+            x_list.append(value_size)
 
-                avg_us, _ = read_ycsbrun_us(results_dir, value_size, NUM_L0_TABLES,
-                                            ycsb_distribution, BACKENDS[0],
-                                            mem_percentage, "orig")
-                results["original"].append(avg_us)
+            avg_us, _ = read_ycsbrun_us(results_dir, value_size, NUM_L0_TABLES,
+                                        YCSB_DISTRIBUTION, BACKENDS[0],
+                                        mem_percentage, "orig")
+            results["original"].append(avg_us)
 
-                for backend in BACKENDS:
-                    for pre_issue_depth in PRE_ISSUE_DEPTH_LIST:
-                        config = f"{backend}-{pre_issue_depth}"
-                        if config not in results:
-                            results[config] = []
-                        avg_us, _ = read_ycsbrun_us(results_dir, value_size,
-                                                    NUM_L0_TABLES,
-                                                    ycsb_distribution, backend,
-                                                    mem_percentage,
-                                                    str(pre_issue_depth))
-                        results[config].append(avg_us)
+            for backend in BACKENDS:
+                for pre_issue_depth in PRE_ISSUE_DEPTH_LIST:
+                    config = f"{backend}-{pre_issue_depth}"
+                    if config not in results:
+                        results[config] = []
+                    avg_us, _ = read_ycsbrun_us(results_dir, value_size,
+                                                NUM_L0_TABLES,
+                                                YCSB_DISTRIBUTION, backend,
+                                                mem_percentage,
+                                                str(pre_issue_depth))
+                    results[config].append(avg_us)
 
         plot_grouped_bars(results, x_list,
-                          "Request distribution - Record value size (bytes)",
+                          "Record value size (bytes)",
                           "Avg. time per Get request (us)",
                           output_prefix, f"req_size-mem_{mem_percentage}")
 
 def handle_tail_lat(results_dir, output_prefix):
     VALUE_SIZES = ["1K", "4K", "16K", "64K", "256K"]
-    MEM_PERCENTAGES = [60]
+    MEM_PERCENTAGES = [100]
     NUM_L0_TABLES = 12
-    YCSB_DISTRIBUTIONS = ["zipfian", "uniform"]
+    YCSB_DISTRIBUTION = "uniform"
     BACKENDS = ["io_uring_sqe_async"]
     PRE_ISSUE_DEPTH_LIST = [8, 15]
 
@@ -207,29 +205,28 @@ def handle_tail_lat(results_dir, output_prefix):
         results = {"original": []}
         x_list = []
 
-        for ycsb_distribution in YCSB_DISTRIBUTIONS:
-            for value_size in VALUE_SIZES:
-                x_list.append(f"{ycsb_distribution}-{value_size}")
+        for value_size in VALUE_SIZES:
+            x_list.append(value_size)
 
-                _, p99_us = read_ycsbrun_us(results_dir, value_size, NUM_L0_TABLES,
-                                            ycsb_distribution, BACKENDS[0],
-                                            mem_percentage, "orig")
-                results["original"].append(p99_us)
+            _, p99_us = read_ycsbrun_us(results_dir, value_size, NUM_L0_TABLES,
+                                        YCSB_DISTRIBUTION, BACKENDS[0],
+                                        mem_percentage, "orig")
+            results["original"].append(p99_us)
 
-                for backend in BACKENDS:
-                    for pre_issue_depth in PRE_ISSUE_DEPTH_LIST:
-                        config = f"{backend}-{pre_issue_depth}"
-                        if config not in results:
-                            results[config] = []
-                        _, p99_us = read_ycsbrun_us(results_dir, value_size,
-                                                    NUM_L0_TABLES,
-                                                    ycsb_distribution, backend,
-                                                    mem_percentage,
-                                                    str(pre_issue_depth))
-                        results[config].append(p99_us)
+            for backend in BACKENDS:
+                for pre_issue_depth in PRE_ISSUE_DEPTH_LIST:
+                    config = f"{backend}-{pre_issue_depth}"
+                    if config not in results:
+                        results[config] = []
+                    _, p99_us = read_ycsbrun_us(results_dir, value_size,
+                                                NUM_L0_TABLES,
+                                                YCSB_DISTRIBUTION, backend,
+                                                mem_percentage,
+                                                str(pre_issue_depth))
+                    results[config].append(p99_us)
 
         plot_grouped_bars(results, x_list,
-                          "Request distribution - Record value size (bytes)",
+                          "Record value size (bytes)",
                           "P99 tail latency (us)",
                           output_prefix, f"tail_lat-mem_{mem_percentage}")
 

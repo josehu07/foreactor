@@ -126,12 +126,12 @@ static constexpr unsigned graph_id = 0;
 
 
 // Some global state for arggen and rcsave functions.
-static Version *curr_version = nullptr;
-static const LookupKey *curr_lookup_key = nullptr;
-static std::vector<FileMetaData *> curr_tables;
-static std::vector<int> curr_levels;
-static std::vector<bool> curr_open_states;
-static std::unordered_set<std::string> curr_table_names;
+thread_local Version *curr_version = nullptr;
+thread_local const LookupKey *curr_lookup_key = nullptr;
+thread_local std::vector<FileMetaData *> curr_tables;
+thread_local std::vector<int> curr_levels;
+thread_local std::vector<bool> curr_open_states;
+thread_local std::unordered_set<std::string> curr_table_names;
 
 
 static bool branch_table_open_arggen(const int *epoch, int *decision) {
@@ -288,6 +288,7 @@ static void BuildSCGraph() {
 
     foreactor_IgnoreSyscallFstat(graph_id);
     foreactor_IgnoreSyscallFstatat(graph_id);
+    foreactor_IgnoreSyscallClose(graph_id);
 
     foreactor_SetSCGraphBuilt(graph_id);
 
