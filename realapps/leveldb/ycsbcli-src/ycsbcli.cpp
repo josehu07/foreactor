@@ -181,9 +181,13 @@ worker_thread_func(leveldb::DB *db, const std::vector<ycsb_req_t>& reqs,
                    const std::string value, bool drop_caches,
                    bool print_block_info, size_t id,
                    std::vector<double>& ops_per_sec,
-                   std::future<void> init_barrier) {
+                   std::promise<void> init_barrier,
+                   std::shared_future<void> start_barrier) {
     // signal main thread for startup complete
     init_barrier.set_value();
+
+    // wait on signal to start the work
+    start_barrier.wait();
 
     // call do_ycsb()
     std::vector<double> microsecs;
@@ -192,13 +196,11 @@ worker_thread_func(leveldb::DB *db, const std::vector<ycsb_req_t>& reqs,
     
     // calculate my throughput in ops/sec
     double sum_us = 0.;
-    for (auto& us ; microsecs)
+    for (auto& us : microsecs)
         sum_us += us;
     double ops = static_cast<double>(cnt) * 1e6 / sum_us;
     assert(id >= 0);
     ops_per_sec[id] = ops;
-
-
 }
 
 /** Main coordinator thread if in multithreaded exper. */
@@ -214,18 +216,27 @@ do_ycsb_multithreaded(leveldb::DB *db, const std::vector<ycsb_req_t>& reqs,
     std::vector<double> ops_per_sec;
     std::vector<std::thread> workers;
     std::vector<std::future<void>> init_barriers;
+    std::promise<void> start_barrier;
     for (size_t id = 0; id < num_threads; ++id) {
         std::promise<void> init_barrier;
         init_barriers.push_back(init_barrier.get_future());
         ops_per_sec.push_back(0.);
         workers.emplace_back(worker_thread_func, db, reqs, value, drop_caches,
                              print_block_info, id, ops_per_sec,
-                             std::move(init_barrier));
+                             std::move(init_barrier),
+                             start_barrier.get_future());
     }
 
-    // wait for everyone finishes initialization
+    // wait for everyone to finish starting up
     for (auto&& init_barrier : init_barriers)
         init_barrier.wait();
+
+    // signal everyone to start the work
+    start_barrier.set_value();
+
+    // wait for all workers to complete their job
+    for (auto&& worker : workers)
+        worker.join();
 
     db->ReleaseSnapshot(read_options.snapshot);
     read_options.snapshot = nullptr;
@@ -380,15 +391,20 @@ main(int argc, char *argv[])
         std::cout << "Finished multithreaded." << std::endl << std::endl;
 
         // print the overall elapsed microseconds
+        std::sort(ops_per_sec.begin(), ops_per_sec.end());
+
         double sum_ops_per_sec = 0.;
         for (double& ops : ops_per_sec)
             sum_ops_per_sec += ops;
+        double min_ops_per_sec = ops_per_sec.front();
+        double max_ops_per_sec = ops_per_sec.back();
         double avg_ops_per_sec = sum_ops_per_sec / num_threads;
 
         std::cout << "Throughput stats:" << std::endl
                   << "  sum  " << sum_ops_per_sec << " ops/sec" << std::endl
-                  << "  avg  " << avg_ops_per_sec << " ops/sec" << std::endl << std::endl;
-        
+                  << "  avg  " << avg_ops_per_sec << " ops/sec" << std::endl
+                  << "  max  " << max_ops_per_sec << " ops/sec" << std::endl
+                  << "  min  " << min_ops_per_sec << " ops/sec" << std::endl << std::endl;
     }
 
     // Force compaction of everything in memory.

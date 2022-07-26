@@ -93,6 +93,7 @@ def run_ycsbcli_single(libforeactor, dbdir, trace, mem_limit, drop_caches,
     output = result.stdout.decode('ascii')
     return output, mb_read_after - mb_read_before
 
+
 def get_us_result_from_output(output):
     in_timing_section = False
     sum_us, avg_us, p99_us = None, None, None
@@ -118,8 +119,8 @@ def run_ycsbcli_iters(num_iters, libforeactor, dbdir, trace, mem_limit,
     result_mb_read = 0.
     for i in range(num_iters):
         output, mb_read = run_ycsbcli_single(libforeactor, dbdir, trace, mem_limit,
-                                             drop_caches, use_foreactor, backend,
-                                             pre_issue_depth)
+                                             drop_caches, use_foreactor, backend=backend,
+                                             pre_issue_depth=pre_issue_depth)
         sum_us, avg_us, p99_us = get_us_result_from_output(output)
         assert mb_read >= 0
         assert sum_us is not None
@@ -135,7 +136,6 @@ def run_ycsbcli_iters(num_iters, libforeactor, dbdir, trace, mem_limit,
     result_p99_us /= num_iters
     result_mb_read /= num_iters
     return result_sum_us, result_avg_us, result_p99_us, result_mb_read
-
 
 def run_exprs(libforeactor, dbdir, trace, mem_limit, drop_caches,
               output_log, backend, pre_issue_depth_list):
@@ -161,6 +161,65 @@ def run_exprs(libforeactor, dbdir, trace, mem_limit, drop_caches,
             print(result)
 
 
+def get_ops_result_from_output(output):
+    in_timing_section = False
+    sum_ops, avg_ops = None, None
+
+    for line in output.split('\n'):
+        line = line.strip()
+        if line.startswith("Throughput stats"):
+            in_timing_section = True
+        elif in_timing_section and line.startswith("sum"):
+            sum_ops = float(line.split()[1])
+        elif in_timing_section and line.startswith("avg"):
+            avg_ops = float(line.split()[1])
+            break
+
+    return (sum_ops, avg_ops)
+
+def run_ycsbcli_iters_multithread(num_iters, num_threads, libforeactor, dbdir,
+                                  trace, mem_limit, drop_caches, use_foreactor,
+                                  backend=None, pre_issue_depth=0):
+    result_sum_ops, result_avg_ops = 0., 0.
+    for i in range(num_iters):
+        output, _ = run_ycsbcli_single(libforeactor, dbdir, trace, mem_limit,
+                                       drop_caches, use_foreactor, backend=backend,
+                                       pre_issue_depth=pre_issue_depth,
+                                       num_threads=num_threads)
+        sum_ops, avg_ops = get_ops_result_from_output(output)
+        assert sum_ops is not None
+        assert avg_ops is not None
+        result_sum_ops += sum_ops
+        result_avg_ops += avg_ops
+
+    result_sum_ops /= num_iters
+    result_avg_ops /= num_iters
+    return result_sum_ops, result_avg_ops
+
+def run_exprs_multithread(libforeactor, dbdir, trace, mem_limit, drop_caches,
+                          output_log, backend, pre_issue_depth_list, num_threads):
+    num_iters = CACHED_ITERS if not drop_caches else DROP_CACHES_ITERS
+
+    with open(output_log, 'w') as fout:
+        sum_ops, avg_ops = run_ycsbcli_iters_multithread(num_iters, num_threads,
+                                                         libforeactor, dbdir,
+                                                         trace, mem_limit,
+                                                         drop_caches, False)
+        result = f" orig: sum {sum_ops:.3f} avg {avg_ops:.3f} ops/sec"
+        fout.write(result + '\n')
+        print(result)
+
+        for pre_issue_depth in pre_issue_depth_list:
+            sum_ops, avg_ops = run_ycsbcli_iters_multithread(num_iters, num_threads,
+                                                             libforeactor, dbdir,
+                                                             trace, mem_limit,
+                                                             drop_caches, True,
+                                                             backend, pre_issue_depth)
+            result = f" {pre_issue_depth:4d}: sum {sum_ops:.3f} avg {avg_ops:.3f} ops/sec"
+            fout.write(result + '\n')
+            print(result)
+
+
 def main():
     parser = argparse.ArgumentParser(description="LevelDB benchmark driver")
     parser.add_argument('-l', dest='libforeactor', required=True,
@@ -173,7 +232,9 @@ def main():
                         help="output log filename")
     parser.add_argument('-b', dest='backend', required=True,
                         help="io_uring_default|io_uring_sqe_async|thread_pool")
-    parser.add_argument('--mem_limit', dest='mem_limit', required=False, default="none",
+    parser.add_argument('-t', dest='num_threads', type=int, required=False, default=1,
+                        help="if > 1, do multithreading on read-only snapshot")
+    parser.add_argument('-m', dest='mem_limit', required=False, default="none",
                         help="memory limit to bound page cache size")
     parser.add_argument('--drop_caches', dest='drop_caches', action='store_true',
                         help="do drop_caches per request")
@@ -193,12 +254,23 @@ def main():
             print("Error: mem_limit must be an integer in bytes")
             exit(1)
 
+    if args.num_threads < 1:
+        print(f"Error: invalid number of threads {args.num_threads}")
+        exit(1)
+
     check_file_exists(args.libforeactor)
     check_file_exists(args.trace)
     check_file_exists(YCSBCLI_BIN)
 
-    run_exprs(args.libforeactor, args.dbdir, args.trace, args.mem_limit,
-              args.drop_caches, args.output_log, args.backend, args.pre_issue_depths)
+    if args.num_threads == 1:
+        run_exprs(args.libforeactor, args.dbdir, args.trace, args.mem_limit,
+                  args.drop_caches, args.output_log, args.backend,
+                  args.pre_issue_depths)
+    else:
+        run_exprs_multithread(args.libforeactor, args.dbdir, args.trace,
+                              args.mem_limit, args.drop_caches, args.output_log,
+                              args.backend, args.pre_issue_depths,
+                              args.num_threads)
 
 if __name__ == "__main__":
     main()
