@@ -11,11 +11,11 @@ BENCHER_PY = "./scripts/bencher.py"
 PLOTTER_PY = "./scripts/plotter.py"
 
 VALUE_SIZES = {
-    # "256B": 256,
-    # "1K":   1024,
+    "256B": 256,
+    "1K":   1024,
     "4K":   4 * 1024,
-    # "16K":  16 * 1024,
-    # "64K":  64 * 1024,
+    "16K":  16 * 1024,
+    "64K":  64 * 1024,
 }
 YCSB_DISTRIBUTIONS = ["zipfian", "uniform"]
 BACKENDS = ["io_uring_sqe_async"]
