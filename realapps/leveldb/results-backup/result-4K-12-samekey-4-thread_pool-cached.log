@@ -1,6 +1,0 @@
- orig: sum 2626.820 avg 26.534 us
-    0: sum 3745.473 avg 37.833 us
-    4: sum 8991.153 avg 90.820 us
-    8: sum 8904.690 avg 89.946 us
-   12: sum 10483.140 avg 105.890 us
-   15: sum 13924.067 avg 140.647 us
