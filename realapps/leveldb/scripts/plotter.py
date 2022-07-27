@@ -61,62 +61,6 @@ def read_timer_fractions(results_dir, segments, value_size, num_l0_tables,
     return fractions, segments_us
 
 
-# def plot_grouped_bars(results, x_list, x_label, y_label, output_prefix,
-#                       title_suffix):
-#     plt.rcParams.update({'font.size': 16})
-#     plt.rcParams.update({'figure.figsize': (15, 7)})
-
-#     norm = Normalize(vmin=5, vmax=30)
-#     orig_color = "steelblue"
-#     orig_hatch = '//'
-#     cmaps = {
-#         "thread_pool": cm.BuGn,
-#         "io_uring_sqe_async": cm.OrRd,
-#     }
-#     edge_color = "black"
-
-#     for idx, config in enumerate(results.keys()):
-#         xs = list(map(lambda x: x * (len(results)+1.2) + idx,
-#                       range(len(x_list))))
-#         ys = results[config]
-
-#         color = orig_color
-#         hatch = orig_hatch
-#         label = config
-#         if config != "original":
-#             segs = config.split('-')
-#             backend, pre_issue_depth = segs[0], int(segs[1])
-#             color = cmaps[backend](norm(pre_issue_depth))
-#             hatch = ''
-#             if config.startswith("io_uring"):
-#                 label = f"foreactor-io_uring-{pre_issue_depth}"
-#             else:
-#                 label = f"foreactor-thread_pool-{pre_issue_depth}"
-        
-#         plt.bar(xs, ys, width=1, label=label, color=color, hatch=hatch,
-#                         edgecolor=edge_color, zorder=3)
-
-#         for x, y in zip(xs, ys):
-#             plt.text(x, y, f"{y:.1f}", ha="center", va="bottom",
-#                            fontsize=10, rotation=15)
-
-#     plt.xlabel(x_label)
-#     plt.ylabel(y_label)
-
-#     xticks = list(map(lambda x: x * (len(results)+1.2) + (len(results)/2),
-#                       range(len(x_list))))
-#     plt.xticks(xticks, x_list)
-
-#     plt.grid(axis='y', zorder=1)
-
-#     plt.legend(loc="center left", bbox_to_anchor=(1.02, 0.5))
-
-#     plt.tight_layout()
-
-#     plt.savefig(f"{output_prefix}-{title_suffix}.png", dpi=200)
-#     plt.close()
-#     print(f"PLOT {title_suffix}")
-
 def plot_series_lines(results, x_list, x_label, y_label, output_prefix,
                       title_suffix):
     plt.rcParams.update({'font.size': 16})
@@ -311,18 +255,21 @@ def plot_heat_map(dist_results, distributions, x_list, y_list, x_label, y_label,
                 plt.text(i, j, f"{results[i, j]*100:.1f}",
                                ha="center", va="center", fontsize=11)
 
-        plt.xlabel(x_label)
-        plt.ylabel(y_label)
+        if sp_idx == 0:
+            plt.ylabel(y_label)
 
         plt.xticks(list(range(len(x_list))), x_list)
         plt.yticks(list(range(len(y_list))), y_list)
 
-        plt.title(distribution)
+        plt.title(distribution.capitalize(), fontsize=12)
 
         sp_idx += 1
 
     plt.subplots_adjust(right=0.9)
+
     fig = plt.figure(1)
+    fig.supxlabel(x_label, fontsize=12, va="center")
+
     cbar_ax = fig.add_axes([0.92, 0.15, 0.02, 0.7])
     cbar_ticks = list(np.arange(vmin+0.1, vmax, 0.1))
     cbar_labels = list(map(lambda p: f"{p*100:.0f}%", cbar_ticks))
@@ -498,7 +445,62 @@ def handle_heat_map(results_dir, output_prefix):
 
 
 def plot_multithread(results, num_threads, output_prefix, title_suffix):
-    pass    # TODO
+# def plot_grouped_bars(results, x_list, x_label, y_label, output_prefix,
+#                       title_suffix):
+#     plt.rcParams.update({'font.size': 16})
+#     plt.rcParams.update({'figure.figsize': (15, 7)})
+
+#     norm = Normalize(vmin=5, vmax=30)
+#     orig_color = "steelblue"
+#     orig_hatch = '//'
+#     cmaps = {
+#         "thread_pool": cm.BuGn,
+#         "io_uring_sqe_async": cm.OrRd,
+#     }
+#     edge_color = "black"
+
+#     for idx, config in enumerate(results.keys()):
+#         xs = list(map(lambda x: x * (len(results)+1.2) + idx,
+#                       range(len(x_list))))
+#         ys = results[config]
+
+#         color = orig_color
+#         hatch = orig_hatch
+#         label = config
+#         if config != "original":
+#             segs = config.split('-')
+#             backend, pre_issue_depth = segs[0], int(segs[1])
+#             color = cmaps[backend](norm(pre_issue_depth))
+#             hatch = ''
+#             if config.startswith("io_uring"):
+#                 label = f"foreactor-io_uring-{pre_issue_depth}"
+#             else:
+#                 label = f"foreactor-thread_pool-{pre_issue_depth}"
+        
+#         plt.bar(xs, ys, width=1, label=label, color=color, hatch=hatch,
+#                         edgecolor=edge_color, zorder=3)
+
+#         for x, y in zip(xs, ys):
+#             plt.text(x, y, f"{y:.1f}", ha="center", va="bottom",
+#                            fontsize=10, rotation=15)
+
+#     plt.xlabel(x_label)
+#     plt.ylabel(y_label)
+
+#     xticks = list(map(lambda x: x * (len(results)+1.2) + (len(results)/2),
+#                       range(len(x_list))))
+#     plt.xticks(xticks, x_list)
+
+#     plt.grid(axis='y', zorder=1)
+
+#     plt.legend(loc="center left", bbox_to_anchor=(1.02, 0.5))
+
+#     plt.tight_layout()
+
+#     plt.savefig(f"{output_prefix}-{title_suffix}.png", dpi=200)
+#     plt.close()
+#     print(f"PLOT {title_suffix}")
+    pass
 
 def handle_multithread(results_dir, output_prefix):
     VALUE_SIZE_ABBR = "16K"
