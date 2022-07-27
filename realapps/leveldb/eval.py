@@ -19,8 +19,8 @@ VALUE_SIZES = {
 }
 YCSB_DISTRIBUTIONS = ["zipfian", "uniform"]
 BACKENDS = ["io_uring_sqe_async"]
-PRE_ISSUE_DEPTH_LIST = [4, 8, 12, 16]
-MEM_PERCENTAGES = [100, 80, 60, 40, 20]
+PRE_ISSUE_DEPTH_LIST = [16]
+MEM_PERCENTAGES = [100, 50, 25, 10, 5]
 
 VALUE_SIZES_FOR_SAMEKEY = {
     "4K":   4 * 1024,
@@ -270,21 +270,21 @@ def main():
         check_dir_exists(args.dbdir_prefix)
         check_dir_exists(args.workloads_dir)
         prepare_dir(args.results_dir, False)
-        # run_all_ycsb_c_run(args.libforeactor,
-        #                    args.workloads_dir, args.results_dir,
-        #                    args.dbdir_prefix, VALUE_SIZES,
-        #                    YCSB_DISTRIBUTIONS,
-        #                    BACKENDS,
-        #                    PRE_ISSUE_DEPTH_LIST,
-        #                    MEM_PERCENTAGES)
+        run_all_ycsb_c_run(args.libforeactor,
+                           args.workloads_dir, args.results_dir,
+                           args.dbdir_prefix, VALUE_SIZES,
+                           YCSB_DISTRIBUTIONS,
+                           BACKENDS,
+                           PRE_ISSUE_DEPTH_LIST,
+                           MEM_PERCENTAGES)
         # run_all_with_writes()
-        run_all_multithread(args.libforeactor, args.workloads_dir, args.results_dir,
-                            args.dbdir_prefix, VALUE_SIZE_ABBR_FOR_MULTITHREAD,
-                            YCSB_DISTRIBUTION_FOR_MULTITHREAD,
-                            BACKEND_FOR_MULTITHREAD,
-                            PRE_ISSUE_DEPTH_LIST,
-                            MEM_PERCENTAGE_FOR_MULTITHREAD,
-                            MULTITHREAD_NUMS_THREADS)
+        # run_all_multithread(args.libforeactor, args.workloads_dir, args.results_dir,
+        #                    args.dbdir_prefix, VALUE_SIZE_ABBR_FOR_MULTITHREAD,
+        #                    YCSB_DISTRIBUTION_FOR_MULTITHREAD,
+        #                    BACKEND_FOR_MULTITHREAD,
+        #                    PRE_ISSUE_DEPTH_LIST,
+        #                    MEM_PERCENTAGE_FOR_MULTITHREAD,
+        #                    MULTITHREAD_NUMS_THREADS)
         # run_all_samekey(args.libforeactor,
         #                 args.workloads_dir, args.results_dir,
         #                 args.dbdir_prefix, VALUE_SIZES_FOR_SAMEKEY,

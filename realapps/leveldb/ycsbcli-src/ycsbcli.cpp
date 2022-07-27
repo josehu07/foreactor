@@ -376,7 +376,7 @@ main(int argc, char *argv[])
                 min_us = microsecs.front();
                 max_us = microsecs.back();
                 avg_us = sum_us / microsecs.size();
-                size_t p999_idx = microsecs.size() * 999 / 1000;
+                size_t p999_idx = microsecs.size() * 99 / 100;
                 if (p999_idx == microsecs.size() - 1)
                     p999_idx -= 1;
                 double p999_us = microsecs.at(p999_idx);
