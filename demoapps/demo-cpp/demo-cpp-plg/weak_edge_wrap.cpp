@@ -49,7 +49,7 @@ static bool pread1_arggen(const int *epoch, bool *link, int *fd, char **buf, siz
     return true;
 }
 
-static bool branch_arggen(const int *epoch, int *decision) {
+static bool branch_arggen(const int *epoch, bool catching_up, int *decision) {
     *decision = (epoch[0] + 1) < static_cast<int>(curr_args->nrepeats) ? 0 : 1;
     return true;
 }

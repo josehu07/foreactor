@@ -61,7 +61,7 @@ class SyscallOpen final : public SyscallNode {
         ArggenFunc arggen_func;
 
         // User-defined return code saver function.
-        RcsaveFunc rcsave_func;        
+        RcsaveFunc rcsave_func;
 
         long SyscallSync(const EpochList& epoch);
         void PrepUringSqe(int epoch_sum, struct io_uring_sqe *sqe);

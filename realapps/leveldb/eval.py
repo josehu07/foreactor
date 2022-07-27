@@ -11,32 +11,32 @@ BENCHER_PY = "./scripts/bencher.py"
 PLOTTER_PY = "./scripts/plotter.py"
 
 VALUE_SIZES = {
-    "256B": 256,
-    "1K":   1024,
+    # "256B": 256,
+    # "1K":   1024,
     "4K":   4 * 1024,
-    "16K":  16 * 1024,
-    "64K":  64 * 1024,
+    # "16K":  16 * 1024,
+    # "64K":  64 * 1024,
 }
 YCSB_DISTRIBUTIONS = ["zipfian", "uniform"]
 BACKENDS = ["io_uring_sqe_async"]
-PRE_ISSUE_DEPTH_LIST = [4, 8, 12, 16]
-MEM_PERCENTAGES = [100, 80, 60, 40, 20]
+PRE_ISSUE_DEPTH_LIST = [16]
+MEM_PERCENTAGES = [100, 50, 25, 10, 5]
 
 VALUE_SIZES_FOR_SAMEKEY = {
     "4K":   4 * 1024,
 }
 BACKENDS_FOR_SAMEKEY = ["io_uring_sqe_async"]
 
-VALUE_SIZE_ABBR_FOR_BREAKDOWN = "4K"
-YCSB_DISTRIBUTION_FOR_BREAKDOWN = "zipfian"
-BACKEND_FOR_BREAKDOWN = "io_uring_sqe_async"
-MEM_PERCENTAGE_FOR_BREAKDOWN = 100
-
 VALUE_SIZE_ABBR_FOR_MULTITHREAD = "4K"
 YCSB_DISTRIBUTION_FOR_MULTITHREAD = "zipfian"
 BACKEND_FOR_MULTITHREAD = "io_uring_sqe_async"
 MEM_PERCENTAGE_FOR_MULTITHREAD = 100
 MULTITHREAD_NUMS_THREADS = [2, 4, 8]
+
+VALUE_SIZE_ABBR_FOR_BREAKDOWN = "4K"
+YCSB_DISTRIBUTION_FOR_BREAKDOWN = "zipfian"
+BACKEND_FOR_BREAKDOWN = "io_uring_sqe_async"
+MEM_PERCENTAGE_FOR_BREAKDOWN = 100
 
 GET_FIGURES = ["mem_ratio", "req_size", "tail_lat", "heat_map", "multithread"]
 GET_BREAKDOWN_FIGURES = ["breakdown"]
@@ -311,8 +311,9 @@ def main():
         check_dir_exists(args.results_dir)
         run_bench_with_timer(args.libforeactor, args.workloads_dir, args.results_dir,
                              args.dbdir_prefix, VALUE_SIZE_ABBR_FOR_BREAKDOWN,
-                             NUM_L0_TABLES_FOR_BREAKDOWN, YCSB_DISTRIBUTION_FOR_BREAKDOWN,
-                             BACKEND_FOR_BREAKDOWN, PRE_ISSUE_DEPTH_LIST,
+                             YCSB_DISTRIBUTION_FOR_BREAKDOWN,
+                             BACKEND_FOR_BREAKDOWN,
+                             PRE_ISSUE_DEPTH_LIST,
                              MEM_PERCENTAGE_FOR_BREAKDOWN)
         plot_all_figs(args.results_dir, GET_BREAKDOWN_FIGURES)
 

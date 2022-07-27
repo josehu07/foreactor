@@ -22,7 +22,7 @@ static bool curr_pread3_done = false;
 static bool curr_pread4_done = false;
 static bool curr_branch3_done = false;
 
-static bool branch0_arggen(const int *epoch, int *decision) {
+static bool branch0_arggen(const int *epoch, bool catching_up, int *decision) {
     *decision = (curr_args->fd < 0) ? 0 : 1;
     return true;
 }
@@ -78,7 +78,7 @@ static void pwrite2_rcsave(const int *epoch, ssize_t res) {
     curr_pwrite2_done = true;
 }
 
-static bool branch1_arggen(const int *epoch, int *decision) {
+static bool branch1_arggen(const int *epoch, bool catching_up, int *decision) {
     *decision = (curr_args->read && !curr_args->readtwice) ? 0 :
                 (curr_args->read && curr_args->readtwice)  ? 1 : 2;
     if (*decision == 2)
@@ -102,7 +102,7 @@ static void pread0_rcsave(const int *epoch, ssize_t res) {
     curr_branch1_done = true;
 }
 
-static bool branch2_arggen(const int *epoch, int *decision) {
+static bool branch2_arggen(const int *epoch, bool catching_up, int *decision) {
     *decision = (!curr_args->moveoff) ? 0 : 1;
     return true;
 }
@@ -180,7 +180,7 @@ static void pread4_rcsave(const int *epoch, ssize_t res) {
     curr_ret = res;
 }
 
-static bool branch3_arggen(const int *epoch, int *decision) {
+static bool branch3_arggen(const int *epoch, bool catching_up, int *decision) {
     if (curr_args->read && curr_args->readtwice && !curr_pread4_done)
         return false;
     *decision = (curr_ret != static_cast<ssize_t>(curr_args->rlen)) ? 0 : 1;

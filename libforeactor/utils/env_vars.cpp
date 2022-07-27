@@ -12,13 +12,13 @@ namespace foreactor {
 
 
 // Externed in header.
-bool EnvParsed = false;
-bool UseForeactor = false;
+thread_local bool EnvParsed = false;
+thread_local bool UseForeactor = false;
 
-static std::unordered_map<unsigned, int> pre_issue_depths;
-static std::unordered_map<unsigned, int> uring_queue_lens;
-static std::unordered_map<unsigned, bool> uring_async_flags;
-static std::unordered_map<unsigned, int> thread_pool_sizes;
+thread_local std::unordered_map<unsigned, int> pre_issue_depths;
+thread_local std::unordered_map<unsigned, int> uring_queue_lens;
+thread_local std::unordered_map<unsigned, bool> uring_async_flags;
+thread_local std::unordered_map<unsigned, int> thread_pool_sizes;
 
 
 void ParseEnvValues() {

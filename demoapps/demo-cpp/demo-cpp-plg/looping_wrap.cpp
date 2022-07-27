@@ -41,7 +41,7 @@ static void pwrite_rcsave(const int *epoch, ssize_t res) {
     curr_pwrites_done++;
 }
 
-static bool branch0_arggen(const int *epoch, int *decision) {
+static bool branch0_arggen(const int *epoch, bool catching_up, int *decision) {
     *decision = ((epoch[0] + epoch[1] + 1) % curr_args->nwrites == 0) ? 0 : 1;
     return true;
 }
@@ -80,12 +80,12 @@ static void pread1_rcsave(const int *epoch, ssize_t res) {
     curr_preads_done++;
 }
 
-static bool branch1_arggen(const int *epoch, int *decision) {
+static bool branch1_arggen(const int *epoch, bool catching_up, int *decision) {
     *decision = ((epoch[0] + epoch[2] + 1) % curr_args->nreadsd2 == 0) ? 0 : 1;
     return true;
 }
 
-static bool branch2_arggen(const int *epoch, int *decision) {
+static bool branch2_arggen(const int *epoch, bool catching_up, int *decision) {
     *decision = (epoch[0] + 1 == static_cast<int>(curr_args->nrepeats)) ? 0 : 1;
     return true;
 }
