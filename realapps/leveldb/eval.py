@@ -29,8 +29,8 @@ VALUE_SIZE_ABBR_FOR_MULTITHREAD = "1K"
 YCSB_DISTRIBUTION_FOR_MULTITHREAD = "zipfian"
 BACKEND_FOR_MULTITHREAD = "io_uring_sqe_async"
 PRE_ISSUE_DEPTH_LIST_FOR_MULTITHREAD = [4, 16]
-MEM_PERCENTAGE_FOR_MULTITHREAD = 100
-MULTITHREAD_NUMS_THREADS = [1, 2, 4, 8, 16]
+MEM_PERCENTAGE_FOR_MULTITHREAD = 10
+MULTITHREAD_NUMS_THREADS = [i+1 for i in range(8)]
 
 VALUE_SIZE_ABBR_FOR_WITH_WRITES = "256B"
 YCSB_DISTRIBUTION_FOR_WITH_WRITES = "zipfian"
@@ -217,6 +217,18 @@ def run_all_multithread(libforeactor, workloads_dir, results_dir, dbdir_prefix,
               f"mem_{mem_percentage} threads_{num_threads}")
         print(output.rstrip())
 
+def run_all_with_writes(libforeactor, workloads_dir, results_dir, dbdir_prefix,
+                        value_size_abbr, ycsb_distribution, backend,
+                        pre_issue_depth_list, mem_percentage, write_workloads):
+    for workload_name in write_workloads:
+        output = run_bench_ycsb(libforeactor, workloads_dir, results_dir,
+                                dbdir_prefix, value_size_abbr, workload_name,
+                                ycsb_distribution, backend, pre_issue_depth_list,
+                                mem_percentage)
+        print(f"RUN {value_size_abbr} ycsb {workload_name} {ycsb_distribution} " + \
+              f"{backend} mem_{mem_percentage} threads_0")
+        print(output.rstrip())
+
 
 def run_bench_with_timer(libforeactor, workloads_dir, results_dir, dbdir_prefix,
                          value_size_abbr, num_l0_tables, ycsb_distribution,
@@ -318,7 +330,6 @@ def main():
         #                    BACKENDS,
         #                    PRE_ISSUE_DEPTH_LIST,
         #                    MEM_PERCENTAGES)
-        # run_all_with_writes()
         run_all_multithread(args.libforeactor, args.workloads_dir, args.results_dir,
                             args.dbdir_prefix, VALUE_SIZE_ABBR_FOR_MULTITHREAD,
                             YCSB_DISTRIBUTION_FOR_MULTITHREAD,
@@ -326,6 +337,13 @@ def main():
                             PRE_ISSUE_DEPTH_LIST_FOR_MULTITHREAD,
                             MEM_PERCENTAGE_FOR_MULTITHREAD,
                             MULTITHREAD_NUMS_THREADS)
+        run_all_with_writes(args.libforeactor, args.workloads_dir, args.results_dir,
+                            args.dbdir_prefix, VALUE_SIZE_ABBR_FOR_WITH_WRITES,
+                            YCSB_DISTRIBUTION_FOR_WITH_WRITES,
+                            BACKEND_FOR_WITH_WRITES,
+                            PRE_ISSUE_DEPTH_LIST_FOR_WITH_WRITES,
+                            MEM_PERCENTAGE_FOR_WITH_WRITES,
+                            WITH_WRITES_WORKLOADS)
         # run_all_samekey(args.libforeactor,
         #                 args.workloads_dir, args.results_dir,
         #                 args.dbdir_prefix, VALUE_SIZES_FOR_SAMEKEY,

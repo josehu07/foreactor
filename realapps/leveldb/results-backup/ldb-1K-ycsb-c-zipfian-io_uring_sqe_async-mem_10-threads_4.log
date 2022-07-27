@@ -1,0 +1,3 @@
+ orig: sum 11633.740 avg 2908.436 ops/sec
+    4: sum 12171.620 avg 3042.908 ops/sec
+   16: sum 14555.700 avg 3638.930 ops/sec
