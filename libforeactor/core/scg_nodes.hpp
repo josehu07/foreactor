@@ -160,6 +160,8 @@ class BranchNode final : public SCGraphNode {
     friend class SCGraph;
     friend class SyscallNode;
 
+    typedef std::function<bool(const int *, bool, int *)> ArggenFunc;
+
     private:
         // Fields that stay the same across loops.
         size_t num_children = 0;
@@ -171,8 +173,9 @@ class BranchNode final : public SCGraphNode {
 
         // User-provided decision generator function. Returns true if decision
         // for that epoch ends up being ready; returns false otherwise.
-        std::function<bool(const int *, int *)> arggen_func;
-        bool GenerateDecision(const EpochList&);
+        ArggenFunc arggen_func;
+        bool GenerateDecision(const EpochList& epoch,
+                              bool catching_up = false);
 
         // Pick a child node based on decision value. Returns nullptr if
         // decision cannot be made yet. If traverses through a back-pointing
@@ -187,7 +190,7 @@ class BranchNode final : public SCGraphNode {
         BranchNode(unsigned node_id, std::string name, size_t num_children,
                    SCGraph *scgraph,
                    const std::unordered_set<int>& assoc_dims,
-                   std::function<bool(const int *, int *)> arggen_func);
+                   ArggenFunc arggen_func);
         ~BranchNode() {}
 
         friend std::ostream& operator<<(std::ostream& s, const BranchNode& n);

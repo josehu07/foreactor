@@ -22,21 +22,20 @@ BACKENDS = ["io_uring_sqe_async"]
 PRE_ISSUE_DEPTH_LIST = [16]
 MEM_PERCENTAGES = [100, 50, 25, 10, 5]
 
-VALUE_SIZES_FOR_SAMEKEY = {
-    "4K":   4 * 1024,
-}
+VALUE_SIZES_FOR_SAMEKEY = {}
 BACKENDS_FOR_SAMEKEY = ["io_uring_sqe_async"]
+
+VALUE_SIZE_ABBR_FOR_MULTITHREAD = "1K"
+YCSB_DISTRIBUTION_FOR_MULTITHREAD = "zipfian"
+BACKEND_FOR_MULTITHREAD = "io_uring_sqe_async"
+PRE_ISSUE_DEPTH_LIST_FOR_MULTITHREAD = [2, 4, 8, 16]
+MEM_PERCENTAGE_FOR_MULTITHREAD = 100
+MULTITHREAD_NUMS_THREADS = [1, 2, 4, 8]
 
 VALUE_SIZE_ABBR_FOR_BREAKDOWN = "4K"
 YCSB_DISTRIBUTION_FOR_BREAKDOWN = "zipfian"
 BACKEND_FOR_BREAKDOWN = "io_uring_sqe_async"
 MEM_PERCENTAGE_FOR_BREAKDOWN = 100
-
-VALUE_SIZE_ABBR_FOR_MULTITHREAD = "4K"
-YCSB_DISTRIBUTION_FOR_MULTITHREAD = "zipfian"
-BACKEND_FOR_MULTITHREAD = "io_uring_sqe_async"
-MEM_PERCENTAGE_FOR_MULTITHREAD = 100
-MULTITHREAD_NUMS_THREADS = [2, 4, 8]
 
 GET_FIGURES = ["mem_ratio", "req_size", "tail_lat", "heat_map", "multithread"]
 GET_BREAKDOWN_FIGURES = ["breakdown"]
@@ -311,8 +310,9 @@ def main():
         check_dir_exists(args.results_dir)
         run_bench_with_timer(args.libforeactor, args.workloads_dir, args.results_dir,
                              args.dbdir_prefix, VALUE_SIZE_ABBR_FOR_BREAKDOWN,
-                             NUM_L0_TABLES_FOR_BREAKDOWN, YCSB_DISTRIBUTION_FOR_BREAKDOWN,
-                             BACKEND_FOR_BREAKDOWN, PRE_ISSUE_DEPTH_LIST,
+                             YCSB_DISTRIBUTION_FOR_BREAKDOWN,
+                             BACKEND_FOR_BREAKDOWN,
+                             PRE_ISSUE_DEPTH_LIST,
                              MEM_PERCENTAGE_FOR_BREAKDOWN)
         plot_all_figs(args.results_dir, GET_BREAKDOWN_FIGURES)
 

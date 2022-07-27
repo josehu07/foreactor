@@ -40,7 +40,7 @@ static void pwrite_rcsave(const int *epoch, ssize_t res) {
     foreactor_PreadPutInternalBuf(graph_id, 0, epoch);
 }
 
-static bool branch_arggen(const int *epoch, int *decision) {
+static bool branch_arggen(const int *epoch, bool catching_up, int *decision) {
     *decision = (epoch[0] + 1 < static_cast<int>(curr_args->num_blocks)) ? 0 : 1;
     return true;
 }

@@ -26,7 +26,7 @@ static bool pwrite_arggen(const int *epoch, bool *link, int *fd, const char **bu
     return false;   // just not pre-issuing any writes
 }
 
-static bool branch_arggen(const int *epoch, int *decision) {
+static bool branch_arggen(const int *epoch, bool catching_up, int *decision) {
     *decision = (epoch[0] + 1 < static_cast<int>(curr_args->num_blocks)) ? 0 : 1;
     return true;
 }

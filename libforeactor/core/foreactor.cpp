@@ -389,7 +389,7 @@ void foreactor_AddBranchNode(unsigned graph_id,
                              const char *name,
                              const int *assoc_dims,
                              size_t assoc_dims_len,
-                             bool (*arggen_func)(const int *, int *),
+                             bool (*arggen_func)(const int *, bool, int *),
                              size_t num_children,
                              bool is_start) {
     SCGraph *scgraph = GetSCGraphFromId(graph_id);

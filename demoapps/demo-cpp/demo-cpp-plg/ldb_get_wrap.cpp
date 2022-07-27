@@ -14,7 +14,7 @@ static ExperLdbGetArgs *curr_args = nullptr;
 static std::vector<int> curr_fds;
 static std::vector<bool> curr_index_block_ready;
 
-static bool branch_table_open_arggen(const int *epoch, int *decision) {
+static bool branch_table_open_arggen(const int *epoch, bool catching_up, int *decision) {
     *decision = (curr_args->fds[epoch[0]] <= 0) ? 0 : 1;
     return true;
 }
@@ -61,7 +61,7 @@ static bool pread_data_arggen(const int *epoch, bool *link, int *fd, char **buf,
     return true;
 }
 
-static bool branch_has_more_arggen(const int *epoch, int *decision) {
+static bool branch_has_more_arggen(const int *epoch, bool catching_up, int *decision) {
     *decision = (epoch[0] < static_cast<int>(curr_args->key_match_at)) ? 0 : 1;
     return true;
 }

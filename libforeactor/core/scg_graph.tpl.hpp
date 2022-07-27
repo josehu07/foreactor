@@ -29,7 +29,8 @@ std::tuple<NodeT *, const EpochList *> SCGraph::GetFrontier() {
         // user-given generator function must be able to generate them now
         if (!branch_node->decision.Has(frontier_epoch)) {
             [[maybe_unused]] bool ready =
-                branch_node->GenerateDecision(frontier_epoch);
+                branch_node->GenerateDecision(frontier_epoch,
+                                              /*catching_up*/ true);
             assert(ready);
         }
         // pick a branch and progress frontier_epoch

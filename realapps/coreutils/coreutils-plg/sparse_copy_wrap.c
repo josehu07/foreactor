@@ -46,7 +46,7 @@ static void read_src_rcsave(const int *epoch, ssize_t res) {
     assert(res >= 0);
 }
 
-static bool branch_stop_loop_arggen(const int *epoch, int *decision) {
+static bool branch_stop_loop_arggen(const int *epoch, bool catching_up, int *decision) {
     off_t aligned_offset = ((off_t) curr_buf_size) * epoch[0];
     if (aligned_offset >= curr_src_file_size)
         *decision = 0;
@@ -72,7 +72,7 @@ static void write_dst_rcsave(const int *epoch, ssize_t res) {
     foreactor_PreadPutInternalBuf(graph_id, 0, epoch);
 }
 
-static bool branch_continue_arggen(const int *epoch, int *decision) {
+static bool branch_continue_arggen(const int *epoch, bool catching_up, int *decision) {
     *decision = 0;
     return true;
 }

@@ -76,7 +76,7 @@ static bool fstatat_arggen(const int *epoch, bool *link, int *dirfd, const char 
 //         return false;
 // }
 
-static bool branch_next_file_arggen(const int *epoch, int *decision) {
+static bool branch_next_file_arggen(const int *epoch, bool catching_up, int *decision) {
     // if catching up to frontier...
     if (curr_ftsent_cnt > epoch[0]) {
         *decision = 0;
