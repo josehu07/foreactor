@@ -13,13 +13,12 @@ TARGET_DATABASE_VOLUME = 1024 * 1024 * 1024     # make ~1GB per database image
 TARGET_WORKLOAD_VOLUME = 100 * 1024 * 1024      # read out ~100MB per workload
 
 YCSB_LOAD_WORKLOAD = "c"
-YCSB_RUN_WORKLOADS = ["a", "b", "c"]
-YCSB_RUN_DISTRIBUTIONS = ["zipfian", "uniform"]
+YCSB_RUN_POSSIBLE_WORKLOADS = {"a", "b", "c", "d", "e", "f"}
+YCSB_RUN_POSSIBLE_DISTRIBUTIONS = {"zipfian", "uniform"}
 
 SAMEKEY_NUMOPS_PER_RUN = 100
 
 NUM_L0_TABLES = 12
-
 NUM_RECORDS_FILENAME = "num_init_records.txt"
 
 
@@ -254,14 +253,15 @@ def get_init_num_records(dbdir):
         return int(fnum.read().strip())
 
 def generate_workloads(dbdir, tmpdir, ycsb_bin, ycsb_run_workloads, value_size,
-                       ycsb_distribution, output_prefix, gen_samekey_workloads):
+                       ycsb_distribution, output_prefix, gen_samekey_workloads,
+                       max_threads):
     stats = get_full_stat_section(
         run_ycsbcli(dbdir, "dummy", value_size, 0, 0, True, True))
     num_records = get_init_num_records(dbdir)
 
     if gen_samekey_workloads:
         print("Workload keys --")
-        samekey_trace = lambda n: f"{output_prefix}-samekey-{n}.txt"
+        samekey_trace = lambda n: f"{output_prefix}-samekey-{n}-{t}.txt"
 
         # generate workload of reading the key that approximately triggers N preads
         # through level 0
@@ -286,17 +286,32 @@ def generate_workloads(dbdir, tmpdir, ycsb_bin, ycsb_run_workloads, value_size,
             print(f" {n}: {level_key}")
             level += 1
 
-    tmpfile = f"{tmpdir}/leveldb_prepare.tmp3.txt"
-    num_operations = TARGET_WORKLOAD_VOLUME // value_size
-    for ycsb_workload in ycsb_run_workloads:
-        workload_name = ycsb_workload[-1:]      # last character of property filename
-        run_ycsb_bin(ycsb_bin, "run", ycsb_workload,
-                     ["-p", f"recordcount={num_records}",
-                      "-p", f"operationcount={num_operations}",
-                      "-p", f"requestdistribution={ycsb_distribution}"], tmpfile)
-        run_trace = f"{output_prefix}-ycsb-{workload_name}-{ycsb_distribution}.txt"
-        convert_trace(tmpfile, run_trace)
+    for t in range(max_threads):
+        tmpfile = f"{tmpdir}/leveldb_prepare.tmp3.txt"
+        num_operations = TARGET_WORKLOAD_VOLUME // value_size
+        for ycsb_workload in ycsb_run_workloads:
+            workload_name = ycsb_workload[-1:]  # last character of property filename
+            run_ycsb_bin(ycsb_bin, "run", ycsb_workload,
+                         ["-p", f"recordcount={num_records}",
+                          "-p", f"operationcount={num_operations}",
+                          "-p", f"requestdistribution={ycsb_distribution}"],
+                         tmpfile)
+            run_trace = f"{output_prefix}-ycsb-{workload_name}-" + \
+                        f"{ycsb_distribution}-{t}.txt"
+            convert_trace(tmpfile, run_trace)
 
+
+def get_comma_separated_list(arg, argname, possible_set):
+    l = arg.strip().split(',')
+    if len(l) == 0:
+        print(f"Error: empty comma-separated list argument {argname}")
+        exit(1)
+    else:
+        for e in l:
+            if e not in possible_set:
+                print(f"Error: invalid comma-separated element {e}")
+                exit(1)
+    return l
 
 def main():
     parser = argparse.ArgumentParser(description="LevelDB database image setup")
@@ -308,8 +323,14 @@ def main():
                         help="path to official YCSB directory")
     parser.add_argument('-v', dest='value_size', required=True, type=int,
                         help="value size in bytes")
+    parser.add_argument('-w', dest='ycsb_workloads', required=True,
+                        help="comma-separated list, e.g. a,b,c")
+    parser.add_argument('-z', dest='ycsb_distributions', required=True,
+                        help="comma-separated list, e.g. zipfian,uniform")
     parser.add_argument('-o', dest='output_prefix', required=True,
                         help="path prefix of output workloads")
+    parser.add_argument('--max_threads', dest='max_threads', type=int, default=1,
+                        help="if > 1, generate these many distinct traces")
     parser.add_argument('--skip_load', dest='skip_load', action='store_true',
                         help="if given, skip loading and only generate workloads")
     parser.add_argument('--gen_samekey', dest='gen_samekey', action='store_true',
@@ -323,10 +344,17 @@ def main():
     check_dir_exists(args.tmpdir)
     check_dir_exists(args.ycsb_dir)
 
+    run_workloads = get_comma_separated_list(args.ycsb_workloads,
+                                             "ycsb_workloads",
+                                             YCSB_RUN_POSSIBLE_WORKLOADS)
+    run_distributions = get_comma_separated_list(args.ycsb_distributions,
+                                                 "ycsb_distributions",
+                                                 YCSB_RUN_POSSIBLE_DISTRIBUTIONS)
+
     ycsb_bin = f"{args.ycsb_dir}/bin/ycsb"
     load_workload = f"{args.ycsb_dir}/workloads/workload{YCSB_LOAD_WORKLOAD}"
     run_workloads = [f"{args.ycsb_dir}/workloads/workload{r}" \
-                     for r in YCSB_RUN_WORKLOADS]
+                     for r in run_workloads]
     check_file_exists(load_workload)
     for run_workload in run_workloads:
         check_file_exists(run_workload)
@@ -334,14 +362,19 @@ def main():
     check_file_exists(YCSBCLI_BIN)
     check_file_exists(LEVELDBUTIL_BIN)
 
+    if args.gen_samekey and args.max_threads > 1:
+        print(f"Error: cannot give gen_samekey when preparing multithreading")
+        exit(1)
+
     if not args.skip_load:
         make_db_image(args.dbdir, args.tmpdir, ycsb_bin, load_workload,
                       args.value_size, args.mlim, args.flim, args.output_prefix)
 
-    for ycsb_distribution in YCSB_RUN_DISTRIBUTIONS:
+    for ycsb_distribution in run_distributions:
         generate_workloads(args.dbdir, args.tmpdir, ycsb_bin, run_workloads,
                            args.value_size, ycsb_distribution,
-                           args.output_prefix, args.gen_samekey)
+                           args.output_prefix, args.gen_samekey,
+                           args.max_threads)
 
 if __name__ == "__main__":
     main()

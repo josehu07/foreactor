@@ -261,14 +261,16 @@ def main():
         exit(1)
 
     check_file_exists(args.libforeactor)
-    check_file_exists(args.trace)
     check_file_exists(YCSBCLI_BIN)
 
     if args.num_threads == 0:
+        check_file_exists(args.trace)
         run_exprs(args.libforeactor, args.dbdir, args.trace, args.mem_limit,
                   args.drop_caches, args.output_log, args.backend,
                   args.pre_issue_depths)
     else:
+        check_file_exists(args.trace+"-0.txt")
+        check_file_exists(args.trace+f"-{args.num_threads-1}.txt")
         run_exprs_multithread(args.libforeactor, args.dbdir, args.trace,
                               args.mem_limit, args.drop_caches, args.output_log,
                               args.backend, args.pre_issue_depths,

@@ -32,6 +32,13 @@ PRE_ISSUE_DEPTH_LIST_FOR_MULTITHREAD = [4, 16]
 MEM_PERCENTAGE_FOR_MULTITHREAD = 100
 MULTITHREAD_NUMS_THREADS = [1, 2, 4, 8, 16]
 
+VALUE_SIZE_ABBR_FOR_WITH_WRITE = "256B"
+YCSB_DISTRIBUTION_FOR_WITH_WRITE = "zipfian"
+WITH_WRITE_WORKLOADS = ["a", "b", "c"]
+BACKEND_FOR_WITH_WRITE = "io_uring_sqe_async"
+PRE_ISSUE_DEPTH_LIST_FOR_WITH_WRITE = [4, 16]
+MEM_PERCENTAGE_FOR_WITH_WRITE = 100
+
 VALUE_SIZE_ABBR_FOR_BREAKDOWN = "4K"
 YCSB_DISTRIBUTION_FOR_BREAKDOWN = "zipfian"
 BACKEND_FOR_BREAKDOWN = "io_uring_sqe_async"
@@ -64,26 +71,50 @@ def prepare_dir(dir_path, empty=False):
         os.mkdir(dir_path)
 
 
-def run_makedb(workloads_dir, dbdir_prefix, value_size, value_size_abbr,
-               ycsb_dir, tmpdir, gen_samekey_workloads):
+def run_prepare(workloads_dir, dbdir_prefix, value_size, value_size_abbr,
+                ycsb_dir, tmpdir, ycsb_workloads, ycsb_distributions,
+                gen_samekey_workloads=False, max_threads=1):
     dbdir = f"{dbdir_prefix}/leveldb_{value_size_abbr}"
     output_prefix = f"{workloads_dir}/trace-{value_size_abbr}"
 
     cmd = ["python3", PREPARE_PY, "-d", dbdir, "-t", tmpdir, "-v", str(value_size),
-           "-y", ycsb_dir, "-o", output_prefix]
+           "-y", ycsb_dir, "-o", output_prefix,
+           "-w", ','.join(ycsb_workloads), "-z", ','.join(ycsb_distributions)]
     if gen_samekey_workloads:
         cmd.append("--gen_samekey")
+    if max_threads > 1:
+        cmd += ["--max_threads", str(max_threads)]
+
+    cmd.append("--skip_load")
 
     result = subprocess.run(cmd, check=True, capture_output=True)
     output = result.stdout.decode('ascii')
     return output
 
-def make_db_images(workloads_dir, dbdir_prefix, ycsb_dir, tmpdir, value_sizes,
-                   value_sizes_for_samekey):
+def prepare_db_and_workloads(workloads_dir, dbdir_prefix, ycsb_dir, tmpdir,
+                             value_sizes, value_sizes_for_samekey,
+                             ycsb_c_run_distributions,
+                             value_size_abbr_for_multithread,
+                             ycsb_distribution_for_multithread, max_threads,
+                             value_size_abbr_for_with_writes,
+                             ycsb_distribution_for_with_write, write_workloads):
     for value_size_abbr, value_size in value_sizes.items():
-        run_makedb(workloads_dir, dbdir_prefix, value_size,
-                   value_size_abbr, ycsb_dir, tmpdir,
-                   value_size_abbr in value_sizes_for_samekey)
+        run_prepare(workloads_dir, dbdir_prefix, value_size,
+                    value_size_abbr, ycsb_dir, tmpdir,
+                    ["c"], ycsb_c_run_distributions,
+                    gen_samekey_workloads=(value_size_abbr in value_sizes_for_samekey))
+
+        if value_size_abbr == value_size_abbr_for_with_writes:
+            run_prepare(workloads_dir, dbdir_prefix, value_size,
+                        value_size_abbr, ycsb_dir, tmpdir,
+                        write_workloads, [ycsb_distribution_for_with_write])
+
+        if value_size_abbr == value_size_abbr_for_multithread:
+            run_prepare(workloads_dir, dbdir_prefix, value_size,
+                        value_size_abbr, ycsb_dir, tmpdir,
+                        ["c"], [ycsb_distribution_for_multithread],
+                        max_threads=max_threads)
+        
         print(f"MADE {value_size_abbr}")
 
 
@@ -96,7 +127,7 @@ def get_dbdir_bytes(dbdir):
 
 def run_bench(libforeactor, dbdir, workload, output_log, backend,
               pre_issue_depth_list, drop_caches, mem_percentage=100,
-              num_threads=1):
+              num_threads=0):
     cmd = ["python3", BENCHER_PY, "-l", libforeactor, "-d", dbdir,
            "-f", workload, "-o", output_log, "-b", backend, "-t", str(num_threads)]
     if drop_caches:
@@ -118,7 +149,8 @@ def run_bench_samekey(libforeactor, workloads_dir, results_dir, dbdir_prefix,
                       value_size_abbr, approx_num_preads, backend,
                       pre_issue_depth_list, drop_caches):
     dbdir = f"{dbdir_prefix}/leveldb_{value_size_abbr}"
-    workload = f"{workloads_dir}/trace-{value_size_abbr}-samekey-{approx_num_preads}.txt"
+    workload = f"{workloads_dir}/trace-{value_size_abbr}-samekey-" + \
+               f"{approx_num_preads}-0.txt"
     output_log = f"{results_dir}/ldb-{value_size_abbr}-samekey-{approx_num_preads}-" + \
                  f"{backend}-{'drop_caches' if drop_caches else 'cached'}.log"
     return run_bench(libforeactor, dbdir, workload, output_log, backend,
@@ -143,10 +175,12 @@ def run_all_samekey(libforeactor, workloads_dir, results_dir, dbdir_prefix,
 
 def run_bench_ycsb(libforeactor, workloads_dir, results_dir, dbdir_prefix,
                    value_size_abbr, workload_name, ycsb_distribution, backend,
-                   pre_issue_depth_list, mem_percentage, num_threads):
+                   pre_issue_depth_list, mem_percentage, num_threads=0):
     dbdir = f"{dbdir_prefix}/leveldb_{value_size_abbr}"
     workload = f"{workloads_dir}/trace-{value_size_abbr}-ycsb-{workload_name}-" + \
-               f"{ycsb_distribution}.txt"
+               f"{ycsb_distribution}"
+    if num_threads == 0:
+        workload += "_0.txt"
     output_log = f"{results_dir}/ldb-{value_size_abbr}-ycsb-{workload_name}-" + \
                  f"{ycsb_distribution}-{backend}-mem_{mem_percentage}-" + \
                  f"threads_{num_threads}.log"
@@ -166,7 +200,7 @@ def run_all_ycsb_c_run(libforeactor, workloads_dir, results_dir, dbdir_prefix,
                                             value_size_abbr, "c",
                                             ycsb_distribution, backend,
                                             pre_issue_depth_list,
-                                            mem_percentage, 1)
+                                            mem_percentage)
                     print(f"RUN {value_size_abbr} ycsb c {ycsb_distribution} "
                           f"{backend} mem_{mem_percentage}")
                     print(output.rstrip())
@@ -257,8 +291,16 @@ def main():
         check_dir_exists(args.dbdir_prefix)
         check_dir_exists(args.ycsb_dir)
         prepare_dir(args.workloads_dir, False)
-        make_db_images(args.workloads_dir, args.dbdir_prefix, args.ycsb_dir, args.tmpdir,
-                       VALUE_SIZES, {})
+        prepare_db_and_workloads(args.workloads_dir, args.dbdir_prefix, args.ycsb_dir,
+                                 args.tmpdir, VALUE_SIZES,
+                                 VALUE_SIZES_FOR_SAMEKEY,
+                                 YCSB_DISTRIBUTIONS,
+                                 VALUE_SIZE_ABBR_FOR_MULTITHREAD,
+                                 YCSB_DISTRIBUTION_FOR_MULTITHREAD,
+                                 max(MULTITHREAD_NUMS_THREADS),
+                                 VALUE_SIZE_ABBR_FOR_WITH_WRITE,
+                                 YCSB_DISTRIBUTION_FOR_WITH_WRITE,
+                                 WITH_WRITE_WORKLOADS)
 
     elif args.mode == "bencher":
         check_arg_given(parser, args, "dbdir_prefix")
@@ -269,21 +311,21 @@ def main():
         check_dir_exists(args.dbdir_prefix)
         check_dir_exists(args.workloads_dir)
         prepare_dir(args.results_dir, False)
-        run_all_ycsb_c_run(args.libforeactor,
-                           args.workloads_dir, args.results_dir,
-                           args.dbdir_prefix, VALUE_SIZES,
-                           YCSB_DISTRIBUTIONS,
-                           BACKENDS,
-                           PRE_ISSUE_DEPTH_LIST,
-                           MEM_PERCENTAGES)
-        # run_all_with_writes()
-        # run_all_multithread(args.libforeactor, args.workloads_dir, args.results_dir,
-        #                    args.dbdir_prefix, VALUE_SIZE_ABBR_FOR_MULTITHREAD,
-        #                    YCSB_DISTRIBUTION_FOR_MULTITHREAD,
-        #                    BACKEND_FOR_MULTITHREAD,
+        # run_all_ycsb_c_run(args.libforeactor,
+        #                    args.workloads_dir, args.results_dir,
+        #                    args.dbdir_prefix, VALUE_SIZES,
+        #                    YCSB_DISTRIBUTIONS,
+        #                    BACKENDS,
         #                    PRE_ISSUE_DEPTH_LIST,
-        #                    MEM_PERCENTAGE_FOR_MULTITHREAD,
-        #                    MULTITHREAD_NUMS_THREADS)
+        #                    MEM_PERCENTAGES)
+        # run_all_with_writes()
+        run_all_multithread(args.libforeactor, args.workloads_dir, args.results_dir,
+                            args.dbdir_prefix, VALUE_SIZE_ABBR_FOR_MULTITHREAD,
+                            YCSB_DISTRIBUTION_FOR_MULTITHREAD,
+                            BACKEND_FOR_MULTITHREAD,
+                            PRE_ISSUE_DEPTH_LIST_FOR_MULTITHREAD,
+                            MEM_PERCENTAGE_FOR_MULTITHREAD,
+                            MULTITHREAD_NUMS_THREADS)
         # run_all_samekey(args.libforeactor,
         #                 args.workloads_dir, args.results_dir,
         #                 args.dbdir_prefix, VALUE_SIZES_FOR_SAMEKEY,
