@@ -180,8 +180,17 @@ static void
 worker_thread_func(leveldb::DB *db, const std::vector<ycsb_req_t> *reqs,
                    const std::string value, bool drop_caches,
                    bool print_block_info, size_t id,
+                   std::vector<double> *ops_per_sec,
                    std::promise<void> init_promise,
                    std::shared_future<void> start_future) {
+    // each thread shuffle the list of requests on its own
+    std::vector<ycsb_req_t> my_reqs;
+    my_reqs.reserve(reqs->size());
+    for (auto&& req : *reqs)
+        my_reqs.push_back(req);
+    auto rng = std::default_random_engine{};
+    std::shuffle(std::begin(my_reqs), std::end(my_reqs), rng);
+
     // signal main thread for startup complete
     init_promise.set_value();
 
@@ -189,19 +198,20 @@ worker_thread_func(leveldb::DB *db, const std::vector<ycsb_req_t> *reqs,
     start_future.wait();
 
     // call do_ycsb()
-    [[maybe_unused]] std::vector<double> microsecs;
-    [[maybe_unused]] uint cnt = do_ycsb(db, reqs, value, drop_caches,
-                                        print_block_info, microsecs);
+    std::vector<double> microsecs;
+    uint cnt = do_ycsb(db, reqs, value, drop_caches, print_block_info,
+                       microsecs);
     
     // calculate my throughput in ops/sec
-    // double sum_us = 0.;
-    // for (auto& us : microsecs)
-    //     sum_us += us;
-    // double ops = static_cast<double>(cnt) * 1e6 / sum_us;
+    double sum_us = 0.;
+    for (auto& us : microsecs)
+        sum_us += us;
+    double ops = static_cast<double>(cnt) * 1e6 / sum_us;
+    ops_per_sec->at(id) = ops;
 }
 
 /** Main coordinator thread if in multithreaded exper. */
-static double
+static std::vector<double>
 do_ycsb_multithreaded(leveldb::DB *db, const std::vector<ycsb_req_t> *reqs,
                       const std::string value, bool drop_caches,
                       bool print_block_info, size_t num_threads) {
@@ -210,6 +220,7 @@ do_ycsb_multithreaded(leveldb::DB *db, const std::vector<ycsb_req_t> *reqs,
 
     // spawn the desired number of worker threads, each applying the whole
     // trace once
+    std::vector<double> ops_per_sec;
     std::vector<std::thread> workers;
     std::vector<std::future<void>> init_futures;
     std::promise<void> start_promise;
@@ -217,17 +228,15 @@ do_ycsb_multithreaded(leveldb::DB *db, const std::vector<ycsb_req_t> *reqs,
     for (size_t id = 0; id < num_threads; ++id) {
         std::promise<void> init_promise;
         init_futures.push_back(init_promise.get_future());
+        ops_per_sec.push_back(0.);
         workers.emplace_back(worker_thread_func, db, reqs, value, drop_caches,
-                             print_block_info, id, std::move(init_promise),
-                             start_future);
+                             print_block_info, id, &ops_per_sec,
+                             std::move(init_promise), start_future);
     }
 
     // wait for everyone to finish starting up
     for (auto&& init_future : init_futures)
         init_future.wait();
-
-    // start timer
-    auto time_start = std::chrono::high_resolution_clock::now();
 
     // signal everyone to start the work
     start_promise.set_value();
@@ -235,13 +244,6 @@ do_ycsb_multithreaded(leveldb::DB *db, const std::vector<ycsb_req_t> *reqs,
     // wait for all workers to complete their job
     for (auto&& worker : workers)
         worker.join();
-
-    // end timer, calculate approximate aggregate throughput
-    auto time_end = std::chrono::high_resolution_clock::now();
-    double time_us = std::chrono::duration<double, std::micro>(
-        time_end - time_start).count();
-    double ops_per_sec = static_cast<double>(reqs->size()) * num_threads
-                         * 1000000. / time_us;
 
     db->ReleaseSnapshot(read_options.snapshot);
     read_options.snapshot = nullptr;
@@ -393,15 +395,28 @@ main(int argc, char *argv[])
     } else {
         // multithreaded case, make a read-only snapshot and spawn child threads
         // to execute the trace on the snapshot
-        double ops_per_sec = do_ycsb_multithreaded(db, &ycsb_reqs, value,
-                                                   drop_caches,
-                                                   print_block_info,
-                                                   num_threads);
+        std::vector<double> ops_per_sec = do_ycsb_multithreaded(db, &ycsb_reqs, value,
+                                                                drop_caches,
+                                                                print_block_info,
+                                                                num_threads);
+        assert(ops_per_sec.size() == num_threads);
         std::cout << "Finished multithreaded." << std::endl << std::endl;
 
         // print throughput info
+        std::sort(ops_per_sec.begin(), ops_per_sec.end());
+
+        double sum_ops_per_sec = 0.;
+        for (double& ops : ops_per_sec)
+            sum_ops_per_sec += ops;
+        double min_ops_per_sec = ops_per_sec.front();
+        double max_ops_per_sec = ops_per_sec.back();
+        double avg_ops_per_sec = sum_ops_per_sec / num_threads;
+
         std::cout << "Throughput stats:" << std::endl
-                  << "  sum  " << ops_per_sec << " ops/sec" << std::endl << std::endl;
+                  << "  sum  " << sum_ops_per_sec << " ops/sec" << std::endl
+                  << "  avg  " << avg_ops_per_sec << " ops/sec" << std::endl
+                  << "  max  " << max_ops_per_sec << " ops/sec" << std::endl
+                  << "  min  " << min_ops_per_sec << " ops/sec" << std::endl << std::endl;
     }
 
     // Force compaction of everything in memory.
