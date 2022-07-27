@@ -32,12 +32,12 @@ PRE_ISSUE_DEPTH_LIST_FOR_MULTITHREAD = [4, 16]
 MEM_PERCENTAGE_FOR_MULTITHREAD = 100
 MULTITHREAD_NUMS_THREADS = [1, 2, 4, 8, 16]
 
-VALUE_SIZE_ABBR_FOR_WITH_WRITE = "256B"
-YCSB_DISTRIBUTION_FOR_WITH_WRITE = "zipfian"
-WITH_WRITE_WORKLOADS = ["a", "b", "c"]
-BACKEND_FOR_WITH_WRITE = "io_uring_sqe_async"
-PRE_ISSUE_DEPTH_LIST_FOR_WITH_WRITE = [4, 16]
-MEM_PERCENTAGE_FOR_WITH_WRITE = 100
+VALUE_SIZE_ABBR_FOR_WITH_WRITES = "256B"
+YCSB_DISTRIBUTION_FOR_WITH_WRITES = "zipfian"
+WITH_WRITES_WORKLOADS = ["a", "b", "c"]
+BACKEND_FOR_WITH_WRITES = "io_uring_sqe_async"
+PRE_ISSUE_DEPTH_LIST_FOR_WITH_WRITES = [4, 16]
+MEM_PERCENTAGE_FOR_WITH_WRITES = 100
 
 VALUE_SIZE_ABBR_FOR_BREAKDOWN = "4K"
 YCSB_DISTRIBUTION_FOR_BREAKDOWN = "zipfian"
@@ -97,7 +97,7 @@ def prepare_db_and_workloads(workloads_dir, dbdir_prefix, ycsb_dir, tmpdir,
                              value_size_abbr_for_multithread,
                              ycsb_distribution_for_multithread, max_threads,
                              value_size_abbr_for_with_writes,
-                             ycsb_distribution_for_with_write, write_workloads):
+                             ycsb_distribution_for_with_writes, write_workloads):
     for value_size_abbr, value_size in value_sizes.items():
         run_prepare(workloads_dir, dbdir_prefix, value_size,
                     value_size_abbr, ycsb_dir, tmpdir,
@@ -107,7 +107,7 @@ def prepare_db_and_workloads(workloads_dir, dbdir_prefix, ycsb_dir, tmpdir,
         if value_size_abbr == value_size_abbr_for_with_writes:
             run_prepare(workloads_dir, dbdir_prefix, value_size,
                         value_size_abbr, ycsb_dir, tmpdir,
-                        write_workloads, [ycsb_distribution_for_with_write])
+                        write_workloads, [ycsb_distribution_for_with_writes])
 
         if value_size_abbr == value_size_abbr_for_multithread:
             run_prepare(workloads_dir, dbdir_prefix, value_size,
@@ -298,9 +298,9 @@ def main():
                                  VALUE_SIZE_ABBR_FOR_MULTITHREAD,
                                  YCSB_DISTRIBUTION_FOR_MULTITHREAD,
                                  max(MULTITHREAD_NUMS_THREADS),
-                                 VALUE_SIZE_ABBR_FOR_WITH_WRITE,
-                                 YCSB_DISTRIBUTION_FOR_WITH_WRITE,
-                                 WITH_WRITE_WORKLOADS)
+                                 VALUE_SIZE_ABBR_FOR_WITH_WRITES,
+                                 YCSB_DISTRIBUTION_FOR_WITH_WRITES,
+                                 WITH_WRITES_WORKLOADS)
 
     elif args.mode == "bencher":
         check_arg_given(parser, args, "dbdir_prefix")
