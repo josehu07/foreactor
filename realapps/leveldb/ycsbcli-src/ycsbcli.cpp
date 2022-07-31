@@ -7,6 +7,7 @@
 #include <algorithm>
 #include <thread>
 #include <future>
+#include <tuple>
 #include <unistd.h>
 #include <string.h>
 #include <math.h>
@@ -103,11 +104,13 @@ static void leveldb_stats(leveldb::DB *db) {
 
 
 /** Run/load YCSB workload on a leveldb instance. */
-static uint do_ycsb(leveldb::DB *db, const std::vector<ycsb_req_t> *reqs,
-                    const std::string value, bool drop_caches,
-                    bool print_block_info, std::vector<double>& microsecs) {
+static std::tuple<uint, uint> do_ycsb(leveldb::DB *db,
+                                      const std::vector<ycsb_req_t> *reqs,
+                                      const std::string value, bool drop_caches,
+                                      bool print_block_info,
+                                      std::vector<double>& microsecs) {
     leveldb::Status status;
-    uint cnt = 0;
+    uint cnt = 0, not_ok_cnt = 0;
     std::string read_buf;
     read_buf.reserve(value.length());
 
@@ -149,21 +152,19 @@ static uint do_ycsb(leveldb::DB *db, const std::vector<ycsb_req_t> *reqs,
         }
         auto time_end = std::chrono::high_resolution_clock::now();
 
-        // Record all successful and failed requests.
+        // Record timing for all successful and failed requests.
         cnt++;
         microsecs.push_back(std::chrono::duration<double, std::micro>(
             time_end - time_start).count());
 
-        if (!status.ok()) {
-            std::cerr << "Error: req returned status: " << status.ToString()
-                      << std::endl;
-        }
+        if (!status.ok())
+            not_ok_cnt++;
 
         if (drop_caches)
             cmd_drop_caches();
     }
 
-    return cnt;
+    return std::make_tuple(cnt, not_ok_cnt);
 }
 
 /** Worker thread func for multithreaded exper. */
@@ -192,8 +193,8 @@ static void worker_thread_func(leveldb::DB *db,
 
     // call do_ycsb()
     std::vector<double> microsecs;
-    uint cnt = do_ycsb(db, reqs, value, drop_caches, print_block_info,
-                       microsecs);
+    auto [cnt, _] = do_ycsb(db, reqs, value, drop_caches, print_block_info,
+                            microsecs);
     
     // calculate my throughput in ops/sec
     double sum_us = 0.;
@@ -284,6 +285,72 @@ static std::vector<ycsb_req_t> read_input_trace(const std::string& filename,
 }
 
 
+static void print_results_latency(std::vector<double>& microsecs) {
+    if (microsecs.size() > 0) {
+        std::sort(microsecs.begin(), microsecs.end());
+
+        std::cout << "Sorted time elapsed:";
+        for (double& us : microsecs)
+            std::cout << " " << us;
+        std::cout << std::endl << std::endl;
+
+        double sum_us = 0.;
+        for (double& us : microsecs)
+            sum_us += us;
+        double min_us = microsecs.front();
+        double max_us = microsecs.back();
+        double avg_us = sum_us / microsecs.size();
+
+        std::cout << "Time elapsed stats:" << std::endl
+                  << "  sum  " << sum_us << " us" << std::endl
+                  << "  avg  " << avg_us << " us" << std::endl
+                  << "  max  " << max_us << " us" << std::endl
+                  << "  min  " << min_us << " us" << std::endl << std::endl;
+
+        if (microsecs.size() > 1) {
+            std::cout << "Removing top-1 outlier:" << std::endl;
+            microsecs.erase(microsecs.end() - 1, microsecs.end());
+
+            sum_us = 0.;
+            for (double& us : microsecs)
+                sum_us += us;
+            min_us = microsecs.front();
+            max_us = microsecs.back();
+            avg_us = sum_us / microsecs.size();
+            size_t p99_idx = microsecs.size() * 99 / 100;
+            if (p99_idx == microsecs.size() - 1)
+                p99_idx -= 1;
+            double p99_us = microsecs.at(p99_idx);
+
+            std::cout << "  sum  " << sum_us << " us" << std::endl
+                      << "  avg  " << avg_us << " us" << std::endl
+                      << "  p99  " << p99_us << " us" << std::endl
+                      << "  max  " << max_us << " us" << std::endl
+                      << "  min  " << min_us << " us" << std::endl << std::endl;
+        }
+    }
+}
+
+static void print_results_throughput(std::vector<double>& ops_per_sec,
+                                     size_t num_threads) {
+    if (ops_per_sec.size() > 0) {
+        std::sort(ops_per_sec.begin(), ops_per_sec.end());
+
+        double sum_ops_per_sec = 0.;
+        for (double& ops : ops_per_sec)
+            sum_ops_per_sec += ops;
+        double min_ops_per_sec = ops_per_sec.front();
+        double max_ops_per_sec = ops_per_sec.back();
+        double avg_ops_per_sec = sum_ops_per_sec / num_threads;
+
+        std::cout << "Throughput stats:" << std::endl
+                  << "  sum  " << sum_ops_per_sec << " ops/sec" << std::endl
+                  << "  avg  " << avg_ops_per_sec << " ops/sec" << std::endl
+                  << "  max  " << max_ops_per_sec << " ops/sec" << std::endl
+                  << "  min  " << min_ops_per_sec << " ops/sec" << std::endl << std::endl;
+    }
+}
+
 int main(int argc, char *argv[]) {
     std::string db_location, ycsb_filename;
     size_t value_size, memtable_limit, filesize_limit, num_threads;
@@ -359,54 +426,18 @@ int main(int argc, char *argv[]) {
     if (num_threads == 0) {
         // no multithread flag, apply trace directly on open DB object
         std::vector<double> microsecs;
-        uint cnt = do_ycsb(db, &ycsb_thread_reqs[0], value, drop_caches,
-                           print_block_info, microsecs);
+        auto [cnt, _] = do_ycsb(db, &ycsb_thread_reqs[0], value, drop_caches,
+                                print_block_info, microsecs);
         std::cout << "Finished " << cnt << " requests." << std::endl << std::endl;
 
-        // print timing info
-        if (microsecs.size() > 0) {
-            std::sort(microsecs.begin(), microsecs.end());
+        print_results_latency(microsecs);
 
-            std::cout << "Sorted time elapsed:";
-            for (double& us : microsecs)
-                std::cout << " " << us;
-            std::cout << std::endl << std::endl;
-
-            double sum_us = 0.;
-            for (double& us : microsecs)
-                sum_us += us;
-            double min_us = microsecs.front();
-            double max_us = microsecs.back();
-            double avg_us = sum_us / microsecs.size();
-
-            std::cout << "Time elapsed stats:" << std::endl
-                      << "  sum  " << sum_us << " us" << std::endl
-                      << "  avg  " << avg_us << " us" << std::endl
-                      << "  max  " << max_us << " us" << std::endl
-                      << "  min  " << min_us << " us" << std::endl << std::endl;
-
-            if (microsecs.size() > 1) {
-                std::cout << "Removing top-1 outlier:" << std::endl;
-                microsecs.erase(microsecs.end() - 1, microsecs.end());
-
-                sum_us = 0.;
-                for (double& us : microsecs)
-                    sum_us += us;
-                min_us = microsecs.front();
-                max_us = microsecs.back();
-                avg_us = sum_us / microsecs.size();
-                size_t p99_idx = microsecs.size() * 99 / 100;
-                if (p99_idx == microsecs.size() - 1)
-                    p99_idx -= 1;
-                double p99_us = microsecs.at(p99_idx);
-
-                std::cout << "  sum  " << sum_us << " us" << std::endl
-                          << "  avg  " << avg_us << " us" << std::endl
-                          << "  p99  " << p99_us << " us" << std::endl
-                          << "  max  " << max_us << " us" << std::endl
-                          << "  min  " << min_us << " us" << std::endl;
-            }
-        }
+        double sum_us = 0.;
+        for (double& us : microsecs)
+            sum_us += us;
+        double ops = static_cast<double>(cnt) * 1e6 / sum_us;
+        std::vector<double> ops_per_sec = {ops};
+        print_results_throughput(ops_per_sec, 1);
 
     } else {
         // multithreaded case, make a read-only snapshot and spawn child threads
@@ -420,21 +451,7 @@ int main(int argc, char *argv[]) {
         assert(ops_per_sec.size() == num_threads);
         std::cout << "Finished multithreaded." << std::endl << std::endl;
 
-        // print throughput info
-        std::sort(ops_per_sec.begin(), ops_per_sec.end());
-
-        double sum_ops_per_sec = 0.;
-        for (double& ops : ops_per_sec)
-            sum_ops_per_sec += ops;
-        double min_ops_per_sec = ops_per_sec.front();
-        double max_ops_per_sec = ops_per_sec.back();
-        double avg_ops_per_sec = sum_ops_per_sec / num_threads;
-
-        std::cout << "Throughput stats:" << std::endl
-                  << "  sum  " << sum_ops_per_sec << " ops/sec" << std::endl
-                  << "  avg  " << avg_ops_per_sec << " ops/sec" << std::endl
-                  << "  max  " << max_ops_per_sec << " ops/sec" << std::endl
-                  << "  min  " << min_ops_per_sec << " ops/sec" << std::endl << std::endl;
+        print_results_throughput(ops_per_sec, num_threads);
     }
 
     // Force compaction of everything in memory.

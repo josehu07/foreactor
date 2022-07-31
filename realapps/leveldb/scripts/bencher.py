@@ -2,6 +2,7 @@
 
 import subprocess
 import os
+import shutil
 import argparse
 
 
@@ -19,6 +20,29 @@ def check_file_exists(path):
     if not os.path.isfile(path):
         print(f"Error: {path} does not exist")
         exit(1)
+
+def check_dir_exists(dir_path):
+    if not os.path.isdir(dir_path):
+        print(f"Error: directory {dir_path} does not exist")
+        exit(1)
+
+def prepare_dir(dir_path, empty=False):
+    if os.path.isdir(dir_path):
+        if empty:
+            for file in os.listdir(dir_path):
+                path = os.path.join(dir_path, file)
+                try:
+                    shutil.rmtree(path)
+                except OSError:
+                    os.remove(path)
+    else:
+        os.mkdir(dir_path)
+
+def copy_dir(src_dir, dst_dir):
+    if not os.path.isdir(src_dir):
+        print(f"Error: source path {src_dir} is not a directory")
+        exit(1)
+    shutil.copytree(src_dir, dst_dir, dirs_exist_ok=True)
 
 
 def set_cgroup_mem_limit(mem_limit):
@@ -59,9 +83,15 @@ def get_iostat_bio_mb_read():
 
 def run_ycsbcli_single(libforeactor, dbdir, trace, mem_limit, drop_caches,
                        use_foreactor, backend=None, pre_issue_depth=0,
-                       num_threads=0):
-    os.system("sudo sync; sudo sh -c 'echo 3 > /proc/sys/vm/drop_caches'")
+                       num_threads=0, with_writes=False):
+    work_dbdir = dbdir
+    if with_writes:
+        work_dbdir = f"{dbdir}_copy"
+        prepare_dir(work_dbdir, True)
+        copy_dir(dbdir, work_dbdir)
+
     os.system("ulimit -n 65536")
+    os.system("sudo sync; sudo sh -c 'echo 3 > /proc/sys/vm/drop_caches'")
 
     envs = os.environ.copy()
     envs["LD_PRELOAD"] = libforeactor
@@ -81,8 +111,10 @@ def run_ycsbcli_single(libforeactor, dbdir, trace, mem_limit, drop_caches,
             num_uthreads = 16
         envs[f"UTHREADS_{GET_GRAPH_ID}"] = str(num_uthreads)
 
-    cmd = [YCSBCLI_BIN, "-d", dbdir, "-f", trace, "-t", str(num_threads),
-           "--bg_compact_off", "--no_fill_cache"]
+    cmd = [YCSBCLI_BIN, "-d", work_dbdir, "-f", trace, "-t", str(num_threads),
+           "--no_fill_cache"]
+    if not with_writes:
+        cmd.append("--bg_compact_off")
     if drop_caches:
         cmd.append("--drop_caches")
     if mem_limit != "none":
@@ -90,7 +122,8 @@ def run_ycsbcli_single(libforeactor, dbdir, trace, mem_limit, drop_caches,
         cmd = ["sudo", "cgexec", "-g", "memory:"+CGROUP_NAME] + cmd
 
     mb_read_before = get_iostat_bio_mb_read()
-    result = subprocess.run(cmd, check=True, capture_output=True, env=envs)
+    result = subprocess.run(cmd, check=True, env=envs, stdout=subprocess.PIPE,
+                                 stderr=subprocess.STDOUT)
     mb_read_after = get_iostat_bio_mb_read()
     output = result.stdout.decode('ascii')
     return output, mb_read_after - mb_read_before
@@ -114,55 +147,6 @@ def get_us_result_from_output(output):
 
     return (sum_us, avg_us, p99_us)
 
-def run_ycsbcli_iters(num_iters, libforeactor, dbdir, trace, mem_limit,
-                      drop_caches, use_foreactor, backend=None,
-                      pre_issue_depth=0):
-    result_sum_us, result_avg_us, result_p99_us = 0., 0., 0.
-    result_mb_read = 0.
-    for i in range(num_iters):
-        output, mb_read = run_ycsbcli_single(libforeactor, dbdir, trace, mem_limit,
-                                             drop_caches, use_foreactor, backend=backend,
-                                             pre_issue_depth=pre_issue_depth)
-        sum_us, avg_us, p99_us = get_us_result_from_output(output)
-        assert mb_read >= 0
-        assert sum_us is not None
-        assert avg_us is not None
-        assert p99_us is not None
-        result_sum_us += sum_us
-        result_avg_us += avg_us
-        result_p99_us += p99_us
-        result_mb_read += mb_read
-
-    result_sum_us /= num_iters
-    result_avg_us /= num_iters
-    result_p99_us /= num_iters
-    result_mb_read /= num_iters
-    return result_sum_us, result_avg_us, result_p99_us, result_mb_read
-
-def run_exprs(libforeactor, dbdir, trace, mem_limit, drop_caches,
-              output_log, backend, pre_issue_depth_list):
-    num_iters = CACHED_ITERS if not drop_caches else DROP_CACHES_ITERS
-
-    with open(output_log, 'w') as fout:
-        sum_us, avg_us, p99_us, mb_read = run_ycsbcli_iters(num_iters, libforeactor,
-                                                            dbdir, trace, mem_limit,
-                                                            drop_caches, False)
-        result = f" orig: sum {sum_us:.3f} avg {avg_us:.3f} p99 {p99_us:.3f} us" + \
-                 f" {mb_read:.3f} MB_read"
-        fout.write(result + '\n')
-        print(result)
-
-        for pre_issue_depth in pre_issue_depth_list:
-            sum_us, avg_us, p99_us, mb_read = run_ycsbcli_iters(num_iters, libforeactor,
-                                                                 dbdir, trace, mem_limit,
-                                                                 drop_caches, True,
-                                                                 backend, pre_issue_depth)
-            result = f" {pre_issue_depth:4d}: sum {sum_us:.3f} avg {avg_us:.3f}" + \
-                     f" p99 {p99_us:.3f} us {mb_read:.3f} MB_read"
-            fout.write(result + '\n')
-            print(result)
-
-
 def get_ops_result_from_output(output):
     in_timing_section = False
     sum_ops, avg_ops = None, None
@@ -179,46 +163,100 @@ def get_ops_result_from_output(output):
 
     return (sum_ops, avg_ops)
 
-def run_ycsbcli_iters_multithread(num_iters, num_threads, libforeactor, dbdir,
-                                  trace, mem_limit, drop_caches, use_foreactor,
-                                  backend=None, pre_issue_depth=0):
-    result_sum_ops, result_avg_ops = 0., 0.
-    for i in range(num_iters):
-        output, _ = run_ycsbcli_single(libforeactor, dbdir, trace, mem_limit,
-                                       drop_caches, use_foreactor, backend=backend,
-                                       pre_issue_depth=pre_issue_depth,
-                                       num_threads=num_threads)
-        sum_ops, avg_ops = get_ops_result_from_output(output)
-        assert sum_ops is not None
-        assert avg_ops is not None
-        result_sum_ops += sum_ops
-        result_avg_ops += avg_ops
+def get_timer_segs_from_output(output):
+    timer_segs = dict()
 
+    for line in output.split('\n'):
+        line = line.strip()
+        if line.startswith("# t"):
+            l = line.split()
+            seg_name = l[1][l[1].index("g0-")+3:]
+            seg_cnt = int(l[4])
+            if seg_cnt > 0:
+                seg_us = float(l[-2])
+                if seg_name not in timer_segs:
+                    timer_segs[seg_name] = seg_us
+                else:
+                    timer_segs[seg_name] += seg_us
+
+    return timer_segs
+
+
+def run_ycsbcli_iters(num_iters, num_threads, libforeactor, dbdir, trace, mem_limit,
+                      drop_caches, use_foreactor, backend=None, pre_issue_depth=0,
+                      with_writes=False, with_timer=False):
+    result_sum_us, result_avg_us, result_p99_us = 0., 0., 0.
+    result_sum_ops, result_avg_ops = 0., 0.
+    result_mb_read = 0.
+    result_timer_segs = dict()
+    for i in range(num_iters):
+        output, mb_read = run_ycsbcli_single(libforeactor, dbdir, trace, mem_limit,
+                                             drop_caches, use_foreactor, backend=backend,
+                                             pre_issue_depth=pre_issue_depth,
+                                             num_threads=num_threads, with_writes=with_writes)
+        sum_us, avg_us, p99_us = get_us_result_from_output(output)
+        sum_ops, avg_ops = get_ops_result_from_output(output)
+        if sum_us is not None:
+            assert avg_us is not None
+            assert p99_us is not None
+            result_sum_us += sum_us
+            result_avg_us += avg_us
+            result_p99_us += p99_us
+        if sum_ops is not None:
+            assert avg_ops is not None
+            result_sum_ops += sum_ops
+            result_avg_ops += avg_ops
+        result_mb_read += mb_read
+
+        if with_timer:
+            timer_segs = get_timer_segs_from_output(output)
+            if timer_segs is not None:
+                for seg_name, seg_us in timer_segs.items():
+                    if seg_name not in result_timer_segs:
+                        result_timer_segs[seg_name] = seg_us
+                    else:
+                        result_timer_segs[seg_name] += seg_us
+
+    result_sum_us /= num_iters
+    result_avg_us /= num_iters
+    result_p99_us /= num_iters
     result_sum_ops /= num_iters
     result_avg_ops /= num_iters
-    return result_sum_ops, result_avg_ops
+    result_mb_read /= num_iters
+    for seg_name in timer_segs:
+        timer_segs[seg_name] /= num_iters
 
-def run_exprs_multithread(libforeactor, dbdir, trace, mem_limit, drop_caches,
-                          output_log, backend, pre_issue_depth_list, num_threads):
+    return (result_sum_us, result_avg_us, result_p99_us, result_sum_ops, result_avg_ops,
+            result_mb_read, timer_segs)
+
+def run_exprs(libforeactor, dbdir, trace, mem_limit, drop_caches, output_log, backend,
+              pre_issue_depth_list, num_threads, with_writes, with_timer):
     num_iters = CACHED_ITERS if not drop_caches else DROP_CACHES_ITERS
 
     with open(output_log, 'w') as fout:
-        sum_ops, avg_ops = run_ycsbcli_iters_multithread(num_iters, num_threads,
-                                                         libforeactor, dbdir,
-                                                         trace, mem_limit,
-                                                         drop_caches, False)
-        result = f" orig: sum {sum_ops:.3f} avg {avg_ops:.3f} ops/sec"
-        fout.write(result + '\n')
+        sum_us, avg_us, p99_us, sum_ops, avg_ops, mb_read, timer_segs = \
+            run_ycsbcli_iters(num_iters, num_threads, libforeactor, dbdir, trace,
+                              mem_limit, drop_caches, False, with_writes=with_writes,
+                              with_timer=with_timer)
+        result = f" orig: sum_us {sum_us:.3f} avg_us {avg_us:.3f} p99_us {p99_us:.3f}" + \
+                 f" sum_ops {sum_ops:.3f} avg_ops {avg_ops:.3f} MB_read {mb_read:.3f}"
+        for seg_name, seg_us in timer_segs.items():
+            result += f"\n       timer_us {seg_name} {seg_us:.3f}"
+        fout.write(result+'\n')
         print(result)
 
         for pre_issue_depth in pre_issue_depth_list:
-            sum_ops, avg_ops = run_ycsbcli_iters_multithread(num_iters, num_threads,
-                                                             libforeactor, dbdir,
-                                                             trace, mem_limit,
-                                                             drop_caches, True,
-                                                             backend, pre_issue_depth)
-            result = f" {pre_issue_depth:4d}: sum {sum_ops:.3f} avg {avg_ops:.3f} ops/sec"
-            fout.write(result + '\n')
+            sum_us, avg_us, p99_us, sum_ops, avg_ops, mb_read, timer_segs = \
+                run_ycsbcli_iters(num_iters, num_threads, libforeactor, dbdir, trace,
+                                  mem_limit, drop_caches, True, backend=backend,
+                                  pre_issue_depth=pre_issue_depth, with_writes=with_writes,
+                                  with_timer=with_timer)
+            result = f" {pre_issue_depth:4d}:" + \
+                     f" sum_us {sum_us:.3f} avg_us {avg_us:.3f} p99_us {p99_us:.3f}" + \
+                     f" sum_ops {sum_ops:.3f} avg_ops {avg_ops:.3f} MB_read {mb_read:.3f}"
+            for seg_name, seg_us in timer_segs.items():
+                result += f"\n       timer_us {seg_name} {seg_us:.3f}"
+            fout.write(result+'\n')
             print(result)
 
 
@@ -238,6 +276,10 @@ def main():
                         help="if > 1, do multithreading on read-only snapshot")
     parser.add_argument('-m', dest='mem_limit', required=False, default="none",
                         help="memory limit to bound page cache size")
+    parser.add_argument('--with_writes', dest='with_writes', action='store_true',
+                        help="should be given when running a workload with writes")
+    parser.add_argument('--with_timer', dest='with_timer', action='store_true',
+                        help="expect timer information output")
     parser.add_argument('--drop_caches', dest='drop_caches', action='store_true',
                         help="do drop_caches per request")
     parser.add_argument('pre_issue_depths', metavar='D', type=int, nargs='+',
@@ -260,21 +302,24 @@ def main():
         print(f"Error: invalid number of threads {args.num_threads}")
         exit(1)
 
+    if args.with_writes and args.num_threads > 0:
+        print(f"Error: with_writes currently incompatible with multithreading")
+        exit(1)
+
     check_file_exists(args.libforeactor)
     check_file_exists(YCSBCLI_BIN)
+    check_dir_exists(args.dbdir)
 
-    if args.num_threads == 0:
+    if args.num_threads == 0 and not args.with_writes:
         check_file_exists(args.trace)
-        run_exprs(args.libforeactor, args.dbdir, args.trace, args.mem_limit,
-                  args.drop_caches, args.output_log, args.backend,
-                  args.pre_issue_depths)
     else:
-        check_file_exists(args.trace+"-0.txt")
-        check_file_exists(args.trace+f"-{args.num_threads-1}.txt")
-        run_exprs_multithread(args.libforeactor, args.dbdir, args.trace,
-                              args.mem_limit, args.drop_caches, args.output_log,
-                              args.backend, args.pre_issue_depths,
-                              args.num_threads)
+        if not args.trace.endswith(".txt"):
+            check_file_exists(args.trace+"-0.txt")
+            check_file_exists(args.trace+f"-{args.num_threads-1}.txt")
+
+    run_exprs(args.libforeactor, args.dbdir, args.trace, args.mem_limit,
+              args.drop_caches, args.output_log, args.backend, args.pre_issue_depths,
+              args.num_threads, args.with_writes, args.with_timer)
 
 if __name__ == "__main__":
     main()

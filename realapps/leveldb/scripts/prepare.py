@@ -10,7 +10,7 @@ YCSBCLI_BIN = "./ycsbcli"
 LEVELDBUTIL_BIN = "./leveldb-src/build/leveldbutil"
 
 TARGET_DATABASE_VOLUME = 1024 * 1024 * 1024     # make ~1GB per database image
-TARGET_WORKLOAD_VOLUME = 100 * 1024 * 1024      # read out ~100MB per workload
+TARGET_WORKLOAD_VOLUME = 200 * 1024 * 1024      # read out ~200MB per workload
 
 YCSB_LOAD_WORKLOAD = "c"
 YCSB_RUN_POSSIBLE_WORKLOADS = {"a", "b", "c", "d", "e", "f"}
@@ -43,7 +43,7 @@ def run_ycsbcli(dbdir, trace, value_size, memtable_limit, filesize_limit,
                "--wait_before_close"]
         if bg_compact_off:
             cmd.append("--bg_compact_off")
-        
+
     result = subprocess.run(cmd, check=True, capture_output=True)
     output = result.stdout.decode('ascii')
     return output

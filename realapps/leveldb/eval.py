@@ -11,16 +11,21 @@ BENCHER_PY = "./scripts/bencher.py"
 PLOTTER_PY = "./scripts/plotter.py"
 
 VALUE_SIZES = {
+    "128B": 128,
     "256B": 256,
+    "512B": 512,
     "1K":   1024,
+    "2K":   2 * 1024,
     "4K":   4 * 1024,
+    "8K":   8 * 1024,
     "16K":  16 * 1024,
+    "32K":  32 * 1024,
     "64K":  64 * 1024,
 }
 YCSB_DISTRIBUTIONS = ["zipfian", "uniform"]
 BACKENDS = ["io_uring_sqe_async"]
 PRE_ISSUE_DEPTH_LIST = [16]
-MEM_PERCENTAGES = [100, 50, 25, 10, 5]
+MEM_PERCENTAGES = [100-i*10 for i in range(10)]
 
 VALUE_SIZES_FOR_SAMEKEY = {}
 BACKENDS_FOR_SAMEKEY = ["io_uring_sqe_async"]
@@ -32,19 +37,20 @@ PRE_ISSUE_DEPTH_LIST_FOR_MULTITHREAD = [4, 16]
 MEM_PERCENTAGE_FOR_MULTITHREAD = 10
 MULTITHREAD_NUMS_THREADS = [i+1 for i in range(8)]
 
-VALUE_SIZE_ABBR_FOR_WITH_WRITES = "256B"
+VALUE_SIZE_ABBR_FOR_WITH_WRITES = "1K"
 YCSB_DISTRIBUTION_FOR_WITH_WRITES = "zipfian"
-WITH_WRITES_WORKLOADS = ["a", "b", "c"]
 BACKEND_FOR_WITH_WRITES = "io_uring_sqe_async"
 PRE_ISSUE_DEPTH_LIST_FOR_WITH_WRITES = [4, 16]
-MEM_PERCENTAGE_FOR_WITH_WRITES = 100
+MEM_PERCENTAGE_FOR_WITH_WRITES = 10
+WITH_WRITES_WORKLOADS = ["a", "b", "d", "e", "f"]
 
-VALUE_SIZE_ABBR_FOR_BREAKDOWN = "4K"
+VALUE_SIZE_ABBR_FOR_BREAKDOWN = "1K"
 YCSB_DISTRIBUTION_FOR_BREAKDOWN = "zipfian"
 BACKEND_FOR_BREAKDOWN = "io_uring_sqe_async"
-MEM_PERCENTAGE_FOR_BREAKDOWN = 100
+MEM_PERCENTAGE_FOR_BREAKDOWN = 10
 
-GET_FIGURES = ["mem_ratio", "req_size", "tail_lat", "heat_map", "multithread"]
+GET_FIGURES = ["mem_ratio", "req_size", "tail_lat", "heat_map",
+               "multithread", "with_writes"]
 GET_BREAKDOWN_FIGURES = ["breakdown"]
 
 
@@ -85,8 +91,6 @@ def run_prepare(workloads_dir, dbdir_prefix, value_size, value_size_abbr,
     if max_threads > 1:
         cmd += ["--max_threads", str(max_threads)]
 
-    cmd.append("--skip_load")
-
     result = subprocess.run(cmd, check=True, capture_output=True)
     output = result.stdout.decode('ascii')
     return output
@@ -99,6 +103,8 @@ def prepare_db_and_workloads(workloads_dir, dbdir_prefix, ycsb_dir, tmpdir,
                              value_size_abbr_for_with_writes,
                              ycsb_distribution_for_with_writes, write_workloads):
     for value_size_abbr, value_size in value_sizes.items():
+        print(f"MAKING {value_size_abbr}")
+
         run_prepare(workloads_dir, dbdir_prefix, value_size,
                     value_size_abbr, ycsb_dir, tmpdir,
                     ["c"], ycsb_c_run_distributions,
@@ -114,8 +120,6 @@ def prepare_db_and_workloads(workloads_dir, dbdir_prefix, ycsb_dir, tmpdir,
                         value_size_abbr, ycsb_dir, tmpdir,
                         ["c"], [ycsb_distribution_for_multithread],
                         max_threads=max_threads)
-        
-        print(f"MADE {value_size_abbr}")
 
 
 def get_dbdir_bytes(dbdir):
@@ -127,9 +131,13 @@ def get_dbdir_bytes(dbdir):
 
 def run_bench(libforeactor, dbdir, workload, output_log, backend,
               pre_issue_depth_list, drop_caches, mem_percentage=100,
-              num_threads=0):
+              num_threads=0, with_writes=False, with_timer=False):
     cmd = ["python3", BENCHER_PY, "-l", libforeactor, "-d", dbdir,
            "-f", workload, "-o", output_log, "-b", backend, "-t", str(num_threads)]
+    if with_writes:
+        cmd.append("--with_writes")
+    if with_timer:
+        cmd.append("--with_timer")
     if drop_caches:
         cmd.append("--drop_caches")
     
@@ -139,8 +147,7 @@ def run_bench(libforeactor, dbdir, workload, output_log, backend,
 
     cmd += list(map(lambda d: str(d), pre_issue_depth_list))
 
-    result = subprocess.run(cmd, check=True, stdout=subprocess.PIPE,
-                                 stderr=subprocess.STDOUT)
+    result = subprocess.run(cmd, check=True, capture_output=True)
     output = result.stdout.decode('ascii')
     return output
 
@@ -153,8 +160,12 @@ def run_bench_samekey(libforeactor, workloads_dir, results_dir, dbdir_prefix,
                f"{approx_num_preads}-0.txt"
     output_log = f"{results_dir}/ldb-{value_size_abbr}-samekey-{approx_num_preads}-" + \
                  f"{backend}-{'drop_caches' if drop_caches else 'cached'}.log"
-    return run_bench(libforeactor, dbdir, workload, output_log, backend,
-                     pre_issue_depth_list, drop_caches)
+
+    print(f"RUNNING {value_size_abbr} samekey {approx_num_preads} {backend} "
+          f"{'drop_caches' if drop_caches else 'cached'}")
+    output = run_bench(libforeactor, dbdir, workload, output_log, backend,
+                       pre_issue_depth_list, drop_caches)
+    print(output.rstrip())
 
 def run_all_samekey(libforeactor, workloads_dir, results_dir, dbdir_prefix,
                     value_sizes, backends, pre_issue_depth_list):
@@ -162,31 +173,30 @@ def run_all_samekey(libforeactor, workloads_dir, results_dir, dbdir_prefix,
         for approx_num_preads in range(1, 16):      # FIXME
             for backend in backends:
                 for drop_caches in (False, True):
-                    output = run_bench_samekey(libforeactor, workloads_dir,
-                                               results_dir, dbdir_prefix,
-                                               value_size_abbr,
-                                               approx_num_preads, backend,
-                                               pre_issue_depth_list,
-                                               drop_caches)
-                    print(f"RUN {value_size_abbr} samekey {approx_num_preads} "
-                          f"{backend} {'drop_caches' if drop_caches else 'cached'}")
-                    print(output.rstrip())
+                    run_bench_samekey(libforeactor, workloads_dir, results_dir,
+                                      dbdir_prefix, value_size_abbr, approx_num_preads,
+                                      backend, pre_issue_depth_list, drop_caches)
 
 
 def run_bench_ycsb(libforeactor, workloads_dir, results_dir, dbdir_prefix,
                    value_size_abbr, workload_name, ycsb_distribution, backend,
-                   pre_issue_depth_list, mem_percentage, num_threads=0):
+                   pre_issue_depth_list, mem_percentage, num_threads=0,
+                   with_writes=False):
     dbdir = f"{dbdir_prefix}/leveldb_{value_size_abbr}"
     workload = f"{workloads_dir}/trace-{value_size_abbr}-ycsb-{workload_name}-" + \
                f"{ycsb_distribution}"
     if num_threads == 0:
-        workload += "_0.txt"
+        workload += "-0.txt"
     output_log = f"{results_dir}/ldb-{value_size_abbr}-ycsb-{workload_name}-" + \
                  f"{ycsb_distribution}-{backend}-mem_{mem_percentage}-" + \
                  f"threads_{num_threads}.log"
-    return run_bench(libforeactor, dbdir, workload, output_log, backend,
-                     pre_issue_depth_list, False, mem_percentage=mem_percentage,
-                     num_threads=num_threads)
+
+    print(f"RUNNING {value_size_abbr} ycsb {workload_name} {ycsb_distribution} " + \
+          f"{backend} mem_{mem_percentage} threads_{num_threads}")
+    output = run_bench(libforeactor, dbdir, workload, output_log, backend,
+                       pre_issue_depth_list, False, mem_percentage=mem_percentage,
+                       num_threads=num_threads, with_writes=with_writes)
+    print(output.rstrip())
 
 def run_all_ycsb_c_run(libforeactor, workloads_dir, results_dir, dbdir_prefix,
                        value_sizes, ycsb_distributions, backends,
@@ -195,58 +205,46 @@ def run_all_ycsb_c_run(libforeactor, workloads_dir, results_dir, dbdir_prefix,
         for ycsb_distribution in ycsb_distributions:
             for backend in backends:
                 for mem_percentage in mem_percentages:
-                    output = run_bench_ycsb(libforeactor, workloads_dir,
-                                            results_dir, dbdir_prefix,
-                                            value_size_abbr, "c",
-                                            ycsb_distribution, backend,
-                                            pre_issue_depth_list,
-                                            mem_percentage)
-                    print(f"RUN {value_size_abbr} ycsb c {ycsb_distribution} "
-                          f"{backend} mem_{mem_percentage}")
-                    print(output.rstrip())
+                    run_bench_ycsb(libforeactor, workloads_dir, results_dir,
+                                   dbdir_prefix, value_size_abbr, "c",
+                                   ycsb_distribution, backend, pre_issue_depth_list,
+                                   mem_percentage)
 
 def run_all_multithread(libforeactor, workloads_dir, results_dir, dbdir_prefix,
                         value_size_abbr, ycsb_distribution, backend,
                         pre_issue_depth_list, mem_percentage, nums_threads):
     for num_threads in nums_threads:
-        output = run_bench_ycsb(libforeactor, workloads_dir, results_dir,
-                                dbdir_prefix, value_size_abbr, "c",
-                                ycsb_distribution, backend, pre_issue_depth_list,
-                                mem_percentage, num_threads)
-        print(f"RUN {value_size_abbr} ycsb c {ycsb_distribution} {backend} " + \
-              f"mem_{mem_percentage} threads_{num_threads}")
-        print(output.rstrip())
+        run_bench_ycsb(libforeactor, workloads_dir, results_dir, dbdir_prefix,
+                       value_size_abbr, "c", ycsb_distribution, backend,
+                       pre_issue_depth_list, mem_percentage, num_threads=num_threads)
 
 def run_all_with_writes(libforeactor, workloads_dir, results_dir, dbdir_prefix,
                         value_size_abbr, ycsb_distribution, backend,
                         pre_issue_depth_list, mem_percentage, write_workloads):
     for workload_name in write_workloads:
-        output = run_bench_ycsb(libforeactor, workloads_dir, results_dir,
-                                dbdir_prefix, value_size_abbr, workload_name,
-                                ycsb_distribution, backend, pre_issue_depth_list,
-                                mem_percentage)
-        print(f"RUN {value_size_abbr} ycsb {workload_name} {ycsb_distribution} " + \
-              f"{backend} mem_{mem_percentage} threads_0")
-        print(output.rstrip())
+        run_bench_ycsb(libforeactor, workloads_dir, results_dir, dbdir_prefix,
+                       value_size_abbr, workload_name, ycsb_distribution, backend,
+                       pre_issue_depth_list, mem_percentage, with_writes=True)
 
 
 def run_bench_with_timer(libforeactor, workloads_dir, results_dir, dbdir_prefix,
-                         value_size_abbr, num_l0_tables, ycsb_distribution,
-                         backend, pre_issue_depth_list, mem_percentage):
-    print(f"Note: please ensure that libforeactor.so is re-compiled with " + \
+                         value_size_abbr, ycsb_distribution, backend,
+                         pre_issue_depth_list, mem_percentage):
+    print(f"Note: please make sure that libforeactor.so is re-compiled with " + \
           f"`make clean && make timer`!")
-    dbdir = f"{dbdir_prefix}/leveldb_{value_size_abbr}_{num_l0_tables}_" + \
-            f"{ycsb_distribution}"
-    workload = f"{workloads_dir}/trace-{value_size_abbr}-{num_l0_tables}-" + \
-               f"{ycsb_distribution}-ycsbrun.txt"
-    output_log = f"{results_dir}/ldb-{value_size_abbr}-{num_l0_tables}-" + \
-                 f"{ycsb_distribution}-ycsbrun-{backend}-mem_{mem_percentage}-" + \
+    dbdir = f"{dbdir_prefix}/leveldb_{value_size_abbr}"
+    workload = f"{workloads_dir}/trace-{value_size_abbr}-ycsb-c-" + \
+               f"{ycsb_distribution}-0.txt"
+    output_log = f"{results_dir}/ldb-{value_size_abbr}-ycsb-c-" + \
+                 f"{ycsb_distribution}-{backend}-mem_{mem_percentage}-" + \
                  f"with_timer.log"
-    run_bench(libforeactor, dbdir, workload, output_log, backend,
-              pre_issue_depth_list, False, mem_percentage=mem_percentage)
-    print(f"RUN {value_size_abbr} {num_l0_tables} " + \
-          f"{ycsb_distribution} ycsbrun {backend} " + \
+
+    print(f"RUNNING {value_size_abbr} ycsb c {ycsb_distribution} {backend} " + \
           f"mem_{mem_percentage} with_timer")
+    run_bench(libforeactor, dbdir, workload, output_log, backend,
+              pre_issue_depth_list, False, mem_percentage=mem_percentage,
+              with_timer=True)
+    print(" DONE")
 
 
 def run_plotter(results_dir, figure):
@@ -323,13 +321,13 @@ def main():
         check_dir_exists(args.dbdir_prefix)
         check_dir_exists(args.workloads_dir)
         prepare_dir(args.results_dir, False)
-        # run_all_ycsb_c_run(args.libforeactor,
-        #                    args.workloads_dir, args.results_dir,
-        #                    args.dbdir_prefix, VALUE_SIZES,
-        #                    YCSB_DISTRIBUTIONS,
-        #                    BACKENDS,
-        #                    PRE_ISSUE_DEPTH_LIST,
-        #                    MEM_PERCENTAGES)
+        run_all_ycsb_c_run(args.libforeactor,
+                           args.workloads_dir, args.results_dir,
+                           args.dbdir_prefix, VALUE_SIZES,
+                           YCSB_DISTRIBUTIONS,
+                           BACKENDS,
+                           PRE_ISSUE_DEPTH_LIST,
+                           MEM_PERCENTAGES)
         run_all_multithread(args.libforeactor, args.workloads_dir, args.results_dir,
                             args.dbdir_prefix, VALUE_SIZE_ABBR_FOR_MULTITHREAD,
                             YCSB_DISTRIBUTION_FOR_MULTITHREAD,
