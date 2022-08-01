@@ -14,7 +14,7 @@ TARGET_WORKLOAD_VOLUME = 200 * 1024 * 1024      # read out ~200MB per workload
 
 YCSB_LOAD_WORKLOAD = "c"
 YCSB_RUN_POSSIBLE_WORKLOADS = {"a", "b", "c", "d", "e", "f"}
-YCSB_RUN_POSSIBLE_DISTRIBUTIONS = {"zipfian", "uniform"}
+YCSB_RUN_POSSIBLE_DISTRIBUTIONS = {"zipf_", "uniform"}
 
 SAMEKEY_NUMOPS_PER_RUN = 100
 
@@ -33,6 +33,35 @@ def check_dir_exists(dir_path):
         exit(1)
 
 
+def run_subprocess_cmd(cmd, outfile=None, merge=False, env=None):
+    try:
+        result = None
+        if outfile is None and not merge:
+            result = subprocess.run(cmd, env=env, check=True,
+                                         capture_output=True)
+        elif outfile is None:
+            result = subprocess.run(cmd, env=env, check=True,
+                                         stdout=subprocess.PIPE,
+                                         stderr=subprocess.STDOUT)
+        elif not merge:
+            result = subprocess.run(cmd, env=env, check=True,
+                                         stdout=outfile)
+        else:
+            result = subprocess.run(cmd, env=env, check=True,
+                                         stdout=outfile,
+                                         stderr=subprocess.STDOUT)
+        output = None
+        if result.stdout is not None:
+            output = result.stdout.decode('ascii')
+        return output
+    except subprocess.CalledProcessError as err:
+        print(f"Error: subprocess returned exit status {err.returncode}")
+        print(f"  command: {' '.join(err.cmd)}")
+        if err.stderr is not None:
+            print(f"  stderr: {err.stderr.decode('ascii')}")
+        exit(1)
+
+
 def run_ycsbcli(dbdir, trace, value_size, memtable_limit, filesize_limit,
                 bg_compact_off, print_stat_exit=False):
     if print_stat_exit:
@@ -44,9 +73,7 @@ def run_ycsbcli(dbdir, trace, value_size, memtable_limit, filesize_limit,
         if bg_compact_off:
             cmd.append("--bg_compact_off")
 
-    result = subprocess.run(cmd, check=True, capture_output=True)
-    output = result.stdout.decode('ascii')
-    return output
+    return run_subprocess_cmd(cmd, merge=False)
 
 def get_num_level_tables(output):
     lines = output.split('\n')
@@ -93,14 +120,17 @@ def get_full_stat_section(output):
     return '\n'.join(stat_lines)
 
 
-def run_ycsb_bin(ycsb_bin, ycsb_action, ycsb_workload, extra_args, out_file):
+def run_ycsb_bin(ycsb_dir, ycsb_bin, ycsb_action, ycsb_workload, extra_args,
+                 out_file):
     cmd = [ycsb_bin, ycsb_action, "basic", "-P", ycsb_workload]
     cmd += extra_args
     cmd += ["-p", "fieldcount=1", "-p", "fieldlength=1"]
 
     with open(out_file, 'w') as fout:
-        result = subprocess.run(cmd, check=True, stdout=fout,
-                                stderr=subprocess.STDOUT)
+        leveldb_cwd = os.getcwd()
+        os.chdir(ycsb_dir)
+        run_subprocess_cmd(cmd, outfile=fout, merge=True)
+        os.chdir(leveldb_cwd)
 
 def convert_trace(ycsb_output, output_trace):
     with open(ycsb_output, 'r') as fin, open(output_trace, 'w') as fout:
@@ -126,8 +156,8 @@ def take_trace_records(ftrace, tmpfile, num_records):
             ftmp.write(line.strip() + '\n')
             num_taken += 1
 
-def make_db_image(dbdir, tmpdir, ycsb_bin, ycsb_workload, value_size,
-                  memtable_limit, filesize_limit, output_prefix):
+def make_db_image(dbdir, tmpdir, ycsb_dir, ycsb_bin, ycsb_workload, value_size,
+                  memtable_limit, filesize_limit):
     # clean up old files
     if os.path.isdir(dbdir):
         for file in os.listdir(dbdir):
@@ -144,7 +174,7 @@ def make_db_image(dbdir, tmpdir, ycsb_bin, ycsb_workload, value_size,
     max_num_records = int(approx_num_records * 1.2)
     tmpfile_ycsb = f"{tmpdir}/leveldb_prepare.tmp1.txt"
     tmpfile_mega = f"{tmpdir}/leveldb_prepare.tmp2.txt"
-    run_ycsb_bin(ycsb_bin, "load", ycsb_workload,
+    run_ycsb_bin(ycsb_dir, ycsb_bin, "load", ycsb_workload,
                  ["-p", f"recordcount={max_num_records}"], tmpfile_ycsb)
     convert_trace(tmpfile_ycsb, tmpfile_mega)
 
@@ -177,9 +207,7 @@ def run_leveldbutil(dbdir, filenum):
     ldb_file = f"{dbdir}/{filenum:06d}.ldb"
     cmd = [LEVELDBUTIL_BIN, "dump", ldb_file]
 
-    result = subprocess.run(cmd, check=True, capture_output=True)
-    output = result.stdout.decode('ascii')
-    return output
+    return run_subprocess_cmd(cmd, merge=False)
 
 def get_file_middle_key(dump_content):
     keys = []   # naturally sorted within a ldb file
@@ -252,9 +280,9 @@ def get_init_num_records(dbdir):
     with open(f"{dbdir}/{NUM_RECORDS_FILENAME}", 'r') as fnum:
         return int(fnum.read().strip())
 
-def generate_workloads(dbdir, tmpdir, ycsb_bin, ycsb_run_workloads, value_size,
-                       ycsb_distribution, output_prefix, gen_samekey_workloads,
-                       max_threads):
+def generate_workloads(dbdir, tmpdir, ycsb_dir, ycsb_bin, ycsb_run_workloads,
+                       value_size, ycsb_distribution, output_prefix,
+                       gen_samekey_workloads, max_threads):
     stats = get_full_stat_section(
         run_ycsbcli(dbdir, "dummy", value_size, 0, 0, True, True))
     num_records = get_init_num_records(dbdir)
@@ -286,29 +314,77 @@ def generate_workloads(dbdir, tmpdir, ycsb_bin, ycsb_run_workloads, value_size,
             print(f" {n}: {level_key}")
             level += 1
 
+    distribution_arg = ycsb_distribution
+    if ycsb_distribution.startswith("zipf_"):
+        distribution_arg = "zipfian"
+
     for t in range(max_threads):
         tmpfile = f"{tmpdir}/leveldb_prepare.tmp3.txt"
         num_operations = TARGET_WORKLOAD_VOLUME // value_size
         for ycsb_workload in ycsb_run_workloads:
             workload_name = ycsb_workload[-1:]  # last character of property filename
-            run_ycsb_bin(ycsb_bin, "run", ycsb_workload,
+            run_ycsb_bin(ycsb_dir, ycsb_bin, "run", ycsb_workload,
                          ["-p", f"recordcount={num_records}",
                           "-p", f"operationcount={num_operations}",
-                          "-p", f"requestdistribution={ycsb_distribution}"],
+                          "-p", f"requestdistribution={distribution_arg}"],
                          tmpfile)
             run_trace = f"{output_prefix}-ycsb-{workload_name}-" + \
                         f"{ycsb_distribution}-{t}.txt"
             convert_trace(tmpfile, run_trace)
 
 
-def get_comma_separated_list(arg, argname, possible_set):
+def zipf_constant_from_name(ycsb_distribution):
+    if ycsb_distribution.startswith("zipf_"):
+        return float(ycsb_distribution[ycsb_distribution.index("zipf_")+5:])
+    return 0.99     # default of YCSB is 0.99
+
+def rebuild_ycsb_zipf_constant(ycsb_dir, zipf_constant):
+    # check if already built
+    zipf_constant_file = f"{ycsb_dir}/curr_zipf_constant.txt"
+    curr_zipf_constant = None
+    if os.path.isfile(zipf_constant_file):
+        with open(zipf_constant_file, 'r') as fzipf:
+            curr_zipf_constant = float(fzipf.read())
+            if curr_zipf_constant == zipf_constant:
+                return      # already built with desired zipf constant
+
+    # modify ZIPFIAN_CONSTANT hardcoded in java source
+    zipf_gen_file = \
+        f"{ycsb_dir}/core/src/main/java/site/ycsb/generator/ZipfianGenerator.java"
+    check_file_exists(zipf_gen_file)
+    cmd = ["sed", "-i", "-E", f"s/" + \
+           f"public static final double ZIPFIAN_CONSTANT = (.*);/" + \
+           f"public static final double ZIPFIAN_CONSTANT = {zipf_constant};/g",
+           zipf_gen_file]
+    run_subprocess_cmd(cmd, merge=False)
+
+    # run maven build; doesn't matter which binding we build -- we will only
+    # use the basic binding interface
+    leveldb_cwd = os.getcwd()
+    os.chdir(ycsb_dir)
+    cmd = ["mvn", "-pl", "site.ycsb:core", "-am", "clean", "package"]
+    run_subprocess_cmd(cmd, merge=False)
+    os.chdir(leveldb_cwd)
+
+    # record current zipf constant
+    with open(zipf_constant_file, 'w') as fzipf:
+        fzipf.write(f"{zipf_constant}")
+    print(f"REBUILT YCSB zipf {zipf_constant}")
+
+
+def get_comma_separated_list(arg, argname, possible_prefixes):
     l = arg.strip().split(',')
     if len(l) == 0:
         print(f"Error: empty comma-separated list argument {argname}")
         exit(1)
     else:
         for e in l:
-            if e not in possible_set:
+            e_valid = False
+            for p in possible_prefixes:
+                if e.startswith(p):
+                    e_valid = True
+                    break
+            if not e_valid:
                 print(f"Error: invalid comma-separated element {e}")
                 exit(1)
     return l
@@ -326,13 +402,13 @@ def main():
     parser.add_argument('-w', dest='ycsb_workloads', required=True,
                         help="comma-separated list, e.g. a,b,c")
     parser.add_argument('-z', dest='ycsb_distributions', required=True,
-                        help="comma-separated list, e.g. zipfian,uniform")
+                        help="comma-separated list, e.g. zipf_0.99,zipf_1.5,uniform")
     parser.add_argument('-o', dest='output_prefix', required=True,
                         help="path prefix of output workloads")
     parser.add_argument('--max_threads', dest='max_threads', type=int, default=1,
                         help="if > 1, generate these many distinct traces")
     parser.add_argument('--skip_load', dest='skip_load', action='store_true',
-                        help="if given, skip loading and only generate workloads")
+                        help="for debugging; skip loading and only generate workloads")
     parser.add_argument('--gen_samekey', dest='gen_samekey', action='store_true',
                         help="if given, also generate samekey workloads")
     parser.add_argument('--mlim', dest='mlim', required=False, type=int,
@@ -351,6 +427,9 @@ def main():
                                                  "ycsb_distributions",
                                                  YCSB_RUN_POSSIBLE_DISTRIBUTIONS)
 
+    rebuild_ycsb_zipf_constant(args.ycsb_dir,
+                               zipf_constant_from_name(run_distributions[0]))
+
     ycsb_bin = f"{args.ycsb_dir}/bin/ycsb"
     load_workload = f"{args.ycsb_dir}/workloads/workload{YCSB_LOAD_WORKLOAD}"
     run_workloads = [f"{args.ycsb_dir}/workloads/workload{r}" \
@@ -367,14 +446,15 @@ def main():
         exit(1)
 
     if not args.skip_load:
-        make_db_image(args.dbdir, args.tmpdir, ycsb_bin, load_workload,
-                      args.value_size, args.mlim, args.flim, args.output_prefix)
+        make_db_image(args.dbdir, args.tmpdir, args.ycsb_dir, ycsb_bin,
+                      load_workload, args.value_size, args.mlim, args.flim)
 
     for ycsb_distribution in run_distributions:
-        generate_workloads(args.dbdir, args.tmpdir, ycsb_bin, run_workloads,
-                           args.value_size, ycsb_distribution,
-                           args.output_prefix, args.gen_samekey,
-                           args.max_threads)
+        rebuild_ycsb_zipf_constant(args.ycsb_dir,
+                                   zipf_constant_from_name(ycsb_distribution))
+        generate_workloads(args.dbdir, args.tmpdir, args.ycsb_dir, ycsb_bin,
+                           run_workloads, args.value_size, ycsb_distribution,
+                           args.output_prefix, args.gen_samekey, args.max_threads)
 
 if __name__ == "__main__":
     main()

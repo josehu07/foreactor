@@ -1,6 +1,5 @@
 #!/usr/bin/env python3
 
-import fractions
 import matplotlib
 matplotlib.use('Agg')
 
@@ -45,6 +44,16 @@ def read_multithread_ops(results_dir, value_size, ycsb_distribution, num_threads
 def read_with_writes_ops(results_dir, value_size, workload_name, ycsb_distribution, backend,
                          mem_percentage, pre_issue_depth_str):
     with open(f"{results_dir}/ldb-{value_size}-ycsb-{workload_name}-{ycsb_distribution}-" + \
+              f"{backend}-mem_{mem_percentage}-threads_0.log", 'r') as flog:
+        for line in flog:
+            line = line.strip()
+            if len(line) > 0 and line[:line.index(':')] == pre_issue_depth_str:
+                sum_ops = float(line.split()[8])
+                return sum_ops
+
+def read_zipf_consts_ops(results_dir, value_size, ycsb_distribution, backend,
+                         mem_percentage, pre_issue_depth_str):
+    with open(f"{results_dir}/ldb-{value_size}-ycsb-c-{ycsb_distribution}-" + \
               f"{backend}-mem_{mem_percentage}-threads_0.log", 'r') as flog:
         for line in flog:
             line = line.strip()
@@ -184,7 +193,7 @@ def plot_grouped_bars(results, x_list, x_label, y_label, output_prefix,
 def handle_mem_ratio(results_dir, output_prefix):
     VALUE_SIZES = ["1K"]
     MEM_PERCENTAGES = [(i+1)*10 for i in range(10)]
-    YCSB_DISTRIBUTION = "zipfian"
+    YCSB_DISTRIBUTION = "zipf_0.99"
     BACKENDS = ["io_uring_sqe_async"]
     PRE_ISSUE_DEPTH_LIST = [16]
 
@@ -219,7 +228,7 @@ def handle_mem_ratio(results_dir, output_prefix):
 def handle_req_size(results_dir, output_prefix):
     VALUE_SIZES = ["128B", "256B", "512B", "1K", "2K", "4K", "8K", "16K", "32K", "64K"]
     MEM_PERCENTAGES = [10]
-    YCSB_DISTRIBUTION = "zipfian"
+    YCSB_DISTRIBUTION = "zipf_0.99"
     BACKENDS = ["io_uring_sqe_async"]
     PRE_ISSUE_DEPTH_LIST = [16]
 
@@ -254,7 +263,7 @@ def handle_req_size(results_dir, output_prefix):
 def handle_tail_lat(results_dir, output_prefix):
     VALUE_SIZES = ["128B", "256B", "512B", "1K", "2K", "4K", "8K", "16K", "32K", "64K"]
     MEM_PERCENTAGES = [10]
-    YCSB_DISTRIBUTION = "zipfian"
+    YCSB_DISTRIBUTION = "zipf_0.99"
     BACKENDS = ["io_uring_sqe_async"]
     PRE_ISSUE_DEPTH_LIST = [16]
 
@@ -290,7 +299,7 @@ def handle_tail_lat(results_dir, output_prefix):
 def plot_heat_map(dist_results, distributions, x_list, y_list, x_label, y_label,
                   output_prefix, title_suffix):
     plt.rcParams.update({'font.size': 16})
-    plt.rcParams.update({'figure.figsize': (16, 6)})
+    plt.rcParams.update({'figure.figsize': (6, 6)})
 
     vmin, vmax = -0.2, 0.5
 
@@ -314,7 +323,8 @@ def plot_heat_map(dist_results, distributions, x_list, y_list, x_label, y_label,
         plt.xticks(list(range(len(x_list))), x_list)
         plt.yticks(list(range(len(y_list))), y_list)
 
-        plt.title(distribution.capitalize(), fontsize=16)
+        if len(distributions) > 1:
+            plt.title(distribution.capitalize(), fontsize=16)
 
         sp_idx += 1
 
@@ -337,7 +347,7 @@ def plot_heat_map(dist_results, distributions, x_list, y_list, x_label, y_label,
 def handle_heat_map(results_dir, output_prefix):
     VALUE_SIZES = ["128B", "256B", "512B", "1K", "2K", "4K", "8K", "16K", "32K", "64K"]
     MEM_PERCENTAGES = [(i+1)*10 for i in range(10)]
-    YCSB_DISTRIBUTIONS = ["zipfian", "uniform"]
+    YCSB_DISTRIBUTIONS = ["zipf_0.99"]
     BACKEND = "io_uring_sqe_async"
     PRE_ISSUE_DEPTH = 16
 
@@ -430,11 +440,11 @@ def plot_multithread(results, nums_threads, x_label, y_label, output_prefix,
 
 def handle_multithread(results_dir, output_prefix):
     VALUE_SIZE_ABBR = "1K"
-    YCSB_DISTRIBUTION = "zipfian"
+    YCSB_DISTRIBUTION = "zipf_0.99"
     BACKEND = "io_uring_sqe_async"
     PRE_ISSUE_DEPTH_LIST = [4, 16]
     MEM_PERCENTAGE = 10
-    NUMS_THREADS = [i+1 for i in range(8)]
+    NUMS_THREADS = [i+1 for i in range(16)]
 
     y_scale = 1000.
     results = {"original": []}
@@ -526,7 +536,7 @@ def plot_with_writes(results, workload_names, x_label, y_label, output_prefix,
 
 def handle_with_writes(results_dir, output_prefix):
     VALUE_SIZE_ABBR = "1K"
-    YCSB_DISTRIBUTION = "zipfian"
+    YCSB_DISTRIBUTION = "zipf_0.99"
     BACKEND = "io_uring_sqe_async"
     PRE_ISSUE_DEPTH_LIST = [16]
     MEM_PERCENTAGE = 10
@@ -554,6 +564,77 @@ def handle_with_writes(results_dir, output_prefix):
                      "",
                      "Throughput (thousand ops/sec)",
                      output_prefix, f"with_writes")
+
+
+def plot_zipf_consts(rel_uniform, rel_zipfian_list, zipf_constants,
+                     x_label, y_label, output_prefix, title_suffix):
+    plt.rcParams.update({'font.size': 16})
+    plt.rcParams.update({'figure.figsize': (12, 7)})
+
+    plt.axhline(y=rel_uniform, label="uniform", color="steelblue",
+                               linestyle="--", linewidth=2.5,
+                               zorder=3)
+
+    plt.plot(zipf_constants, rel_zipfian_list, label="zipfian",
+                                               color="orange",
+                                               marker='o',
+                                               linewidth=2.5,
+                                               markersize=10,
+                                               zorder=3)
+
+    plt.xlabel(x_label)
+    plt.ylabel(y_label)
+
+    min_x, max_x = min(zipf_constants), max(zipf_constants)
+    min_y, max_y = 1.0, max((rel_uniform, max(rel_zipfian_list)))
+    plt.xlim((min_x - 0.05, max_x + 0.05))
+    plt.ylim((min_y, max_y * 1.2))
+
+    xticks = [min_x + 0.1*i for i in range(len(zipf_constants))]
+    xtick_labels = [f"{x:.1f}" for x in xticks]
+    plt.xticks(xticks, xtick_labels)
+
+    plt.grid(axis='both', zorder=1)
+
+    plt.legend(loc="center left", bbox_to_anchor=(1.02, 0.5))
+
+    plt.tight_layout()
+
+    plt.savefig(f"{output_prefix}-{title_suffix}.png", dpi=200)
+    plt.close()
+    print(f"PLOT {title_suffix}")
+
+def handle_zipf_consts(results_dir, output_prefix):
+    VALUE_SIZE_ABBR = "1K"
+    ZIPF_CONSTANTS = [0.9, 0.99, 1.1, 1.2, 1.3, 1.4, 1.5]
+    BACKEND = "io_uring_sqe_async"
+    PRE_ISSUE_DEPTH = 16
+    MEM_PERCENTAGE = 10
+
+    sum_ops_original = read_zipf_consts_ops(results_dir, VALUE_SIZE_ABBR,
+                                            "uniform", BACKEND, MEM_PERCENTAGE,
+                                            "orig") 
+    sum_ops_foreactor = read_zipf_consts_ops(results_dir, VALUE_SIZE_ABBR,
+                                             "uniform", BACKEND, MEM_PERCENTAGE,
+                                             str(PRE_ISSUE_DEPTH))
+    rel_uniform = sum_ops_foreactor / sum_ops_original
+
+    rel_zipfian_list = []
+    for zipf_constant in ZIPF_CONSTANTS:
+        ycsb_distribution = f"zipf_{zipf_constant}"
+        sum_ops_original = read_zipf_consts_ops(results_dir, VALUE_SIZE_ABBR,
+                                                ycsb_distribution, BACKEND,
+                                                MEM_PERCENTAGE, "orig") 
+        sum_ops_foreactor = read_zipf_consts_ops(results_dir, VALUE_SIZE_ABBR,
+                                                 ycsb_distribution, BACKEND,
+                                                 MEM_PERCENTAGE,
+                                                 str(PRE_ISSUE_DEPTH))
+        rel_zipfian_list.append(sum_ops_foreactor / sum_ops_original)
+    
+    plot_zipf_consts(rel_uniform, rel_zipfian_list, ZIPF_CONSTANTS,
+                     "Zipfian theta constant",
+                     "Relative throughput improvement",
+                     output_prefix, f"zipf_consts")
 
 
 def plot_breakdown(fractions_map, segments_us_map, segments, x_label, y_label,
@@ -628,7 +709,7 @@ def plot_breakdown(fractions_map, segments_us_map, segments, x_label, y_label,
 
 def handle_breakdown(results_dir, output_prefix):
     VALUE_SIZE_ABBR = "1K"
-    YCSB_DISTRIBUTION = "zipfian"
+    YCSB_DISTRIBUTION = "zipf_0.99"
     BACKEND = "io_uring_sqe_async"
     PRE_ISSUE_DEPTH_LIST = [16]
     MEM_PERCENTAGE = 10
@@ -692,7 +773,7 @@ def main():
     parser = argparse.ArgumentParser(description="LevelDB result plotting")
     parser.add_argument('-m', dest='mode', required=True,
                         help="mem_ratio|req_size|heat_map|breakdown|" + \
-                             "multithread|with_writes")
+                             "multithread|with_writes|zipf_consts")
     parser.add_argument('-r', dest='results_dir', required=True,
                         help="input result logs directory")
     parser.add_argument('-o', dest='output_prefix', required=True,
@@ -711,6 +792,8 @@ def main():
         handle_multithread(args.results_dir, args.output_prefix)
     elif args.mode == 'with_writes':
         handle_with_writes(args.results_dir, args.output_prefix)
+    elif args.mode == 'zipf_consts':
+        handle_zipf_consts(args.results_dir, args.output_prefix)
     elif args.mode == 'breakdown':
         handle_breakdown(args.results_dir, args.output_prefix)
     else:

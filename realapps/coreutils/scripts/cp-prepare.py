@@ -19,13 +19,40 @@ def prepare_dir(dir_path, empty=False):
         os.mkdir(dir_path)
 
 
+def run_subprocess_cmd(cmd, outfile=None, merge=False, env=None):
+    try:
+        result = None
+        if outfile is None and not merge:
+            result = subprocess.run(cmd, env=env, check=True,
+                                         capture_output=True)
+        elif outfile is None:
+            result = subprocess.run(cmd, env=env, check=True,
+                                         stdout=subprocess.PIPE,
+                                         stderr=subprocess.STDOUT)
+        elif not merge:
+            result = subprocess.run(cmd, env=env, check=True,
+                                         stdout=outfile)
+        else:
+            result = subprocess.run(cmd, env=env, check=True,
+                                         stdout=outfile,
+                                         stderr=subprocess.STDOUT)
+        output = None
+        if result.stdout is not None:
+            output = result.stdout.decode('ascii')
+        return output
+    except subprocess.CalledProcessError as err:
+        print(f"Error: subprocess returned exit status {err.returncode}")
+        print(f"  command: {' '.join(err.cmd)}")
+        if err.stderr is not None:
+            print(f"  stderr: {err.stderr.decode('ascii')}")
+        exit(1)
+
+
 def create_random_file(path, file_size):
     cmd = ["head", "-c", str(file_size), "/dev/urandom"]
-    result = subprocess.run(cmd, check=True, capture_output=True)
-    output = result.stdout
-    
+
     with open(path, 'wb') as f:
-        f.write(output)
+        run_subprocess_cmd(cmd, outfile=f, merge=False)
 
 
 def make_cp_files(workdir, file_size, num_files):

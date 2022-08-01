@@ -45,10 +45,38 @@ def copy_dir(src_dir, dst_dir):
     shutil.copytree(src_dir, dst_dir, dirs_exist_ok=True)
 
 
+def run_subprocess_cmd(cmd, outfile=None, merge=False, env=None):
+    try:
+        result = None
+        if outfile is None and not merge:
+            result = subprocess.run(cmd, env=env, check=True,
+                                         capture_output=True)
+        elif outfile is None:
+            result = subprocess.run(cmd, env=env, check=True,
+                                         stdout=subprocess.PIPE,
+                                         stderr=subprocess.STDOUT)
+        elif not merge:
+            result = subprocess.run(cmd, env=env, check=True,
+                                         stdout=outfile)
+        else:
+            result = subprocess.run(cmd, env=env, check=True,
+                                         stdout=outfile,
+                                         stderr=subprocess.STDOUT)
+        output = None
+        if result.stdout is not None:
+            output = result.stdout.decode('ascii')
+        return output
+    except subprocess.CalledProcessError as err:
+        print(f"Error: subprocess returned exit status {err.returncode}")
+        print(f"  command: {' '.join(err.cmd)}")
+        if err.stderr is not None:
+            print(f"  stderr: {err.stderr.decode('ascii')}")
+        exit(1)
+
+
 def set_cgroup_mem_limit(mem_limit):
     cmd = ["sudo", "lscgroup"]
-    result = subprocess.run(cmd, check=True, capture_output=True)
-    output = result.stdout.decode('ascii')
+    output = run_subprocess_cmd(cmd, merge=False)
     cgroup_found = False
     for line in output.split('\n'):
         line = line.strip()
@@ -58,17 +86,16 @@ def set_cgroup_mem_limit(mem_limit):
 
     if not cgroup_found:    # create cgroup
         cmd = ["sudo", "cgcreate", "-g", "memory:"+CGROUP_NAME]
-        subprocess.run(cmd, check=True)
+        run_subprocess_cmd(cmd, merge=False)
 
     cmd = ["sudo", "cgset", "-r", "memory.limit_in_bytes="+str(mem_limit),
            CGROUP_NAME]
-    subprocess.run(cmd, check=True)
+    run_subprocess_cmd(cmd, merge=False)
 
 def get_iostat_bio_mb_read():
     # FIXME: currently just reads stat of the first device
     cmd = ["sudo", "iostat", "-d", "-m", "1", "1"]
-    result = subprocess.run(cmd, check=True, capture_output=True)
-    output = result.stdout.decode('ascii')
+    output = run_subprocess_cmd(cmd, merge=False)
     in_dev_line, mb_read_idx = False, -1
     for line in output.split('\n'):
         line = line.strip()
@@ -83,7 +110,7 @@ def get_iostat_bio_mb_read():
 
 def run_ycsbcli_single(libforeactor, dbdir, trace, mem_limit, drop_caches,
                        use_foreactor, backend=None, pre_issue_depth=0,
-                       num_threads=0, with_writes=False):
+                       num_threads=0, with_writes=False, tiny_bench=False):
     work_dbdir = dbdir
     if with_writes:
         work_dbdir = f"{dbdir}_copy"
@@ -115,6 +142,8 @@ def run_ycsbcli_single(libforeactor, dbdir, trace, mem_limit, drop_caches,
            "--no_fill_cache"]
     if not with_writes:
         cmd.append("--bg_compact_off")
+    if tiny_bench:
+        cmd.append("--tiny_bench")
     if drop_caches:
         cmd.append("--drop_caches")
     if mem_limit != "none":
@@ -122,10 +151,8 @@ def run_ycsbcli_single(libforeactor, dbdir, trace, mem_limit, drop_caches,
         cmd = ["sudo", "cgexec", "-g", "memory:"+CGROUP_NAME] + cmd
 
     mb_read_before = get_iostat_bio_mb_read()
-    result = subprocess.run(cmd, check=True, env=envs, stdout=subprocess.PIPE,
-                                 stderr=subprocess.STDOUT)
+    output = run_subprocess_cmd(cmd, merge=True, env=envs)
     mb_read_after = get_iostat_bio_mb_read()
-    output = result.stdout.decode('ascii')
     return output, mb_read_after - mb_read_before
 
 
@@ -184,7 +211,7 @@ def get_timer_segs_from_output(output):
 
 def run_ycsbcli_iters(num_iters, num_threads, libforeactor, dbdir, trace, mem_limit,
                       drop_caches, use_foreactor, backend=None, pre_issue_depth=0,
-                      with_writes=False, with_timer=False):
+                      with_writes=False, with_timer=False, tiny_bench=False):
     result_sum_us, result_avg_us, result_p99_us = 0., 0., 0.
     result_sum_ops, result_avg_ops = 0., 0.
     result_mb_read = 0.
@@ -193,7 +220,8 @@ def run_ycsbcli_iters(num_iters, num_threads, libforeactor, dbdir, trace, mem_li
         output, mb_read = run_ycsbcli_single(libforeactor, dbdir, trace, mem_limit,
                                              drop_caches, use_foreactor, backend=backend,
                                              pre_issue_depth=pre_issue_depth,
-                                             num_threads=num_threads, with_writes=with_writes)
+                                             num_threads=num_threads, with_writes=with_writes,
+                                             tiny_bench=tiny_bench)
         sum_us, avg_us, p99_us = get_us_result_from_output(output)
         sum_ops, avg_ops = get_ops_result_from_output(output)
         if sum_us is not None:
@@ -223,21 +251,21 @@ def run_ycsbcli_iters(num_iters, num_threads, libforeactor, dbdir, trace, mem_li
     result_sum_ops /= num_iters
     result_avg_ops /= num_iters
     result_mb_read /= num_iters
-    for seg_name in timer_segs:
-        timer_segs[seg_name] /= num_iters
+    for seg_name in result_timer_segs:
+        result_timer_segs[seg_name] /= num_iters
 
     return (result_sum_us, result_avg_us, result_p99_us, result_sum_ops, result_avg_ops,
-            result_mb_read, timer_segs)
+            result_mb_read, result_timer_segs)
 
 def run_exprs(libforeactor, dbdir, trace, mem_limit, drop_caches, output_log, backend,
-              pre_issue_depth_list, num_threads, with_writes, with_timer):
+              pre_issue_depth_list, num_threads, with_writes, with_timer, tiny_bench):
     num_iters = CACHED_ITERS if not drop_caches else DROP_CACHES_ITERS
 
     with open(output_log, 'w') as fout:
         sum_us, avg_us, p99_us, sum_ops, avg_ops, mb_read, timer_segs = \
             run_ycsbcli_iters(num_iters, num_threads, libforeactor, dbdir, trace,
                               mem_limit, drop_caches, False, with_writes=with_writes,
-                              with_timer=with_timer)
+                              with_timer=with_timer, tiny_bench=tiny_bench)
         result = f" orig: sum_us {sum_us:.3f} avg_us {avg_us:.3f} p99_us {p99_us:.3f}" + \
                  f" sum_ops {sum_ops:.3f} avg_ops {avg_ops:.3f} MB_read {mb_read:.3f}"
         for seg_name, seg_us in timer_segs.items():
@@ -250,7 +278,7 @@ def run_exprs(libforeactor, dbdir, trace, mem_limit, drop_caches, output_log, ba
                 run_ycsbcli_iters(num_iters, num_threads, libforeactor, dbdir, trace,
                                   mem_limit, drop_caches, True, backend=backend,
                                   pre_issue_depth=pre_issue_depth, with_writes=with_writes,
-                                  with_timer=with_timer)
+                                  with_timer=with_timer, tiny_bench=tiny_bench)
             result = f" {pre_issue_depth:4d}:" + \
                      f" sum_us {sum_us:.3f} avg_us {avg_us:.3f} p99_us {p99_us:.3f}" + \
                      f" sum_ops {sum_ops:.3f} avg_ops {avg_ops:.3f} MB_read {mb_read:.3f}"
@@ -280,6 +308,8 @@ def main():
                         help="should be given when running a workload with writes")
     parser.add_argument('--with_timer', dest='with_timer', action='store_true',
                         help="expect timer information output")
+    parser.add_argument('--tiny_bench', dest='tiny_bench', action='store_true',
+                        help="for debugging; run only a few lines of each workload")
     parser.add_argument('--drop_caches', dest='drop_caches', action='store_true',
                         help="do drop_caches per request")
     parser.add_argument('pre_issue_depths', metavar='D', type=int, nargs='+',
@@ -319,7 +349,7 @@ def main():
 
     run_exprs(args.libforeactor, args.dbdir, args.trace, args.mem_limit,
               args.drop_caches, args.output_log, args.backend, args.pre_issue_depths,
-              args.num_threads, args.with_writes, args.with_timer)
+              args.num_threads, args.with_writes, args.with_timer, args.tiny_bench)
 
 if __name__ == "__main__":
     main()

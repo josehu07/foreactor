@@ -65,6 +65,33 @@ def prepare_dir(dir_path, empty=False):
         os.mkdir(dir_path)
 
 
+def run_subprocess_cmd(cmd, outfile=None, merge=False, env=None):
+    try:
+        result = None
+        if outfile is None and not merge:
+            result = subprocess.run(cmd, env=env, check=True,
+                                         capture_output=True)
+        elif outfile is None:
+            result = subprocess.run(cmd, env=env, check=True,
+                                         stdout=subprocess.PIPE,
+                                         stderr=subprocess.STDOUT)
+        elif not merge:
+            result = subprocess.run(cmd, env=env, check=True,
+                                         stdout=outfile)
+        else:
+            result = subprocess.run(cmd, env=env, check=True,
+                                         stdout=outfile,
+                                         stderr=subprocess.STDOUT)
+        output = result.stdout.decode('ascii')
+        return output
+    except subprocess.CalledProcessError as err:
+        print(f"Error: subprocess returned exit status {err.returncode}")
+        print(f"  command: {' '.join(err.cmd)}")
+        if err.stderr is not None:
+            print(f"  stderr: {err.stderr.decode('ascii')}")
+        return None
+
+
 def run_prepare_cp(workdir_prefix, file_size, file_size_abbr, num_files):
     workdir = f"{workdir_prefix}/cp_{file_size_abbr}_{num_files}"
     prepare_dir(workdir, True)
@@ -72,9 +99,7 @@ def run_prepare_cp(workdir_prefix, file_size, file_size_abbr, num_files):
     cmd = ["python3", CP_PREPARE_PY, "-d", workdir, "-s", str(file_size),
            "-n", str(num_files)]
 
-    result = subprocess.run(cmd, check=True, capture_output=True)
-    output = result.stdout.decode('ascii')
-    return output
+    return run_subprocess_cmd(cmd, merge=False)
 
 def prepare_all_cp(workdir_prefix, file_sizes, num_files):
     for file_size_abbr, file_size in file_sizes.items():
@@ -90,9 +115,7 @@ def run_prepare_du(workdir_prefix, num_dirs, file_count, file_count_abbr,
     cmd = ["python3", DU_PREPARE_PY, "-d", workdir, "-s", str(file_size),
            "-r", str(num_dirs), "-n", str(file_count)]
 
-    result = subprocess.run(cmd, check=True, capture_output=True)
-    output = result.stdout.decode('ascii')
-    return output
+    return run_subprocess_cmd(cmd, merge=False)
 
 def prepare_all_du(workdir_prefix, num_dirs, file_counts, file_size):
     for file_count_abbr, file_count in file_counts.items():
@@ -111,9 +134,7 @@ def run_bench_cp(libforeactor, results_dir, workdir_prefix, file_size_abbr,
            "-o", output_log, "-b", backend]
     cmd += list(map(lambda d: str(d), pre_issue_depth_list))
 
-    result = subprocess.run(cmd, check=True, capture_output=True)
-    output = result.stdout.decode('ascii')
-    return output
+    return run_subprocess_cmd(cmd, merge=False)
 
 def run_all_cp(libforeactor, results_dir, workdir_prefix, file_sizes,
                num_files, backends, pre_issue_depth_list):
@@ -137,9 +158,7 @@ def run_bench_du(libforeactor, results_dir, workdir_prefix, num_dirs,
            "-o", output_log, "-b", backend]
     cmd += list(map(lambda d: str(d), pre_issue_depth_list))
 
-    result = subprocess.run(cmd, check=True, capture_output=True)
-    output = result.stdout.decode('ascii')
-    return output
+    return run_subprocess_cmd(cmd, merge=False)
 
 def run_all_du(libforeactor, results_dir, workdir_prefix, num_dirs,
                file_counts, backends, pre_issue_depth_list):
@@ -157,9 +176,7 @@ def run_plot_cp(results_dir, figure):
     cmd = ["python3", CP_PLOTTER_PY, "-m", figure, "-r", results_dir,
            "-o", f"{results_dir}/cp"]
 
-    result = subprocess.run(cmd, check=True, capture_output=True)
-    output = result.stdout.decode('ascii')
-    return output
+    return run_subprocess_cmd(cmd, merge=False)
 
 def plot_all_cp(results_dir, figures):
     for figure in figures:
@@ -171,9 +188,7 @@ def run_plot_du(results_dir, figure):
     cmd = ["python3", DU_PLOTTER_PY, "-m", figure, "-r", results_dir,
            "-o", f"{results_dir}/du"]
 
-    result = subprocess.run(cmd, check=True, capture_output=True)
-    output = result.stdout.decode('ascii')
-    return output
+    return run_subprocess_cmd(cmd, merge=False)
 
 def plot_all_du(results_dir, figures):
     for figure in figures:

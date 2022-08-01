@@ -248,7 +248,8 @@ static std::vector<double> do_ycsb_multithreaded(
 
 /** Read in input YCSB trace. */
 static std::vector<ycsb_req_t> read_input_trace(const std::string& filename,
-                                                bool multithreading) {
+                                                bool multithreading,
+                                                bool tiny_bench) {
     std::vector<ycsb_req_t> reqs;
 
     if (!filename.empty()) {
@@ -270,6 +271,9 @@ static std::vector<ycsb_req_t> read_input_trace(const std::string& filename,
                 input >> scan_len;
             reqs.push_back(
                 ycsb_req_t { .op=op, .key=key, .scan_len=scan_len });
+
+            if (tiny_bench && reqs.size() >= 5)
+                return reqs;
         }
     } else {
         std::cerr << "Error: must give YCSB trace filename argument" << std::endl;
@@ -354,7 +358,8 @@ static void print_results_throughput(std::vector<double>& ops_per_sec,
 int main(int argc, char *argv[]) {
     std::string db_location, ycsb_filename;
     size_t value_size, memtable_limit, filesize_limit, num_threads;
-    bool help, write_sync, bg_compact_off, no_fill_cache, drop_caches, print_block_info, print_stat_exit, wait_before_close;
+    bool help, write_sync, bg_compact_off, no_fill_cache, drop_caches,
+         print_block_info, print_stat_exit, wait_before_close, tiny_bench;
 
     cxxopts::Options cmd_args("leveldb ycsb trace exec client");
     cmd_args.add_options()
@@ -371,7 +376,8 @@ int main(int argc, char *argv[]) {
             ("drop_caches", "do drop_caches between ops", cxxopts::value<bool>(drop_caches)->default_value("false"))
             ("print_block_info", "for distribution accounting", cxxopts::value<bool>(print_block_info)->default_value("false"))
             ("print_stat_exit", "only print stats and exit", cxxopts::value<bool>(print_stat_exit)->default_value("false"))
-            ("wait_before_close", "ensure memtable compacted", cxxopts::value<bool>(wait_before_close)->default_value("false"));
+            ("wait_before_close", "ensure memtable compacted", cxxopts::value<bool>(wait_before_close)->default_value("false"))
+            ("tiny_bench", "only run the first few lines", cxxopts::value<bool>(tiny_bench)->default_value("false"));
     auto result = cmd_args.parse(argc, argv);
 
     if (help) {
@@ -396,7 +402,7 @@ int main(int argc, char *argv[]) {
     if (!print_stat_exit) {
         if (num_threads == 0) {
             ycsb_thread_reqs.emplace_back(
-                read_input_trace(ycsb_filename, false));
+                read_input_trace(ycsb_filename, false, tiny_bench));
         } else {
             // if multithreading, the ycsb_filename string is a prefix with
             // should be appended with "_0.txt", "_1.txt" etc.
@@ -404,7 +410,7 @@ int main(int argc, char *argv[]) {
                 std::string thread_filename = ycsb_filename + "-" +
                                               std::to_string(id) + ".txt";
                 ycsb_thread_reqs.emplace_back(
-                    read_input_trace(thread_filename, true));
+                    read_input_trace(thread_filename, true, tiny_bench));
             }
         }
     }
