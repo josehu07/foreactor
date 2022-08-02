@@ -210,7 +210,7 @@ static std::vector<double> do_ycsb_multithreaded(
         const std::string value, bool drop_caches, bool print_block_info,
         size_t num_threads) {
     // take a read-only snapshot shared across threads
-    read_options.snapshot = db->GetSnapshot();
+    // read_options.snapshot = db->GetSnapshot();
 
     // spawn the desired number of worker threads, each applying the whole
     // trace once
@@ -239,8 +239,8 @@ static std::vector<double> do_ycsb_multithreaded(
     for (auto&& worker : workers)
         worker.join();
 
-    db->ReleaseSnapshot(read_options.snapshot);
-    read_options.snapshot = nullptr;
+    // db->ReleaseSnapshot(read_options.snapshot);
+    // read_options.snapshot = nullptr;
 
     return ops_per_sec;
 }
@@ -249,26 +249,32 @@ static std::vector<double> do_ycsb_multithreaded(
 /** Read in input YCSB trace. */
 static std::vector<ycsb_req_t> read_input_trace(const std::string& filename,
                                                 bool multithreading,
-                                                bool tiny_bench) {
+                                                bool tiny_bench,
+                                                bool& regularize_compact) {
     std::vector<ycsb_req_t> reqs;
+    size_t scan_cnt = 0;
 
     if (!filename.empty()) {
         std::ifstream input(filename);
         std::string opcode;
         std::string key;
         while (input >> opcode >> key) {
-            if (multithreading && opcode != "READ" && opcode != "SCAN") {
-                std::cerr << "Error: can only do read-only ops when"
-                          << " multithreaded" << std::endl;
-                exit(1);
-            }
+            // if (multithreading && opcode != "READ" && opcode != "SCAN") {
+            //     std::cerr << "Error: can only do read-only ops when"
+            //               << " multithreaded" << std::endl;
+            //     exit(1);
+            // }
+            // NOTE: multithreaded Puts are fine and internally mutexed by
+            //       LevelDB; commenting out above
             ycsb_op_t op = opcode == "READ"   ? READ
                          : opcode == "INSERT" ? INSERT
                          : opcode == "UPDATE" ? UPDATE
                          : opcode == "SCAN"   ? SCAN : UNKNOWN;
             size_t scan_len = 0;
-            if (op == SCAN)
+            if (op == SCAN) {
                 input >> scan_len;
+                scan_cnt++;
+            }
             reqs.push_back(
                 ycsb_req_t { .op=op, .key=key, .scan_len=scan_len });
 
@@ -284,6 +290,11 @@ static std::vector<ycsb_req_t> read_input_trace(const std::string& filename,
                   << " has no valid lines" << std::endl;
         exit(1);
     }
+
+    // force default compaction behavior if most requests are scans, otherwise
+    // will likely trigger OOM
+    if (scan_cnt * 2 >= reqs.size())
+        regularize_compact = false;
 
     return reqs;
 }
@@ -358,8 +369,9 @@ static void print_results_throughput(std::vector<double>& ops_per_sec,
 int main(int argc, char *argv[]) {
     std::string db_location, ycsb_filename;
     size_t value_size, memtable_limit, filesize_limit, num_threads;
-    bool help, write_sync, bg_compact_off, no_fill_cache, drop_caches,
-         print_block_info, print_stat_exit, wait_before_close, tiny_bench;
+    bool help, write_sync, bg_compact_off, regularize_compact, no_fill_cache,
+         drop_caches, print_block_info, print_stat_exit, wait_before_close,
+         tiny_bench;
 
     cxxopts::Options cmd_args("leveldb ycsb trace exec client");
     cmd_args.add_options()
@@ -372,6 +384,7 @@ int main(int argc, char *argv[]) {
             ("flim", "sstable filesize limit", cxxopts::value<size_t>(filesize_limit)->default_value("2097152"))
             ("write_sync", "force write sync", cxxopts::value<bool>(write_sync)->default_value("false"))
             ("bg_compact_off", "turn off background compaction", cxxopts::value<bool>(bg_compact_off)->default_value("false"))
+            ("regularize_compact", "for with_writes benchmarking", cxxopts::value<bool>(regularize_compact)->default_value("false"))
             ("no_fill_cache", "no block cache for gets", cxxopts::value<bool>(no_fill_cache)->default_value("false"))
             ("drop_caches", "do drop_caches between ops", cxxopts::value<bool>(drop_caches)->default_value("false"))
             ("print_block_info", "for distribution accounting", cxxopts::value<bool>(print_block_info)->default_value("false"))
@@ -385,24 +398,12 @@ int main(int argc, char *argv[]) {
         exit(0);
     }
 
-    // Use unusually small mem buffer size and max file size.
-    // Must comment out `ClipToRange()` sanitizers @ db_impl.cc:102.
-    db_options.write_buffer_size = memtable_limit;
-    db_options.max_file_size = filesize_limit;
-    // When benchmarking Gets we want to turn off the automatic bg thread.
-    db_options.bg_compact_off = bg_compact_off;
-    db_options.create_if_missing = true;
-
-    write_options.sync = write_sync;
-    read_options.fill_cache = !no_fill_cache;
-    read_options.print_block_info = print_block_info;
-
     // Read in YCSB workload trace.
     std::vector<std::vector<ycsb_req_t>> ycsb_thread_reqs;
     if (!print_stat_exit) {
         if (num_threads == 0) {
             ycsb_thread_reqs.emplace_back(
-                read_input_trace(ycsb_filename, false, tiny_bench));
+                read_input_trace(ycsb_filename, false, tiny_bench, regularize_compact));
         } else {
             // if multithreading, the ycsb_filename string is a prefix with
             // should be appended with "_0.txt", "_1.txt" etc.
@@ -410,10 +411,25 @@ int main(int argc, char *argv[]) {
                 std::string thread_filename = ycsb_filename + "-" +
                                               std::to_string(id) + ".txt";
                 ycsb_thread_reqs.emplace_back(
-                    read_input_trace(thread_filename, true, tiny_bench));
+                    read_input_trace(thread_filename, true, tiny_bench, regularize_compact));
             }
         }
     }
+
+    // If using unusually small mem buffer size and max file size, then should
+    // comment out `ClipToRange()` sanitizers @ db_impl.cc:102.
+    db_options.write_buffer_size = memtable_limit;
+    db_options.max_file_size = filesize_limit;
+    // When benchmarking Gets we want to turn off the automatic bg thread.
+    db_options.bg_compact_off = bg_compact_off;
+    // When doing with_writes benchmarking we want to regularize compactions.
+    db_options.regularize_compact = regularize_compact;
+
+    db_options.create_if_missing = true;
+
+    write_options.sync = write_sync;
+    read_options.fill_cache = !no_fill_cache;
+    read_options.print_block_info = print_block_info;
 
     // Generate value.
     std::string value(value_size, '0');
@@ -446,8 +462,7 @@ int main(int argc, char *argv[]) {
         print_results_throughput(ops_per_sec, 1);
 
     } else {
-        // multithreaded case, make a read-only snapshot and spawn child threads
-        // to execute the trace on the snapshot
+        // multithreaded case, spawn child threads to execute the trace
         std::vector<double> ops_per_sec = do_ycsb_multithreaded(db,
                                                                 &ycsb_thread_reqs,
                                                                 value,

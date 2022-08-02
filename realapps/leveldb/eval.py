@@ -42,17 +42,15 @@ YCSB_DISTRIBUTION_FOR_WITH_WRITES = "zipf_0.99"
 BACKEND_FOR_WITH_WRITES = "io_uring_sqe_async"
 PRE_ISSUE_DEPTH_LIST_FOR_WITH_WRITES = [4, 16]
 MEM_PERCENTAGE_FOR_WITH_WRITES = 10
+WITH_WRITES_NUM_THREADS = 1
 WITH_WRITES_WORKLOADS = ["a", "b", "d", "e", "f"]
 
 VALUE_SIZE_ABBR_FOR_ZIPF_CONSTS = "1K"
 YCSB_DISTRIBUTIONS_FOR_ZIPF_CONSTS = [
     "zipf_0.9",
-    "zipf_0.99",
     "zipf_1.1",
     "zipf_1.2",
     "zipf_1.3",
-    "zipf_1.4",
-    "zipf_1.5",
     "uniform"
 ]
 BACKEND_FOR_ZIPF_CONSTS = "io_uring_sqe_async"
@@ -153,7 +151,8 @@ def prepare_db_and_workloads(workloads_dir, dbdir_prefix, ycsb_dir, tmpdir,
                              value_size_abbr_for_multithread,
                              ycsb_distribution_for_multithread, max_threads,
                              value_size_abbr_for_with_writes,
-                             ycsb_distribution_for_with_writes, write_workloads,
+                             ycsb_distribution_for_with_writes,
+                             num_threads_for_with_writes, write_workloads,
                              value_size_abbr_for_zipf_consts,
                              ycsb_distributions_for_zipf_consts,
                              skip_load):
@@ -170,7 +169,7 @@ def prepare_db_and_workloads(workloads_dir, dbdir_prefix, ycsb_dir, tmpdir,
             run_prepare(workloads_dir, dbdir_prefix, value_size,
                         value_size_abbr, ycsb_dir, tmpdir,
                         write_workloads, [ycsb_distribution_for_with_writes],
-                        skip_load=skip_load)
+                        max_threads=num_threads_for_with_writes, skip_load=skip_load)
 
         if value_size_abbr == value_size_abbr_for_multithread:
             print(f"  EXTRA multithread")
@@ -289,13 +288,13 @@ def run_all_multithread(libforeactor, workloads_dir, results_dir, dbdir_prefix,
 
 def run_all_with_writes(libforeactor, workloads_dir, results_dir, dbdir_prefix,
                         value_size_abbr, ycsb_distribution, backend,
-                        pre_issue_depth_list, mem_percentage, write_workloads,
-                        tiny_bench=False):
+                        pre_issue_depth_list, mem_percentage, num_threads,
+                        write_workloads, tiny_bench=False):
     for workload_name in write_workloads:
         run_bench_ycsb(libforeactor, workloads_dir, results_dir, dbdir_prefix,
                        value_size_abbr, workload_name, ycsb_distribution, backend,
-                       pre_issue_depth_list, mem_percentage, with_writes=True,
-                       tiny_bench=tiny_bench)
+                       pre_issue_depth_list, mem_percentage, num_threads=num_threads,
+                       with_writes=True, tiny_bench=tiny_bench)
 
 def run_all_zipf_consts(libforeactor, workloads_dir, results_dir, dbdir_prefix,
                         value_size_abbr, ycsb_distributions, backend,
@@ -392,6 +391,7 @@ def main():
                                  max(MULTITHREAD_NUMS_THREADS),
                                  VALUE_SIZE_ABBR_FOR_WITH_WRITES,
                                  YCSB_DISTRIBUTION_FOR_WITH_WRITES,
+                                 WITH_WRITES_NUM_THREADS,
                                  WITH_WRITES_WORKLOADS,
                                  VALUE_SIZE_ABBR_FOR_ZIPF_CONSTS,
                                  YCSB_DISTRIBUTIONS_FOR_ZIPF_CONSTS,
@@ -406,33 +406,34 @@ def main():
         check_dir_exists(args.dbdir_prefix)
         check_dir_exists(args.workloads_dir)
         prepare_dir(args.results_dir, False)
-        run_all_ycsb_c_run(args.libforeactor,
-                           args.workloads_dir, args.results_dir,
-                           args.dbdir_prefix, VALUE_SIZES,
-                           YCSB_DISTRIBUTIONS,
-                           BACKENDS,
-                           PRE_ISSUE_DEPTH_LIST,
-                           MEM_PERCENTAGES, args.tiny_bench)
-        run_all_multithread(args.libforeactor, args.workloads_dir, args.results_dir,
-                            args.dbdir_prefix, VALUE_SIZE_ABBR_FOR_MULTITHREAD,
-                            YCSB_DISTRIBUTION_FOR_MULTITHREAD,
-                            BACKEND_FOR_MULTITHREAD,
-                            PRE_ISSUE_DEPTH_LIST_FOR_MULTITHREAD,
-                            MEM_PERCENTAGE_FOR_MULTITHREAD,
-                            MULTITHREAD_NUMS_THREADS, args.tiny_bench)
+        # run_all_ycsb_c_run(args.libforeactor,
+        #                    args.workloads_dir, args.results_dir,
+        #                    args.dbdir_prefix, VALUE_SIZES,
+        #                    YCSB_DISTRIBUTIONS,
+        #                    BACKENDS,
+        #                    PRE_ISSUE_DEPTH_LIST,
+        #                    MEM_PERCENTAGES, args.tiny_bench)
+        # run_all_multithread(args.libforeactor, args.workloads_dir, args.results_dir,
+        #                     args.dbdir_prefix, VALUE_SIZE_ABBR_FOR_MULTITHREAD,
+        #                     YCSB_DISTRIBUTION_FOR_MULTITHREAD,
+        #                     BACKEND_FOR_MULTITHREAD,
+        #                     PRE_ISSUE_DEPTH_LIST_FOR_MULTITHREAD,
+        #                     MEM_PERCENTAGE_FOR_MULTITHREAD,
+        #                     MULTITHREAD_NUMS_THREADS, args.tiny_bench)
         run_all_with_writes(args.libforeactor, args.workloads_dir, args.results_dir,
                             args.dbdir_prefix, VALUE_SIZE_ABBR_FOR_WITH_WRITES,
                             YCSB_DISTRIBUTION_FOR_WITH_WRITES,
                             BACKEND_FOR_WITH_WRITES,
                             PRE_ISSUE_DEPTH_LIST_FOR_WITH_WRITES,
                             MEM_PERCENTAGE_FOR_WITH_WRITES,
+                            WITH_WRITES_NUM_THREADS,
                             WITH_WRITES_WORKLOADS, args.tiny_bench)
-        run_all_zipf_consts(args.libforeactor, args.workloads_dir, args.results_dir,
-                            args.dbdir_prefix, VALUE_SIZE_ABBR_FOR_ZIPF_CONSTS,
-                            YCSB_DISTRIBUTIONS_FOR_ZIPF_CONSTS,
-                            BACKEND_FOR_ZIPF_CONSTS,
-                            PRE_ISSUE_DEPTH_LIST_FOR_ZIPF_CONSTS,
-                            MEM_PERCENTAGE_FOR_ZIPF_CONSTS, args.tiny_bench)
+        # run_all_zipf_consts(args.libforeactor, args.workloads_dir, args.results_dir,
+        #                     args.dbdir_prefix, VALUE_SIZE_ABBR_FOR_ZIPF_CONSTS,
+        #                     YCSB_DISTRIBUTIONS_FOR_ZIPF_CONSTS,
+        #                     BACKEND_FOR_ZIPF_CONSTS,
+        #                     PRE_ISSUE_DEPTH_LIST_FOR_ZIPF_CONSTS,
+        #                     MEM_PERCENTAGE_FOR_ZIPF_CONSTS, args.tiny_bench)
         # run_all_samekey(args.libforeactor,
         #                 args.workloads_dir, args.results_dir,
         #                 args.dbdir_prefix, VALUE_SIZES_FOR_SAMEKEY,

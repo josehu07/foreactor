@@ -251,6 +251,9 @@ class VersionSet {
   // Returns true iff some level needs a compaction.
   bool NeedsCompaction() const {
     Version* v = current_;
+    // [foreactor] for the regularize_compact option.
+    if (options_->regularize_compact)
+      return (v->compaction_score_ >= 1);
     return (v->compaction_score_ >= 1) || (v->file_to_compact_ != nullptr);
   }
 

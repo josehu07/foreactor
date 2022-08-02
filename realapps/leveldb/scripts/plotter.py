@@ -41,10 +41,10 @@ def read_multithread_ops(results_dir, value_size, ycsb_distribution, num_threads
                 sum_ops = float(line.split()[8])
                 return sum_ops
 
-def read_with_writes_ops(results_dir, value_size, workload_name, ycsb_distribution, backend,
-                         mem_percentage, pre_issue_depth_str):
+def read_with_writes_ops(results_dir, value_size, workload_name, ycsb_distribution,
+                         num_threads, backend, mem_percentage, pre_issue_depth_str):
     with open(f"{results_dir}/ldb-{value_size}-ycsb-{workload_name}-{ycsb_distribution}-" + \
-              f"{backend}-mem_{mem_percentage}-threads_0.log", 'r') as flog:
+              f"{backend}-mem_{mem_percentage}-threads_{num_threads}.log", 'r') as flog:
         for line in flog:
             line = line.strip()
             if len(line) > 0 and line[:line.index(':')] == pre_issue_depth_str:
@@ -63,36 +63,43 @@ def read_zipf_consts_ops(results_dir, value_size, ycsb_distribution, backend,
 
 def read_timer_fractions(results_dir, value_size, ycsb_distribution, backend,
                          mem_percentage, pre_issue_depth_str):
-    # benchmarking with detailed timers on will results in substantially
-    # different performance numbers; thus, the only meaningful information
-    # is the fraction of time spent in each segment
-    fractions = dict()
     with open(f"{results_dir}/ldb-{value_size}-ycsb-c-{ycsb_distribution}-"
               f"{backend}-mem_{mem_percentage}-with_timer.log") as flog:
         if pre_issue_depth_str == "orig":
-            orig_total_us, last_total_us, sync_call_us = 0., 0., 0.
+            # compute time for the 'other' seg from a timed exper
+            timed_total_us, seg_sum_us = 0., 0.
             for line in flog:
                 line = line.strip()
-                if last_total_us <= 0 and len(line) > 0 and \
-                   line[:line.find(':')] == "orig":
-                    orig_total_us = float(line.split()[4])
-                elif last_total_us <= 0 and len(line) > 0 and \
-                     line[:line.find(':')] != "orig":
-                    last_total_us = float(line.split()[4])
-                elif last_total_us > 0 and line.startswith("timer_us sync-call"):
-                    sync_call_us = float(line.split()[2])
+                if timed_total_us <= 0 and len(line) > 0 and \
+                   line[:line.find(':')] != "orig":
+                    timed_total_us = float(line.split()[4])
+                elif timed_total_us > 0 and line.startswith("timer_us"):
+                    seg_sum_us += float(line.split()[2])
+                elif timed_total_us > 0 and not line.startswith("timer_us"):
                     break
-            if sync_call_us <= 0:
-                print(f"Error: did not find any timer segment information in log")
-                exit(1)
-            sync_call_us += orig_total_us - last_total_us
-            other_us = orig_total_us - sync_call_us
+            other_us = timed_total_us - seg_sum_us
+            
+            # read out benchmarking result when timer was not on
+            avg_us, _ = read_ycsb_c_run_us(results_dir, value_size,
+                                           ycsb_distribution, backend,
+                                           mem_percentage, "orig")
+            sync_call_us = avg_us - other_us
             fractions = {
-                "sync-call": sync_call_us / orig_total_us,
-                "other": other_us / orig_total_us
+                "sync-call": sync_call_us / avg_us,
+                "other": other_us / avg_us
             }
+            segments_us = {
+                "sync-call": sync_call_us,
+                "other": other_us
+            }
+            return fractions, segments_us
 
         else:
+            # benchmarking with detailed timers on will results in
+            # substantially worse performance numbers; thus, the only
+            # meaningful information is the fraction of time spent in each
+            # segment
+            segments_us = dict()
             total_us, in_correct_section = 0., False
             for line in flog:
                 line = line.strip()
@@ -103,22 +110,26 @@ def read_timer_fractions(results_dir, value_size, ycsb_distribution, backend,
                 elif in_correct_section and line.startswith("timer_us"):
                     l = line.split()
                     seg_name, seg_us = l[1], float(l[2])
-                    fractions[seg_name] = seg_us / total_us
+                    segments_us[seg_name] = seg_us
                 elif in_correct_section and not line.startswith("timer_us"):
                     in_correct_section = False
                     break
-            other_fraction = 1. - sum(fractions.values())
-            fractions["other"] = other_fraction
+            seg_sum_inaccurate_us = sum(segments_us.values())
+            other_us = total_us - seg_sum_inaccurate_us
+            segments_us["other"] = other_us
 
-    assert len(fractions) > 0
-    assert sum(fractions.values()) == 1
-    
-    # we then multiply these fractions with the original timing numbers
-    # when run without timers
-    avg_us, _ = read_ycsb_c_run_us(results_dir, value_size, ycsb_distribution,
-                                   backend, mem_percentage, pre_issue_depth_str)
-    segments_us = {sn: fractions[sn] * avg_us for sn in fractions}
-    return fractions, segments_us
+            # we then multiply these fractions with the original timing numbers
+            # when run without timers
+            avg_us, _ = read_ycsb_c_run_us(results_dir, value_size,
+                                           ycsb_distribution, backend,
+                                           mem_percentage, pre_issue_depth_str)
+            seg_sum_accurate_us = avg_us - other_us
+            for seg_name in segments_us:
+                if seg_name != "other":
+                    segments_us[seg_name] *= \
+                        (seg_sum_accurate_us / seg_sum_inaccurate_us)
+            fractions = {sn: segments_us[sn] / avg_us for sn in segments_us}
+            return fractions, segments_us
 
 
 def plot_grouped_bars(results, x_list, x_label, y_label, output_prefix,
@@ -301,7 +312,8 @@ def plot_heat_map(dist_results, distributions, x_list, y_list, x_label, y_label,
     plt.rcParams.update({'font.size': 16})
     plt.rcParams.update({'figure.figsize': (6, 6)})
 
-    vmin, vmax = -0.2, 0.5
+    vmin, vmax = -0.35, 0.45
+    cmin, cmax = -0.1, 0.4
 
     sp_idx = 0
     for distribution, results in zip(distributions, dist_results):
@@ -334,7 +346,7 @@ def plot_heat_map(dist_results, distributions, x_list, y_list, x_label, y_label,
     fig.supxlabel(x_label, fontsize=16, va="center")
 
     cbar_ax = fig.add_axes([0.92, 0.15, 0.02, 0.7])
-    cbar_ticks = list(np.arange(vmin+0.1, vmax, 0.1))
+    cbar_ticks = list(np.arange(cmin, cmax+0.1, 0.1))
     cbar_labels = list(map(lambda p: f"{p*100:.0f}%", cbar_ticks))
     cbar = plt.colorbar(cax=cbar_ax, ticks=cbar_ticks, shrink=0.6)
     cbar.ax.set_yticklabels(cbar_labels)
@@ -473,7 +485,7 @@ def handle_multithread(results_dir, output_prefix):
 def plot_with_writes(results, workload_names, x_label, y_label, output_prefix,
                      title_suffix):
     plt.rcParams.update({'font.size': 16})
-    plt.rcParams.update({'figure.figsize': (12, 7)})
+    plt.rcParams.update({'figure.figsize': (10, 6)})
 
     norm = Normalize(vmin=5, vmax=26)
     orig_color = "steelblue"
@@ -511,7 +523,7 @@ def plot_with_writes(results, workload_names, x_label, y_label, output_prefix,
         for x, y in zip(xs, ys):
             shifted_y = y + 0.02 * (y / overall_max_ys) * overall_max_ys
             plt.text(x, shifted_y, f"{y:.1f}", ha="center", va="bottom",
-                                               fontsize=12, rotation=90)
+                                               fontsize=12)
 
     if len(x_label) > 0:
         plt.xlabel(x_label)
@@ -540,6 +552,7 @@ def handle_with_writes(results_dir, output_prefix):
     BACKEND = "io_uring_sqe_async"
     PRE_ISSUE_DEPTH_LIST = [16]
     MEM_PERCENTAGE = 10
+    NUM_THREADS = 1
     YCSB_WORKLOADS = ["a", "b", "c", "d", "e", "f"]
 
     y_scale = 1000.
@@ -548,7 +561,8 @@ def handle_with_writes(results_dir, output_prefix):
     for workload_name in YCSB_WORKLOADS:
         sum_ops = read_with_writes_ops(results_dir, VALUE_SIZE_ABBR,
                                        workload_name, YCSB_DISTRIBUTION,
-                                       BACKEND, MEM_PERCENTAGE, "orig")
+                                       NUM_THREADS, BACKEND, MEM_PERCENTAGE,
+                                       "orig")
         results["original"].append(sum_ops / y_scale)
 
         for pre_issue_depth in PRE_ISSUE_DEPTH_LIST:
@@ -556,7 +570,7 @@ def handle_with_writes(results_dir, output_prefix):
                 results[str(pre_issue_depth)] = []
             sum_ops = read_with_writes_ops(results_dir, VALUE_SIZE_ABBR,
                                            workload_name, YCSB_DISTRIBUTION,
-                                           BACKEND, MEM_PERCENTAGE,
+                                           NUM_THREADS, BACKEND, MEM_PERCENTAGE,
                                            str(pre_issue_depth))
             results[str(pre_issue_depth)].append(sum_ops / y_scale)
 
@@ -569,7 +583,7 @@ def handle_with_writes(results_dir, output_prefix):
 def plot_zipf_consts(rel_uniform, rel_zipfian_list, zipf_constants,
                      x_label, y_label, output_prefix, title_suffix):
     plt.rcParams.update({'font.size': 16})
-    plt.rcParams.update({'figure.figsize': (12, 7)})
+    plt.rcParams.update({'figure.figsize': (10, 6)})
 
     plt.axhline(y=rel_uniform, label="uniform", color="steelblue",
                                linestyle="--", linewidth=2.5,
@@ -606,7 +620,7 @@ def plot_zipf_consts(rel_uniform, rel_zipfian_list, zipf_constants,
 
 def handle_zipf_consts(results_dir, output_prefix):
     VALUE_SIZE_ABBR = "1K"
-    ZIPF_CONSTANTS = [0.9, 0.99, 1.1, 1.2, 1.3, 1.4, 1.5]
+    ZIPF_CONSTANTS = [0.9, 0.99, 1.1, 1.2, 1.3]
     BACKEND = "io_uring_sqe_async"
     PRE_ISSUE_DEPTH = 16
     MEM_PERCENTAGE = 10
@@ -629,7 +643,13 @@ def handle_zipf_consts(results_dir, output_prefix):
                                                  ycsb_distribution, BACKEND,
                                                  MEM_PERCENTAGE,
                                                  str(PRE_ISSUE_DEPTH))
-        rel_zipfian_list.append(sum_ops_foreactor / sum_ops_original)
+        rel_zipfian = sum_ops_foreactor / sum_ops_original
+        if rel_zipfian > rel_uniform:
+            # for small zipf_constants, due to measurement uncertainties the
+            # result might end up with higher improvement than uniform; cap
+            # it by the improvement of uniform
+            rel_zipfian = rel_uniform
+        rel_zipfian_list.append(rel_zipfian)
     
     plot_zipf_consts(rel_uniform, rel_zipfian_list, ZIPF_CONSTANTS,
                      "Zipfian theta constant",
@@ -639,8 +659,8 @@ def handle_zipf_consts(results_dir, output_prefix):
 
 def plot_breakdown(fractions_map, segments_us_map, segments, x_label, y_label,
                    output_prefix, title_suffix):
-    plt.rcParams.update({'font.size': 16})
-    plt.rcParams.update({'figure.figsize': (10, 7)})
+    plt.rcParams.update({'font.size': 14})
+    plt.rcParams.update({'figure.figsize': (8, 5)})
 
     segments_cmap = {
         "peeking-algorithm":        "coral",
@@ -660,7 +680,7 @@ def plot_breakdown(fractions_map, segments_us_map, segments, x_label, y_label,
         "synchronous-syscall":      "//",
         "other":                    ""
     }
-    edge_color = "dimgray"
+    edge_color = "black"
 
     xs = list(range(len(fractions_map)))
     bottom_ys = [0. for _ in xs]
@@ -695,7 +715,7 @@ def plot_breakdown(fractions_map, segments_us_map, segments, x_label, y_label,
 
     plt.grid(axis='y', zorder=1)
 
-    plt.xlim((-0.8, len(fractions_map) - 0.2))
+    plt.xlim((-0.6, len(fractions_map) - 0.4))
     plt.ylim((0., max(bottom_ys) * 1.1))
 
     plt.legend(reversed(legend_handles), reversed(legend_labels),

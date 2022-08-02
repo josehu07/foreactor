@@ -1,0 +1,12 @@
+ orig: sum_us 70045620.000 avg_us 342.022 p99_us 811.561 sum_ops 2924.378 avg_ops 2924.378 MB_read 2640.600
+   16: sum_us 58112560.000 avg_us 283.754 p99_us 570.359 sum_ops 3524.596 avg_ops 3524.596 MB_read 3194.000
+       timer_us get-frontier 4.156
+       timer_us check-args 2.832
+       timer_us peek-algo 36.690
+       timer_us sync-call 3.982
+       timer_us push-forward 12.097
+       timer_us clear-prog 10.406
+       timer_us reset-graph 1.158
+       timer_us engine-submit 17.515
+       timer_us engine-cmpl 95.665
+       timer_us reflect-res 10.005

@@ -140,7 +140,9 @@ def run_ycsbcli_single(libforeactor, dbdir, trace, mem_limit, drop_caches,
 
     cmd = [YCSBCLI_BIN, "-d", work_dbdir, "-f", trace, "-t", str(num_threads),
            "--no_fill_cache"]
-    if not with_writes:
+    if with_writes:
+        cmd.append("--regularize_compact")
+    else:
         cmd.append("--bg_compact_off")
     if tiny_bench:
         cmd.append("--tiny_bench")
@@ -192,6 +194,7 @@ def get_ops_result_from_output(output):
 
 def get_timer_segs_from_output(output):
     timer_segs = dict()
+    timer_line_cnt = 0
 
     for line in output.split('\n'):
         line = line.strip()
@@ -205,6 +208,13 @@ def get_timer_segs_from_output(output):
                     timer_segs[seg_name] = seg_us
                 else:
                     timer_segs[seg_name] += seg_us
+            timer_line_cnt += 1
+
+    if len(timer_segs) > 0:
+        assert timer_line_cnt % len(timer_segs) == 0
+        req_cnt = timer_line_cnt / len(timer_segs)
+        for seg_name in timer_segs:
+            timer_segs[seg_name] /= req_cnt
 
     return timer_segs
 
@@ -218,9 +228,11 @@ def run_ycsbcli_iters(num_iters, num_threads, libforeactor, dbdir, trace, mem_li
     result_timer_segs = dict()
     for i in range(num_iters):
         output, mb_read = run_ycsbcli_single(libforeactor, dbdir, trace, mem_limit,
-                                             drop_caches, use_foreactor, backend=backend,
+                                             drop_caches, use_foreactor,
+                                             backend=backend,
                                              pre_issue_depth=pre_issue_depth,
-                                             num_threads=num_threads, with_writes=with_writes,
+                                             num_threads=num_threads,
+                                             with_writes=with_writes,
                                              tiny_bench=tiny_bench)
         sum_us, avg_us, p99_us = get_us_result_from_output(output)
         sum_ops, avg_ops = get_ops_result_from_output(output)
@@ -330,10 +342,6 @@ def main():
 
     if args.num_threads < 0:
         print(f"Error: invalid number of threads {args.num_threads}")
-        exit(1)
-
-    if args.with_writes and args.num_threads > 0:
-        print(f"Error: with_writes currently incompatible with multithreading")
         exit(1)
 
     check_file_exists(args.libforeactor)

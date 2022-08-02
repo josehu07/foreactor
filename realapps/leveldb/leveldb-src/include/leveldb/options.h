@@ -144,6 +144,11 @@ struct LEVELDB_EXPORT Options {
   // [foreactor] when benchmarking Gets we do not want the bg thread
   // to automatically compact and mess up the database image setup.
   bool bg_compact_off = false;
+
+  // [foreactor] turn this on when doing with_writes benchmarking for
+  // more stable results: compaction happens exactly when writes are
+  // fully stopped.
+  bool regularize_compact = false;
 };
 
 // Options that control read operations

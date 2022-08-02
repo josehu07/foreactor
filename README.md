@@ -194,7 +194,7 @@ python3 eval.py -m prepare \
 
 If finished successfully, produces the database images at `/path/to/workspace/dir/leveldb_*/` and the workload traces under current path's `workloads/`.
 
-Benchmark all workloads (may take several tens of hours; give `--tiny_bench` option to run only the first few requests of each workload for easier debugging):
+Benchmark all workloads (may take ~30h; give `--tiny_bench` option to run only the first few requests of each workload for easier debugging):
 
 ```bash
 python3 eval.py -m bencher \
