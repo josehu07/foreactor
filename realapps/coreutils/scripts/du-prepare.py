@@ -48,40 +48,39 @@ def run_subprocess_cmd(cmd, outfile=None, merge=False, env=None):
         exit(1)
 
 
-def create_random_file(path, file_size):
-    cmd = ["head", "-c", str(file_size), "/dev/urandom"]
-    
-    with open(path, 'wb') as f:
-        run_subprocess_cmd(cmd, outfile=f, merge=False)
+def touch_new_file(path):
+    try:
+        os.mknod(path)
+    except:
+        print(f"Error: failed to do os.mknod({path})")
+        exit(1)
     
 
-def make_du_dir_tree(workdir, num_dirs, num_files, file_size):
+def make_du_dir_tree(workdir, num_dirs, num_files_per_dir):
     for i in range(num_dirs):
         dir_path = f"{workdir}/indir/dir_{i}"
         prepare_dir(dir_path, True)
 
-        for j in range(num_files):
+        for j in range(num_files_per_dir):
             file_path = f"{dir_path}/file_{j}.dat"
-            create_random_file(file_path, file_size)
+            touch_new_file(file_path)
 
 
 def main():
     parser = argparse.ArgumentParser(description="du workload files setup")
     parser.add_argument('-d', dest='workdir', required=True,
                         help="workdir containing the directory tree")
-    parser.add_argument('-s', dest='file_size', required=True, type=int,
-                        help="leaf file size in bytes")
     parser.add_argument('-r', dest='num_dirs', required=True, type=int,
                         help="number of root directories")
     parser.add_argument('-n', dest='num_files', required=True, type=int,
-                        help="number of files per root dir")
+                        help="total number of files per dir")
     args = parser.parse_args()
 
     prepare_dir(args.workdir, True)
     prepare_dir(f"{args.workdir}/indir", True)
 
-    make_du_dir_tree(args.workdir, args.num_dirs, args.num_files,
-                     args.file_size)
+    num_files_per_dir = args.num_files // args.num_dirs
+    make_du_dir_tree(args.workdir, args.num_dirs, num_files_per_dir)
 
 if __name__ == "__main__":
     main()

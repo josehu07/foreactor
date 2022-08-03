@@ -11,7 +11,7 @@ DU_GRAPH_ID = 1
 
 URING_QUEUE = 512
 
-NUM_ITERS = 30
+NUM_ITERS = 20
 
 
 def check_file_exists(path):
@@ -60,6 +60,7 @@ def query_timestamp_sec():
 
 def run_du_single(libforeactor, workdir, use_foreactor, backend=None,
                   pre_issue_depth=0):
+    os.system("ulimit -n 65536")
     os.system("sudo sync; sudo sh -c 'echo 3 > /proc/sys/vm/drop_caches'")
 
     envs = os.environ.copy()
@@ -85,16 +86,13 @@ def run_du_single(libforeactor, workdir, use_foreactor, backend=None,
     indir = f"{workdir}/indir"
 
     assert os.path.isdir(indir)
-    num_dirs = 0
     for root_dir in os.listdir(indir):
         cmd.append(f"{workdir}/indir/{root_dir}")
-        num_dirs += 1
-    assert num_dirs > 0
     
     secs_before = query_timestamp_sec()
     run_subprocess_cmd(cmd, merge=False, env=envs)
     secs_after = query_timestamp_sec()
-    return (secs_after - secs_before) / num_dirs    # return value is secs/dir
+    return (secs_after - secs_before)
 
 def run_du_iters(num_iters, libforeactor, workdir, use_foreactor, backend=None,
                  pre_issue_depth=0):

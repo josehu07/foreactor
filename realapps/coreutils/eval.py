@@ -10,36 +10,33 @@ CP_PREPARE_PY = "./scripts/cp-prepare.py"
 CP_BENCHER_PY = "./scripts/cp-bencher.py"
 CP_PLOTTER_PY = "./scripts/cp-plotter.py"
 
-CP_FILE_SIZES = {
-    "16M":  16   * 1024 * 1024,
-    "32M":  32   * 1024 * 1024,
-    "64M":  64   * 1024 * 1024,
-    "128M": 128  * 1024 * 1024,
-    "256M": 256  * 1024 * 1024,
+CP_TOTAL_SIZES = {
+    "2G":  2  * 1024 * 1024 * 1024,
+    "4G":  4  * 1024 * 1024 * 1024,
+    "8G":  8  * 1024 * 1024 * 1024,
+    "16G": 16 * 1024 * 1024 * 1024,
 }
-CP_NUM_FILES = 4
+CP_NUM_FILES = 8
 
 CP_FIGURES = ["avgtime"]
-CP_BACKENDS = ["io_uring_default"]
-CP_PRE_ISSUE_DEPTH_LIST = [4, 8, 16, 32, 64]
+CP_BACKENDS = ["io_uring_sqe_async"]
+CP_PRE_ISSUE_DEPTH_LIST = [4, 16]
 
 DU_PREPARE_PY = "./scripts/du-prepare.py"
 DU_BENCHER_PY = "./scripts/du-bencher.py"
 DU_PLOTTER_PY = "./scripts/du-plotter.py"
 
 DU_FILE_COUNTS = {
-    "1k":  1  * 1000,
-    "3k":  3  * 1000,
-    "5k":  5  * 1000,
-    "7k":  7  * 1000,
-    "9k":  9  * 1000,
+    "100k": 100 * 1000,
+    "200k": 200 * 1000,
+    "400k": 400 * 1000,
+    "800k": 800 * 1000,
 }
-DU_NUM_DIRS = 4
-DU_FILE_SIZE = 10
+DU_NUM_DIRS = 100
 
 DU_FIGURES = ["avgtime"]
 DU_BACKENDS = ["io_uring_sqe_async"]
-DU_PRE_ISSUE_DEPTH_LIST = [4, 8, 16, 32, 64]
+DU_PRE_ISSUE_DEPTH_LIST = [4, 16]
 
 
 def check_file_exists(path):
@@ -82,14 +79,16 @@ def run_subprocess_cmd(cmd, outfile=None, merge=False, env=None):
             result = subprocess.run(cmd, env=env, check=True,
                                          stdout=outfile,
                                          stderr=subprocess.STDOUT)
-        output = result.stdout.decode('ascii')
+        output = None
+        if result.stdout is not None:
+            output = result.stdout.decode('ascii')
         return output
     except subprocess.CalledProcessError as err:
         print(f"Error: subprocess returned exit status {err.returncode}")
         print(f"  command: {' '.join(err.cmd)}")
         if err.stderr is not None:
             print(f"  stderr: {err.stderr.decode('ascii')}")
-        return None
+        exit(1)
 
 
 def run_prepare_cp(workdir_prefix, file_size, file_size_abbr, num_files):
@@ -107,20 +106,18 @@ def prepare_all_cp(workdir_prefix, file_sizes, num_files):
         print(f"MADE {file_size_abbr} {num_files}")
 
 
-def run_prepare_du(workdir_prefix, num_dirs, file_count, file_count_abbr,
-                   file_size):
+def run_prepare_du(workdir_prefix, num_dirs, file_count, file_count_abbr):
     workdir = f"{workdir_prefix}/du_{num_dirs}_{file_count_abbr}"
     prepare_dir(workdir, True)
 
-    cmd = ["python3", DU_PREPARE_PY, "-d", workdir, "-s", str(file_size),
-           "-r", str(num_dirs), "-n", str(file_count)]
+    cmd = ["python3", DU_PREPARE_PY, "-d", workdir, "-r", str(num_dirs),
+           "-n", str(file_count)]
 
     return run_subprocess_cmd(cmd, merge=False)
 
-def prepare_all_du(workdir_prefix, num_dirs, file_counts, file_size):
+def prepare_all_du(workdir_prefix, num_dirs, file_counts):
     for file_count_abbr, file_count in file_counts.items():
-        run_prepare_du(workdir_prefix, num_dirs, file_count, file_count_abbr,
-                       file_size)
+        run_prepare_du(workdir_prefix, num_dirs, file_count, file_count_abbr)
         print(f"MADE {num_dirs} {file_count_abbr}")
 
 
@@ -224,7 +221,7 @@ def main():
         check_arg_given(parser, args, "workdir_prefix")
         check_file_exists(CP_PREPARE_PY)
         check_dir_exists(args.workdir_prefix)
-        prepare_all_cp(args.workdir_prefix, CP_FILE_SIZES, CP_NUM_FILES)
+        prepare_all_cp(args.workdir_prefix, CP_TOTAL_SIZES, CP_NUM_FILES)
 
     elif args.mode == "cp-bencher":
         check_arg_given(parser, args, "libforeactor")
@@ -232,7 +229,7 @@ def main():
         check_file_exists(CP_BENCHER_PY)
         prepare_dir(args.results_dir, False)
         run_all_cp(args.libforeactor, args.results_dir, args.workdir_prefix,
-                   CP_FILE_SIZES, CP_NUM_FILES, CP_BACKENDS,
+                   CP_TOTAL_SIZES, CP_NUM_FILES, CP_BACKENDS,
                    CP_PRE_ISSUE_DEPTH_LIST)
 
     elif args.mode == "cp-plotter":
@@ -246,8 +243,7 @@ def main():
         check_arg_given(parser, args, "workdir_prefix")
         check_file_exists(DU_PREPARE_PY)
         check_dir_exists(args.workdir_prefix)
-        prepare_all_du(args.workdir_prefix, DU_NUM_DIRS, DU_FILE_COUNTS,
-                       DU_FILE_SIZE)
+        prepare_all_du(args.workdir_prefix, DU_NUM_DIRS, DU_FILE_COUNTS)
 
     elif args.mode == "du-bencher":
         check_arg_given(parser, args, "libforeactor")

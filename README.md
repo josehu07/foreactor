@@ -145,17 +145,47 @@ This repository contains a collection of applications that involve functions sui
 Build:
 
 ```bash
-sudo apt install automake
 cd realapps/coreutils
+sudo apt install automake texinfo
 make reconf
 make
 ```
 
-Run:
+If built successfully, there will be `coreutils-src/src/cp` and `coreutils-src/src/du` binaries produced.
+
+Prepare filesystem workload image (make sure that the parent workspace directory has > 40GB available space and the backing filesystem has sufficient amount of free inodes; may take ~5m):
 
 ```bash
-# TODO
+python3 eval.py -m du-prepare -d /path/to/workspace/dir
+python3 eval.py -m cp-prepare -d /path/to/workspace/dir
 ```
+
+If finished successfully, produces the workload files at `/path/to/workspace/dir/du_*/` and `/path/to/workspace/dir/cp_*/`.
+
+Benchmark all workloads (may take ~TODO):
+
+```bash
+python3 eval.py -m du-bencher \
+                -d /path/to/workspace/dir \
+                -l /path/to/libforeactor.so \
+                -r results
+python3 eval.py -m cp-bencher \
+                -d /path/to/workspace/dir \
+                -l /path/to/libforeactor.so \
+                -r results
+```
+
+If finished successfully, stores all benchmarking result logs under current path's `results/`.
+
+Plot result figures:
+
+```bash
+pip3 install matplotlib
+python3 eval.py -m du-plotter -r results
+python3 eval.py -m cp-plotter -r results
+```
+
+If finished successfully, produces all plots under current path's `results/`.
 </details>
 
 <details>

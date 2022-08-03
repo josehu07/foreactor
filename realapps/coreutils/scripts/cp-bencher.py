@@ -11,7 +11,7 @@ CP_GRAPH_ID = 0
 
 URING_QUEUE = 512
 
-NUM_ITERS = 30
+NUM_ITERS = 20
 
 
 def check_file_exists(path):
@@ -60,6 +60,7 @@ def query_timestamp_sec():
 
 def run_cp_single(libforeactor, workdir, use_foreactor, backend=None,
                   pre_issue_depth=0):
+    os.system("ulimit -n 65536")
     os.system("sudo sync; sudo sh -c 'echo 3 > /proc/sys/vm/drop_caches'")
 
     envs = os.environ.copy()
@@ -82,18 +83,15 @@ def run_cp_single(libforeactor, workdir, use_foreactor, backend=None,
     outdir = f"{workdir}/outdir"
 
     assert os.path.isdir(indir)
-    num_files = 0
     for file in os.listdir(indir):
         cmd.append(f"{workdir}/indir/{file}")
-        num_files += 1
-    assert num_files > 0
     
     cmd.append(f"{outdir}/")
 
     secs_before = query_timestamp_sec()
     run_subprocess_cmd(cmd, merge=False, env=envs)
     secs_after = query_timestamp_sec()
-    return (secs_after - secs_before) / num_files   # return value is secs/file
+    return (secs_after - secs_before)
 
 def run_cp_iters(num_iters, libforeactor, workdir, use_foreactor, backend=None,
                  pre_issue_depth=0):

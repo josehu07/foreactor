@@ -406,20 +406,20 @@ def main():
         check_dir_exists(args.dbdir_prefix)
         check_dir_exists(args.workloads_dir)
         prepare_dir(args.results_dir, False)
-        # run_all_ycsb_c_run(args.libforeactor,
-        #                    args.workloads_dir, args.results_dir,
-        #                    args.dbdir_prefix, VALUE_SIZES,
-        #                    YCSB_DISTRIBUTIONS,
-        #                    BACKENDS,
-        #                    PRE_ISSUE_DEPTH_LIST,
-        #                    MEM_PERCENTAGES, args.tiny_bench)
-        # run_all_multithread(args.libforeactor, args.workloads_dir, args.results_dir,
-        #                     args.dbdir_prefix, VALUE_SIZE_ABBR_FOR_MULTITHREAD,
-        #                     YCSB_DISTRIBUTION_FOR_MULTITHREAD,
-        #                     BACKEND_FOR_MULTITHREAD,
-        #                     PRE_ISSUE_DEPTH_LIST_FOR_MULTITHREAD,
-        #                     MEM_PERCENTAGE_FOR_MULTITHREAD,
-        #                     MULTITHREAD_NUMS_THREADS, args.tiny_bench)
+        run_all_ycsb_c_run(args.libforeactor,
+                           args.workloads_dir, args.results_dir,
+                           args.dbdir_prefix, VALUE_SIZES,
+                           YCSB_DISTRIBUTIONS,
+                           BACKENDS,
+                           PRE_ISSUE_DEPTH_LIST,
+                           MEM_PERCENTAGES, args.tiny_bench)
+        run_all_multithread(args.libforeactor, args.workloads_dir, args.results_dir,
+                            args.dbdir_prefix, VALUE_SIZE_ABBR_FOR_MULTITHREAD,
+                            YCSB_DISTRIBUTION_FOR_MULTITHREAD,
+                            BACKEND_FOR_MULTITHREAD,
+                            PRE_ISSUE_DEPTH_LIST_FOR_MULTITHREAD,
+                            MEM_PERCENTAGE_FOR_MULTITHREAD,
+                            MULTITHREAD_NUMS_THREADS, args.tiny_bench)
         run_all_with_writes(args.libforeactor, args.workloads_dir, args.results_dir,
                             args.dbdir_prefix, VALUE_SIZE_ABBR_FOR_WITH_WRITES,
                             YCSB_DISTRIBUTION_FOR_WITH_WRITES,
@@ -428,12 +428,12 @@ def main():
                             MEM_PERCENTAGE_FOR_WITH_WRITES,
                             WITH_WRITES_NUM_THREADS,
                             WITH_WRITES_WORKLOADS, args.tiny_bench)
-        # run_all_zipf_consts(args.libforeactor, args.workloads_dir, args.results_dir,
-        #                     args.dbdir_prefix, VALUE_SIZE_ABBR_FOR_ZIPF_CONSTS,
-        #                     YCSB_DISTRIBUTIONS_FOR_ZIPF_CONSTS,
-        #                     BACKEND_FOR_ZIPF_CONSTS,
-        #                     PRE_ISSUE_DEPTH_LIST_FOR_ZIPF_CONSTS,
-        #                     MEM_PERCENTAGE_FOR_ZIPF_CONSTS, args.tiny_bench)
+        run_all_zipf_consts(args.libforeactor, args.workloads_dir, args.results_dir,
+                            args.dbdir_prefix, VALUE_SIZE_ABBR_FOR_ZIPF_CONSTS,
+                            YCSB_DISTRIBUTIONS_FOR_ZIPF_CONSTS,
+                            BACKEND_FOR_ZIPF_CONSTS,
+                            PRE_ISSUE_DEPTH_LIST_FOR_ZIPF_CONSTS,
+                            MEM_PERCENTAGE_FOR_ZIPF_CONSTS, args.tiny_bench)
         # run_all_samekey(args.libforeactor,
         #                 args.workloads_dir, args.results_dir,
         #                 args.dbdir_prefix, VALUE_SIZES_FOR_SAMEKEY,

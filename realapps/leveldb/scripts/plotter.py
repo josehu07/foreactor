@@ -178,7 +178,7 @@ def plot_grouped_bars(results, x_list, x_label, y_label, output_prefix,
                       range(len(x_list))))
         ys = results[config]
         for x, y in zip(xs, ys):
-            shifted_y = y + 0.02 * (y / overall_max_ys) * overall_max_ys
+            shifted_y = y + 0.01 * overall_max_ys
             plt.text(x, shifted_y, f"{y:.1f}", ha="center", va="bottom",
                                                fontsize=12, rotation=90)
 
@@ -485,7 +485,7 @@ def handle_multithread(results_dir, output_prefix):
 def plot_with_writes(results, workload_names, x_label, y_label, output_prefix,
                      title_suffix):
     plt.rcParams.update({'font.size': 16})
-    plt.rcParams.update({'figure.figsize': (10, 6)})
+    plt.rcParams.update({'figure.figsize': (12, 6)})
 
     norm = Normalize(vmin=5, vmax=26)
     orig_color = "steelblue"
@@ -521,9 +521,9 @@ def plot_with_writes(results, workload_names, x_label, y_label, output_prefix,
                       range(len(workload_names))))
         ys = results[config]
         for x, y in zip(xs, ys):
-            shifted_y = y + 0.02 * (y / overall_max_ys) * overall_max_ys
+            shifted_y = y + 0.01 * overall_max_ys
             plt.text(x, shifted_y, f"{y:.1f}", ha="center", va="bottom",
-                                               fontsize=12)
+                                               fontsize=12, rotation=90)
 
     if len(x_label) > 0:
         plt.xlabel(x_label)

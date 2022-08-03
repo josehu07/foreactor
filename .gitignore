@@ -21,4 +21,8 @@ realapps/leveldb/workloads
 realapps/leveldb/results
 
 realapps/coreutils/results
+realapps/coreutils/**/.deps/
+realapps/coreutils/**/config.hin~
+realapps/coreutils/coreutils-src/autom4te.cache/
+
 realapps/tar/results

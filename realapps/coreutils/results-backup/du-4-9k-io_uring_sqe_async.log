@@ -1,7 +1,0 @@
- orig: avg 93.103 ms
-    2: avg 85.708 ms
-    4: avg 68.439 ms
-    8: avg 59.535 ms
-   16: avg 57.168 ms
-   32: avg 53.510 ms
-   64: avg 49.419 ms

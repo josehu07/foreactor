@@ -50,23 +50,22 @@ def run_subprocess_cmd(cmd, outfile=None, merge=False, env=None):
 
 def create_random_file(path, file_size):
     cmd = ["head", "-c", str(file_size), "/dev/urandom"]
-
     with open(path, 'wb') as f:
         run_subprocess_cmd(cmd, outfile=f, merge=False)
 
 
-def make_cp_files(workdir, file_size, num_files):
+def make_cp_files(workdir, file_size_each, num_files):
     for i in range(num_files):
         path = f"{workdir}/indir/in_{i}.dat"
-        create_random_file(path, file_size)
+        create_random_file(path, file_size_each)
 
 
 def main():
     parser = argparse.ArgumentParser(description="cp workload files setup")
     parser.add_argument('-d', dest='workdir', required=True,
                         help="workdir containing files")
-    parser.add_argument('-s', dest='file_size', required=True, type=int,
-                        help="file size in bytes")
+    parser.add_argument('-s', dest='total_size', required=True, type=int,
+                        help="total file size in bytes")
     parser.add_argument('-n', dest='num_files', required=True, type=int,
                         help="number of files per run")
     args = parser.parse_args()
@@ -75,7 +74,8 @@ def main():
     prepare_dir(f"{args.workdir}/indir", True)
     prepare_dir(f"{args.workdir}/outdir", True)
 
-    make_cp_files(args.workdir, args.file_size, args.num_files)
+    file_size_each = args.total_size // args.num_files
+    make_cp_files(args.workdir, file_size_each, args.num_files)
 
 if __name__ == "__main__":
     main()
