@@ -49,7 +49,6 @@ def gen_env(libforeactor, use_foreactor, backend):
     return env
 
 def run_cmd(cmd, env):
-    # print(f" env: {env} cmd: {cmd}")
     result = subprocess.run(cmd, stdout=subprocess.PIPE, check=True, env=env)
     return result.stdout.decode('utf-8')
 

@@ -7,8 +7,8 @@
 namespace foreactor {
 
 
-extern bool EnvParsed;
-extern bool UseForeactor;
+extern thread_local bool EnvParsed;
+extern thread_local bool UseForeactor;
 
 
 void ParseEnvValues();

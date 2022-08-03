@@ -11,6 +11,9 @@
 #include "leveldb/table.h"
 #include "util/coding.h"
 
+// [foreactor] for ignoring the open branch
+#include <foreactor.h>
+
 namespace leveldb {
 
 struct TableAndFile {
@@ -104,7 +107,9 @@ Status TableCache::Get(const ReadOptions& options, uint64_t file_number,
                        void (*handle_result)(void*, const Slice&,
                                              const Slice&)) {
   Cache::Handle* handle = nullptr;
+  foreactor_PauseCurrentSCGraph();
   Status s = FindTable(file_number, file_size, &handle);
+  foreactor_ResumeCurrentSCGraph();
   if (s.ok()) {
     Table* t = reinterpret_cast<TableAndFile*>(cache_->Value(handle))->table;
 

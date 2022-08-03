@@ -257,10 +257,12 @@ long SyscallNode::Issue(const EpochList& epoch) {
                 if (!branch_node->decision.Has(peek_epoch)) {
                     if (!branch_node->GenerateDecision(peek_epoch)) {
                         decision_barrier = true;
-                        break;
+                        break;      // still no, so hitting a deicsion barrier
                     }
                 }
+                // decision is ready, pick the decided branch
                 next = branch_node->PickBranch(peek_epoch);
+                scgraph->peekhead = next;
                 DEBUG("picked branch '%s' in peeking\n",
                       next == nullptr ? "end" : next->name.c_str());
             }
@@ -321,16 +323,17 @@ long SyscallNode::Issue(const EpochList& epoch) {
             }
 
 update_firstskip_and_continue:
-            if (firstskip_node == nullptr) {
-                // this is the first skipped node in this round
-                firstskip_node = syscall_node;
-                firstskip_edge = edge;
-                scgraph->firstskip_epoch.CopyFrom(peek_epoch);
-                firstskip_distance = scgraph->peekhead_distance;
-                DEBUG("firstskip node set to %s<%p>@%s\n",
-                      StreamStr(*firstskip_node).c_str(), firstskip_node,
-                      StreamStr(scgraph->firstskip_epoch).c_str());
-            }
+            // TODO: allow resetting to firstskip or not
+            // if (firstskip_node == nullptr) {
+            //     // this is the first skipped node in this round
+            //     firstskip_node = syscall_node;
+            //     firstskip_edge = edge;
+            //     scgraph->firstskip_epoch.CopyFrom(peek_epoch);
+            //     firstskip_distance = scgraph->peekhead_distance;
+            //     DEBUG("firstskip node set to %s<%p>@%s\n",
+            //           StreamStr(*firstskip_node).c_str(), firstskip_node,
+            //           StreamStr(scgraph->firstskip_epoch).c_str());
+            // }
 
 peek_continue:
             // distance of peekhead from frontier increments by 1
@@ -432,7 +435,7 @@ peek_continue:
 BranchNode::BranchNode(unsigned node_id, std::string name, size_t num_children,
                        SCGraph *scgraph,
                        const std::unordered_set<int>& assoc_dims,
-                       std::function<bool(const int *, int *)> arggen_func)
+                       ArggenFunc arggen_func)
         : SCGraphNode(node_id, name, NODE_BRANCH, scgraph, assoc_dims),
           num_children(num_children), children{}, epoch_dims{},
           decision(assoc_dims), arggen_func(arggen_func) {
@@ -455,11 +458,12 @@ std::ostream& operator<<(std::ostream& s, const BranchNode& n) {
 }
 
 
-bool BranchNode::GenerateDecision(const EpochList& epoch) {
+bool BranchNode::GenerateDecision(const EpochList& epoch,
+                                  bool catching_up) {
     assert(!decision.Has(epoch));
 
-    int d;
-    if (!arggen_func(epoch.RawArray(), &d))
+    int d = -1;
+    if (!arggen_func(epoch.RawArray(), catching_up, &d))
         return false;
     
     assert(d >= 0 && d < static_cast<int>(num_children));

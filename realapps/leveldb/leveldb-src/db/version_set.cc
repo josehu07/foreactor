@@ -1048,8 +1048,12 @@ void VersionSet::Finalize(Version* v) {
       // file size is small (perhaps because of a small write-buffer
       // setting, or very high compression ratios, or lots of
       // overwrites/deletions).
-      score = v->files_[level].size() /
-              static_cast<double>(config::kL0_CompactionTrigger);
+      //
+      // [foreactor] for the regularize_compact option.
+      int divisor =
+        options_->regularize_compact ? config::kL0_StopWritesTrigger
+                                     : config::kL0_CompactionTrigger;
+      score = v->files_[level].size() / static_cast<double>(divisor);
     } else {
       // Compute the ratio of current size to size limit.
       const uint64_t level_bytes = TotalFileSize(v->files_[level]);
@@ -1257,7 +1261,10 @@ Compaction* VersionSet::PickCompaction() {
   // We prefer compactions triggered by too much data in a level over
   // the compactions triggered by seeks.
   const bool size_compaction = (current_->compaction_score_ >= 1);
-  const bool seek_compaction = (current_->file_to_compact_ != nullptr);
+  // [foreactor] for the regularize_compact option.
+  bool seek_compaction = (current_->file_to_compact_ != nullptr);
+  if (options_->regularize_compact)
+    seek_compaction = false;
   if (size_compaction) {
     level = current_->compaction_level_;
     assert(level >= 0);

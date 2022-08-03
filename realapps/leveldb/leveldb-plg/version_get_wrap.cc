@@ -126,23 +126,26 @@ static constexpr unsigned graph_id = 0;
 
 
 // Some global state for arggen and rcsave functions.
-static Version *curr_version = nullptr;
-static const LookupKey *curr_lookup_key = nullptr;
-static std::vector<FileMetaData *> curr_tables;
-static std::vector<int> curr_levels;
-static std::vector<bool> curr_open_states;
-static std::unordered_set<std::string> curr_table_names;
+thread_local Version *curr_version = nullptr;
+thread_local const LookupKey *curr_lookup_key = nullptr;
+thread_local std::vector<FileMetaData *> curr_tables;
+thread_local std::vector<Cache::Handle *> curr_tc_handles;
+thread_local std::vector<int> curr_table_levels;
+thread_local std::unordered_set<std::string> curr_table_names;
 
 
-static bool branch_table_open_arggen(const int *epoch, int *decision) {
+static bool branch_table_open_arggen(const int *epoch, bool catching_up, int *decision) {
     if (epoch[0] > curr_tables.size()) {
         *decision = 2;
         return true;
     }
 
     // if running past level 0 tables, may need to look for the next level table
+    FileMetaData *table_f = nullptr;
+    int table_level = -1;
+    bool push_table = false;
     if (epoch[0] == curr_tables.size()) {
-        int level = (curr_tables.size() == 0) ? 1 : (curr_levels.back() + 1);
+        int level = (curr_tables.size() == 0) ? 1 : (curr_table_levels.back() + 1);
         const Comparator *ucmp = curr_version->vset_->icmp_.user_comparator();
         for (; level < config::kNumLevels; level++) {
             size_t num_files = curr_version->files_[level].size();
@@ -155,8 +158,9 @@ static bool branch_table_open_arggen(const int *epoch, int *decision) {
                     // all of "f" is past any data for user_key
                 } else {
                     // found candidate
-                    curr_tables.push_back(f);
-                    curr_levels.push_back(level);
+                    table_f = f;
+                    table_level = level;
+                    push_table = true;
                     goto decide_open;
                 }
             }
@@ -164,24 +168,38 @@ static bool branch_table_open_arggen(const int *epoch, int *decision) {
         // no more files
         *decision = 2;
         return true;
+    } else {
+        table_f = curr_tables[epoch[0]];
+        table_level = curr_table_levels[epoch[0]];
+        push_table = false;
     }
 
 decide_open:
-    FileMetaData *table_f = curr_tables[epoch[0]];
-    int level = curr_levels[epoch[0]];
-    Cache::Handle *handle = TryFindTable(curr_version->vset_->table_cache_, table_f->number);
-    Table *table = CacheHandleToTable(curr_version->vset_->table_cache_, handle);
-    if (table == nullptr) {
-        // needs open
-        curr_open_states.push_back(false);
-        *decision = 0;
-    } else {
-        // already open
-        curr_open_states.push_back(true);
-        *decision = 1;
+    // TODO: currently turning off the open branch for simplicity
+    // Cache::Handle *handle = nullptr;
+    // if (epoch[0] < curr_tc_handles.size() && curr_tc_handles[epoch[0]] != nullptr)
+    //     handle = curr_tc_handles[epoch[0]];
+    // else
+    //     handle = TryFindTable(curr_version->vset_->table_cache_, table_f->number);
+    // if (handle == nullptr) {
+    //     // needs open
+    //     if (catching_up) {
+    //         curr_tc_handles.push_back(nullptr);
+    //         *decision = 0;
+    //     } else
+    //         return false;   // the open syscall will be a hard barrier anyway
+    // } else {
+    //     // already open
+    //     curr_tc_handles.push_back(handle);
+    //     *decision = 1;
+    // }
+
+    if (push_table) {
+        curr_tables.push_back(table_f);
+        curr_table_levels.push_back(table_level);
+        curr_tc_handles.push_back(nullptr);
     }
-    if (handle != nullptr)
-        ReleaseCacheHandle(curr_version->vset_->table_cache_, handle);
+    *decision = 1;
     return true;
 }
 
@@ -226,11 +244,18 @@ static void pread_index_rcsave(const int *epoch, ssize_t res) {
 static bool pread_data_arggen(const int *epoch, bool *link, int *fd, char **buf, size_t *count, off_t *offset,
                               bool *buf_ready, bool *skip_memcpy) {
     assert(epoch[0] < curr_tables.size());
-    if (!curr_open_states[epoch[0]])
-        return false;   // depends on preceding index pread anyway
 
-    // need to re-grab the cache handle
-    Cache::Handle *handle = TryFindTable(curr_version->vset_->table_cache_, curr_tables[epoch[0]]->number);
+    // TODO: currently turning off the open branch; this implementation might fail the `fd_ == fd.Get(epoch)`
+    // assertion when library is compiled with debug mode, because of the fact that leveldb may open the same file
+    // duplicatedly in a corner case if operated by multiple threads simultaneously
+    Cache::Handle *handle = curr_tc_handles[epoch[0]];
+    if (handle == nullptr) {
+        handle = TryFindTable(curr_version->vset_->table_cache_, curr_tables[epoch[0]]->number);
+        if (handle == nullptr)
+            return false;   // depends on preceding index pread
+        curr_tc_handles[epoch[0]] = handle;
+    }
+
     Table *table = CacheHandleToTable(curr_version->vset_->table_cache_, handle);
     assert(table != nullptr);
 
@@ -243,9 +268,6 @@ static bool pread_data_arggen(const int *epoch, bool *link, int *fd, char **buf,
     *count = BlockHandleToSize(block_handle);
     *offset = BlockHandleToOffset(block_handle);
     *buf_ready = false;
-
-    if (handle != nullptr)
-        ReleaseCacheHandle(curr_version->vset_->table_cache_, handle);
     return true;
 }
 
@@ -253,11 +275,11 @@ static void pread_data_rcsave(const int *epoch, ssize_t res) {
     return;
 }
 
-static bool branch_deepest_level_arggen(const int *epoch, int *decision) {
+static bool branch_deepest_level_arggen(const int *epoch, bool catching_up, int *decision) {
     if (epoch[0] + 1 < curr_tables.size())
         *decision = 0;
     else {
-        int next_level = (curr_tables.size() == 0) ? 1 : (curr_levels.back() + 1);
+        int next_level = (curr_tables.size() == 0) ? 1 : (curr_table_levels.back() + 1);
         *decision = (next_level < config::kNumLevels) ? 0 : 1;
     }
     return true;
@@ -288,6 +310,7 @@ static void BuildSCGraph() {
 
     foreactor_IgnoreSyscallFstat(graph_id);
     foreactor_IgnoreSyscallFstatat(graph_id);
+    foreactor_IgnoreSyscallClose(graph_id);
 
     foreactor_SetSCGraphBuilt(graph_id);
 
@@ -345,10 +368,11 @@ Status __wrap__ZN7leveldb7Version3GetERKNS_11ReadOptionsERKNS_9LookupKeyEPNSt7__
         if (!curr_tables.empty())
             std::sort(curr_tables.begin(), curr_tables.end(), NewestFirst);
         // for recording the level of each table in this vector
-        curr_levels.reserve(max_num_tables);
-        curr_levels.insert(curr_levels.end(), curr_tables.size(), 0);
+        curr_table_levels.reserve(max_num_tables);
+        curr_table_levels.insert(curr_table_levels.end(), curr_tables.size(), 0);
         // for recording if the table was open upon entering or not
-        curr_open_states.reserve(max_num_tables);
+        curr_tc_handles.reserve(max_num_tables);
+        curr_tc_handles.insert(curr_tc_handles.end(), curr_tables.size(), nullptr);
 
         // call the original function with corresponding SCGraph activated
         foreactor_EnterSCGraph(graph_id);
@@ -359,8 +383,14 @@ Status __wrap__ZN7leveldb7Version3GetERKNS_11ReadOptionsERKNS_9LookupKeyEPNSt7__
         curr_version = nullptr;
         curr_lookup_key = nullptr;
         curr_tables.clear();
-        curr_levels.clear();
-        curr_open_states.clear();
+        curr_table_levels.clear();
+        // release cache handles at the end of whole Get request, so that an
+        // open file stays open at least through this request
+        for (auto&& handle : curr_tc_handles) {
+            if (handle != nullptr)
+                ReleaseCacheHandle(me->vset_->table_cache_, handle);
+        }
+        curr_tc_handles.clear();
         curr_table_names.clear();
 
         return ret;

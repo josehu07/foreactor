@@ -30,7 +30,7 @@ static void pread_rcsave(const int *epoch, ssize_t res) {
     curr_preads_done++;
 }
 
-static bool branch_arggen(const int *epoch, int *decision) {
+static bool branch_arggen(const int *epoch, bool catching_up, int *decision) {
     *decision = (epoch[0] + 1 < static_cast<int>(curr_args->nreads)) ? 0 : 1;
     return true;
 }

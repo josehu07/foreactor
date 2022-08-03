@@ -1337,13 +1337,17 @@ Status DBImpl::MakeRoomForWrite(bool force) {
   assert(!writers_.empty());
   bool allow_delay = !force;
   Status s;
+  // [foreactor] for the regularize_compact option.
+  int slowdown_trigger =
+    options_.regularize_compact ? config::kL0_StopWritesTrigger
+                                : config::kL0_SlowdownWritesTrigger;
   while (true) {
     if (!bg_error_.ok()) {
       // Yield previous error
       s = bg_error_;
       break;
     } else if (allow_delay && versions_->NumLevelFiles(0) >=
-                                  config::kL0_SlowdownWritesTrigger) {
+                                  slowdown_trigger) {
       // We are getting close to hitting a hard limit on the number of
       // L0 files.  Rather than delaying a single write by several
       // seconds when we hit the hard limit, start delaying each

@@ -11,7 +11,7 @@ CP_GRAPH_ID = 0
 
 URING_QUEUE = 512
 
-NUM_ITERS = 30
+NUM_ITERS = 20
 
 
 def check_file_exists(path):
@@ -25,12 +25,42 @@ def check_dir_exists(dir_path):
         exit(1)
 
 
+def run_subprocess_cmd(cmd, outfile=None, merge=False, env=None):
+    try:
+        result = None
+        if outfile is None and not merge:
+            result = subprocess.run(cmd, env=env, check=True,
+                                         capture_output=True)
+        elif outfile is None:
+            result = subprocess.run(cmd, env=env, check=True,
+                                         stdout=subprocess.PIPE,
+                                         stderr=subprocess.STDOUT)
+        elif not merge:
+            result = subprocess.run(cmd, env=env, check=True,
+                                         stdout=outfile)
+        else:
+            result = subprocess.run(cmd, env=env, check=True,
+                                         stdout=outfile,
+                                         stderr=subprocess.STDOUT)
+        output = None
+        if result.stdout is not None:
+            output = result.stdout.decode('ascii')
+        return output
+    except subprocess.CalledProcessError as err:
+        print(f"Error: subprocess returned exit status {err.returncode}")
+        print(f"  command: {' '.join(err.cmd)}")
+        if err.stderr is not None:
+            print(f"  stderr: {err.stderr.decode('ascii')}")
+        exit(1)
+
+
 def query_timestamp_sec():
     return time.perf_counter()
 
 
 def run_cp_single(libforeactor, workdir, use_foreactor, backend=None,
                   pre_issue_depth=0):
+    os.system("ulimit -n 65536")
     os.system("sudo sync; sudo sh -c 'echo 3 > /proc/sys/vm/drop_caches'")
 
     envs = os.environ.copy()
@@ -53,19 +83,15 @@ def run_cp_single(libforeactor, workdir, use_foreactor, backend=None,
     outdir = f"{workdir}/outdir"
 
     assert os.path.isdir(indir)
-    num_files = 0
     for file in os.listdir(indir):
         cmd.append(f"{workdir}/indir/{file}")
-        num_files += 1
-    assert num_files > 0
     
     cmd.append(f"{outdir}/")
 
     secs_before = query_timestamp_sec()
-    subprocess.run(cmd, check=True, capture_output=True, env=envs)
+    run_subprocess_cmd(cmd, merge=False, env=envs)
     secs_after = query_timestamp_sec()
-
-    return (secs_after - secs_before) / num_files   # return value is secs/file
+    return (secs_after - secs_before)
 
 def run_cp_iters(num_iters, libforeactor, workdir, use_foreactor, backend=None,
                  pre_issue_depth=0):
