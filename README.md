@@ -162,7 +162,7 @@ python3 eval.py -m cp-prepare -d /path/to/workspace/dir
 
 If finished successfully, produces the workload files at `/path/to/workspace/dir/du_*/` and `/path/to/workspace/dir/cp_*/`.
 
-Benchmark all workloads (may take ~TODO):
+Benchmark all workloads (may take ~2h):
 
 ```bash
 python3 eval.py -m du-bencher \
