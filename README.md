@@ -276,14 +276,14 @@ This section summarizes the steps to make a plugin for an application function, 
 2. Write a plugin file (using the application's source language), mimicking e.g. `demoapps/demo-cpp/demo-cpp-plg/simple2_wrap.cpp`.
     - Include foreactor library interfaces by `#include <foreactor.h>`.
     - Write the function interception wrapper `__wrap_funcname` and use `__real_funcname` to call the original function.
-    - Build the foreaction graph using `foreactor_*` APIs.
+    - Build the foreaction graph structure using `foreactor_*` APIs.
     - Keep track of all the necessary states and write the correct `_arggen` and `_rcsave` stubs for each syscall node in the graph (this is probably the most app-specific and error-prone step).
     - Put the plugin file alongside application source files.
 3. Modify the application's build system to:
     - Add compilation of the plugin file;
     - Add flags to link with the foreactor library `-I/path/to/libforeactor/include -L/path/to/libforeactor -lforeactor -Wl,-rpath=/path/to/libforeactor`;
     - Use linker wrap trick in the final step of linking to intercept the chosen function `-Wl,--wrap=funcname`.
-    - Note: this trick works only for function calls across source files and does not work for e.g. static functions. Workarounds to be added...
+    - Note: this trick works only for function calls across object files and does not work for e.g. local static functions. Workarounds to be added...
 4. Build the application. If goes successfully, calls to the chosen function will be intercepted by our wrapper function after linking. Run the application with proper environment variables to enable foreactor pre-issuing.
 </details>
 
