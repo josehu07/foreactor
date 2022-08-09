@@ -295,7 +295,7 @@ static void BuildSCGraph() {
     foreactor_AddSyscallOpen(graph_id, 1, "open", common_assoc_dims, 1, open_arggen, open_rcsave, false);
     foreactor_AddSyscallPread(graph_id, 2, "pread_footer", common_assoc_dims, 1, pread_footer_arggen, pread_footer_rcsave, 0, false);
     foreactor_AddSyscallPread(graph_id, 3, "pread_index", common_assoc_dims, 1, pread_index_arggen, pread_index_rcsave, 0, false);
-    foreactor_AddSyscallPread(graph_id, 4, "pread_data", common_assoc_dims, 1, pread_data_arggen, pread_data_rcsave, (1 << 20) + 4096, false);
+    foreactor_AddSyscallPread(graph_id, 4, "pread_data", common_assoc_dims, 1, pread_data_arggen, pread_data_rcsave, 64 * 1024 + 4096, false);
     foreactor_AddBranchNode(graph_id, 5, "deepest_level", common_assoc_dims, 1, branch_deepest_level_arggen, 2, false);
 
     foreactor_BranchAppendChild(graph_id, 0, 1, /*epoch_dim*/ -1);

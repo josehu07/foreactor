@@ -62,6 +62,11 @@ YCSB_DISTRIBUTION_FOR_BREAKDOWN = "zipf_0.99"
 BACKEND_FOR_BREAKDOWN = "io_uring_sqe_async"
 MEM_PERCENTAGE_FOR_BREAKDOWN = 10
 
+VALUE_SIZE_ABBR_FOR_UTIL = "64K"
+YCSB_DISTRIBUTION_FOR_UTIL = "zipf_0.99"
+BACKEND_FOR_UTIL = "io_uring_sqe_async"
+MEM_PERCENTAGE_FOR_UTIL = 10
+
 GET_FIGURES = [
     "mem_ratio",
     "req_size",
@@ -195,7 +200,7 @@ def get_dbdir_bytes(dbdir):
 def run_bench(libforeactor, dbdir, workload, output_log, backend,
               pre_issue_depth_list, drop_caches, mem_percentage=100,
               num_threads=0, with_writes=False, with_timer=False,
-              tiny_bench=False):
+              tiny_bench=False, util_dev=None):
     cmd = ["python3", BENCHER_PY, "-l", libforeactor, "-d", dbdir,
            "-f", workload, "-o", output_log, "-b", backend, "-t", str(num_threads)]
     if with_writes:
@@ -210,6 +215,9 @@ def run_bench(libforeactor, dbdir, workload, output_log, backend,
     assert mem_percentage > 0 and mem_percentage <= 100
     mem_bytes = int(get_dbdir_bytes(dbdir) * mem_percentage / 100)
     cmd += ["-m", str(mem_bytes)]
+
+    if util_dev is not None:
+        cmd += ["--util_dev", util_dev]
 
     cmd += list(map(lambda d: str(d), pre_issue_depth_list))
 
@@ -326,16 +334,29 @@ def run_bench_with_timer(libforeactor, workloads_dir, results_dir, dbdir_prefix,
     print(" DONE")
 
 
-def run_plotter(results_dir, figure):
-    cmd = ["python3", PLOTTER_PY, "-m", figure, "-r", results_dir,
-           "-o", f"{results_dir}/ldb"]
-
-    return run_subprocess_cmd(cmd, merge=False)
-
 def plot_all_figs(results_dir, figures):
     for figure in figures:
-        run_plotter(results_dir, figure)
+        cmd = ["python3", PLOTTER_PY, "-m", figure, "-r", results_dir,
+               "-o", f"{results_dir}/ldb"]
+        run_subprocess_cmd(cmd, merge=False)
         print(f"PLOT {figure}")
+
+
+def run_util_report(libforeactor, workloads_dir, results_dir, dbdir_prefix, dev_name,
+                    value_size_abbr, ycsb_distribution, backend, pre_issue_depth_list,
+                    mem_percentage):
+    dbdir = f"{dbdir_prefix}/leveldb_{value_size_abbr}"
+    workload = f"{workloads_dir}/trace-{value_size_abbr}-ycsb-c-" + \
+               f"{ycsb_distribution}-0.txt"
+    output_log = f"{results_dir}/ldb-{value_size_abbr}-ycsb-c-" + \
+                 f"{ycsb_distribution}-{backend}-mem_{mem_percentage}-util.log"
+
+    print(f"RUNNING {value_size_abbr} ycsb c {ycsb_distribution} {backend} " + \
+          f"mem_{mem_percentage} utilization")
+    output = run_bench(libforeactor, dbdir, workload, output_log, backend,
+                       pre_issue_depth_list, False, mem_percentage=mem_percentage,
+                       util_dev=dev_name)
+    print(output)
 
 
 def check_arg_given(parser, args, argname):
@@ -362,6 +383,8 @@ def main():
                         help="required for bencher; absolute path to libforeactor.so")
     parser.add_argument('-r', dest='results_dir', required=False,
                         help="required for bencher/plotter; directory to hold result logs")
+    parser.add_argument('--util_dev', dest='util_dev', required=False,
+                        help="required for utilization; disk device name")
     parser.add_argument('--skip_load', dest='skip_load', action='store_true',
                         help="for debugging prepare; skip loading and only generate workloads")
     parser.add_argument('--tiny_bench', dest='tiny_bench', action='store_true',
@@ -465,6 +488,23 @@ def main():
                              PRE_ISSUE_DEPTH_LIST,
                              MEM_PERCENTAGE_FOR_BREAKDOWN)
         plot_all_figs(args.results_dir, GET_BREAKDOWN_FIGURES)
+
+    elif args.mode == "utilization":
+        check_arg_given(parser, args, "dbdir_prefix")
+        check_arg_given(parser, args, "libforeactor")
+        check_arg_given(parser, args, "workloads_dir")
+        check_arg_given(parser, args, "results_dir")
+        check_arg_given(parser, args, "util_dev")
+        check_file_exists(BENCHER_PY)
+        check_dir_exists(args.dbdir_prefix)
+        check_dir_exists(args.workloads_dir)
+        prepare_dir(args.results_dir, False)
+        run_util_report(args.libforeactor, args.workloads_dir, args.results_dir,
+                        args.dbdir_prefix, args.util_dev, VALUE_SIZE_ABBR_FOR_UTIL,
+                        YCSB_DISTRIBUTION_FOR_UTIL,
+                        BACKEND_FOR_UTIL,
+                        PRE_ISSUE_DEPTH_LIST,
+                        MEM_PERCENTAGE_FOR_UTIL)
 
     else:
         print(f"Error: unrecognized mode {args.mode}")

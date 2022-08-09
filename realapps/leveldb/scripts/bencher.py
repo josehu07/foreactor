@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
 
+import time
 import subprocess
 import os
 import shutil
@@ -73,6 +74,9 @@ def run_subprocess_cmd(cmd, outfile=None, merge=False, env=None):
             print(f"  stderr: {err.stderr.decode('ascii')}")
         exit(1)
 
+def query_timestamp_sec():
+    return time.perf_counter()
+
 
 def set_cgroup_mem_limit(mem_limit):
     cmd = ["sudo", "lscgroup"]
@@ -92,34 +96,9 @@ def set_cgroup_mem_limit(mem_limit):
            CGROUP_NAME]
     run_subprocess_cmd(cmd, merge=False)
 
-def get_iostat_bio_mb_read():
-    # FIXME: currently just reads stat of the first device
-    cmd = ["sudo", "iostat", "-d", "-m", "1", "1"]
-    output = run_subprocess_cmd(cmd, merge=False)
-    in_dev_line, mb_read_idx = False, -1
-    for line in output.split('\n'):
-        line = line.strip()
-        if "MB_read" in line:
-            in_dev_line = True
-            mb_read_idx = line.split().index("MB_read")
-        elif in_dev_line:
-            assert mb_read_idx > 0
-            return float(line.split()[mb_read_idx])
-    return None
-
-
-def run_ycsbcli_single(libforeactor, dbdir, trace, mem_limit, drop_caches,
-                       use_foreactor, backend=None, pre_issue_depth=0,
-                       num_threads=0, with_writes=False, tiny_bench=False):
-    work_dbdir = dbdir
-    if with_writes:
-        work_dbdir = f"{dbdir}_copy"
-        prepare_dir(work_dbdir, True)
-        copy_dir(dbdir, work_dbdir)
-
-    os.system("ulimit -n 65536")
-    os.system("sudo sync; sudo sh -c 'echo 3 > /proc/sys/vm/drop_caches'")
-
+def compose_ycsbcli_cmd_env(libforeactor, dbdir, trace, mem_limit, drop_caches,
+                            use_foreactor, backend, pre_issue_depth, num_threads=0,
+                            with_writes=False, tiny_bench=False):
     envs = os.environ.copy()
     envs["LD_PRELOAD"] = libforeactor
     envs["USE_FOREACTOR"] = "yes" if use_foreactor else "no"
@@ -138,7 +117,7 @@ def run_ycsbcli_single(libforeactor, dbdir, trace, mem_limit, drop_caches,
             num_uthreads = 16
         envs[f"UTHREADS_{GET_GRAPH_ID}"] = str(num_uthreads)
 
-    cmd = [YCSBCLI_BIN, "-d", work_dbdir, "-f", trace, "-t", str(num_threads),
+    cmd = [YCSBCLI_BIN, "-d", dbdir, "-f", trace, "-t", str(num_threads),
            "--no_fill_cache"]
     if with_writes:
         cmd.append("--regularize_compact")
@@ -152,10 +131,28 @@ def run_ycsbcli_single(libforeactor, dbdir, trace, mem_limit, drop_caches,
         set_cgroup_mem_limit(int(mem_limit))
         cmd = ["sudo", "cgexec", "-g", "memory:"+CGROUP_NAME] + cmd
 
-    mb_read_before = get_iostat_bio_mb_read()
-    output = run_subprocess_cmd(cmd, merge=True, env=envs)
-    mb_read_after = get_iostat_bio_mb_read()
-    return output, mb_read_after - mb_read_before
+    return cmd, envs
+
+
+def run_ycsbcli_single(libforeactor, dbdir, trace, mem_limit, drop_caches,
+                       use_foreactor, backend=None, pre_issue_depth=0,
+                       num_threads=0, with_writes=False, tiny_bench=False):
+    work_dbdir = dbdir
+    if with_writes:
+        work_dbdir = f"{dbdir}_copy"
+        prepare_dir(work_dbdir, True)
+        copy_dir(dbdir, work_dbdir)
+
+    os.system("ulimit -n 65536")
+    os.system("sudo sync; sudo sh -c 'echo 3 > /proc/sys/vm/drop_caches'")
+
+    cmd, env = compose_ycsbcli_cmd_env(libforeactor, work_dbdir, trace, mem_limit,
+                                       drop_caches, use_foreactor, backend,
+                                       pre_issue_depth, num_threads, with_writes,
+                                       tiny_bench)
+
+    output = run_subprocess_cmd(cmd, merge=True, env=env)
+    return output, 0.   # used in debugging, discard now
 
 
 def get_us_result_from_output(output):
@@ -300,6 +297,103 @@ def run_exprs(libforeactor, dbdir, trace, mem_limit, drop_caches, output_log, ba
             print(result)
 
 
+def get_iostat_snapshot(dev_name):
+    cmd = ["sudo", "iostat", "-p", "-m", "1", "1"]
+    output = run_subprocess_cmd(cmd, merge=False)
+
+    in_avg_cpu = False
+    cpu_util, mb_read, mb_wrtn = 0., 0., 0.
+    for line in output.strip().split('\n'):
+        line = line.strip()
+        if not in_avg_cpu and line.startswith('avg-cpu'):
+            in_avg_cpu = True
+        elif in_avg_cpu:
+            segs = line.split()
+            cpu_ur, cpu_ni, cpu_sy = float(segs[0]), float(segs[1]), float(segs[2])
+            cpu_util = cpu_ur + cpu_ni + cpu_sy
+            in_avg_cpu = False
+        elif line.startswith(dev_name):
+            segs = line.split()
+            mb_read, mb_wrtn = float(segs[5]), float(segs[6])
+
+    return cpu_util, mb_read, mb_wrtn
+
+def get_top_cpu_util(pid, interval, count):
+    assert count > 1
+    cmd = ["sudo", "top", "-b", "-n", str(count), "-d", str(interval), "-p", str(pid)]
+    output = run_subprocess_cmd(cmd, merge=False)
+
+    cpu_utils = []
+    for line in output.strip().split('\n'):
+        line = line.strip()
+        # io_uring kernel threads' cpu usage may not be charged under pid, so anyway
+        # we read the global cpu usage
+        if line.startswith("%Cpu(s)"):
+            segs = line[line.index(':')+1:].strip().split(',')
+            cpu_ur, cpu_sy, cpu_ni = \
+                float(segs[0][:-3]), float(segs[1][:-3]), float(segs[2][:-3])
+            cpu_utils.append(cpu_ur + cpu_ni + cpu_sy)
+    
+    return sum(cpu_utils[1:]) / (len(cpu_utils) - 1)
+
+def gen_ycsbcli_util(dev_name, libforeactor, dbdir, trace, mem_limit, use_foreactor,
+                     backend=None, pre_issue_depth=0):
+    os.system("ulimit -n 65536")
+    os.system("sudo sync; sudo sh -c 'echo 3 > /proc/sys/vm/drop_caches'")
+
+    cmd, env = compose_ycsbcli_cmd_env(libforeactor, dbdir, trace, mem_limit, False,
+                                       use_foreactor, backend, pre_issue_depth)
+
+    num_iters = 10
+    cpu_utils, disk_r_utils, disk_w_utils = [], [], []
+    for _ in range(num_iters):
+        # read disk counter before run
+        _, mb_read_before, mb_wrtn_before = get_iostat_snapshot(dev_name)
+        secs_before = query_timestamp_sec()
+
+        # spawn process, do top alongside to sample cpu util
+        proc = subprocess.Popen(cmd, env=env, stdout=subprocess.DEVNULL,
+                                     stderr=subprocess.DEVNULL)
+        cpu_util = get_top_cpu_util(proc.pid, 0.1, 10)   # assume at least lasts 1s
+        proc.wait()
+
+        # read disk counter after run
+        secs_after = query_timestamp_sec()
+        _, mb_read_after, mb_wrtn_after = get_iostat_snapshot(dev_name)
+
+        cpu_utils.append(cpu_util)
+
+        elapsed_secs = secs_after - secs_before
+        disk_r_util = (mb_read_after - mb_read_before) / elapsed_secs
+        disk_w_util = (mb_wrtn_after - mb_wrtn_before) / elapsed_secs
+        disk_r_utils.append(disk_r_util)
+        disk_w_utils.append(disk_w_util)
+
+    cpu_util = sum(cpu_utils) / len(cpu_utils)
+    disk_r_util = sum(disk_r_utils) / len(disk_r_utils)
+    disk_w_util = sum(disk_w_utils) / len(disk_w_utils)
+    return cpu_util, disk_r_util, disk_w_util
+
+def run_utils(libforeactor, dbdir, trace, mem_limit, output_log, backend,
+              pre_issue_depth_list, dev_name):
+    with open(output_log, 'w') as fout:
+        cpu_util, disk_r_util, disk_w_util = \
+            gen_ycsbcli_util(dev_name, libforeactor, dbdir, trace, mem_limit, False)
+        result = f" orig: cpu {cpu_util:.2f}% disk_r {disk_r_util:.2f} " + \
+                 f"disk_w {disk_w_util:.2f} MB/s"
+        fout.write(result + '\n')
+        print(result)
+
+        for pre_issue_depth in pre_issue_depth_list:
+            cpu_util, disk_r_util, disk_w_util = \
+                gen_ycsbcli_util(dev_name, libforeactor, dbdir, trace, mem_limit,
+                                 True, backend, pre_issue_depth)
+            result = f" {pre_issue_depth:4d}: cpu {cpu_util:.2f}% " + \
+                     f"disk_r {disk_r_util:.2f} disk_w {disk_w_util:.2f} MB/s"
+            fout.write(result + '\n')
+            print(result)
+
+
 def main():
     parser = argparse.ArgumentParser(description="LevelDB benchmark driver")
     parser.add_argument('-l', dest='libforeactor', required=True,
@@ -324,6 +418,8 @@ def main():
                         help="for debugging; run only a few lines of each workload")
     parser.add_argument('--drop_caches', dest='drop_caches', action='store_true',
                         help="do drop_caches per request")
+    parser.add_argument('--util_dev', dest='util_dev', required=False,
+                        help="run utilization report mode on disk dev")
     parser.add_argument('pre_issue_depths', metavar='D', type=int, nargs='+',
                         help="list of pre_issue_depth to try")
     args = parser.parse_args()
@@ -355,9 +451,13 @@ def main():
             check_file_exists(args.trace+"-0.txt")
             check_file_exists(args.trace+f"-{args.num_threads-1}.txt")
 
-    run_exprs(args.libforeactor, args.dbdir, args.trace, args.mem_limit,
-              args.drop_caches, args.output_log, args.backend, args.pre_issue_depths,
-              args.num_threads, args.with_writes, args.with_timer, args.tiny_bench)
+    if args.util_dev is None:
+        run_exprs(args.libforeactor, args.dbdir, args.trace, args.mem_limit,
+                  args.drop_caches, args.output_log, args.backend, args.pre_issue_depths,
+                  args.num_threads, args.with_writes, args.with_timer, args.tiny_bench)
+    else:
+        run_utils(args.libforeactor, args.dbdir, args.trace, args.mem_limit,
+                  args.output_log, args.backend, args.pre_issue_depths, args.util_dev)
 
 if __name__ == "__main__":
     main()
