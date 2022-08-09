@@ -186,6 +186,24 @@ python3 eval.py -m cp-plotter -r results
 ```
 
 If finished successfully, produces all plots under current path's `results/`.
+
+Generate utilization report:
+
+```bash
+sudo apt install sysstat
+python3 eval.py -m du-utilization \
+                -d /path/to/workspace/dir \
+                -l /path/to/libforeactor.so \
+                -r results \
+                --util_dev nvme0n1p4    # device (partition) name
+python3 eval.py -m cp-utilization \
+                -d /path/to/workspace/dir \
+                -l /path/to/libforeactor.so \
+                -r results \
+                --util_dev nvme0n1p4    # device (partition) name
+```
+
+If finished successfully, produces utilization reports at current path's `results/*-util.log`.
 </details>
 
 <details>
@@ -207,7 +225,7 @@ If built successfully, there will be a `ycsbcli` binary produced at current path
 Clone YCSB source code (to any path):
 
 ```bash
-sudo apt install sysstat default-jre maven
+sudo apt install default-jre maven
 git clone https://github.com/brianfrankcooper/YCSB.git ycsb
 # the building of YCSB will be taken care of in the preparation scripts
 ```
@@ -250,7 +268,7 @@ The breakdown plot requires libforeactor to be compiled with timers on. To produ
 ```bash
 cd ../../libforeactor
 make clean
-make -j$(nproc) timer
+make -j$(nproc) timer   # re-compile with timers
 cd ../realapps/leveldb
 python3 eval.py -m breakdown \
                 -d /path/to/workspace/dir \
@@ -258,6 +276,24 @@ python3 eval.py -m breakdown \
                 -w workloads \
                 -r results
 ```
+
+Generate utilization report:
+
+```bash
+sudo apt install sysstat
+cd ../../libforeactor
+make clean
+make -j$(nproc)         # re-compile without timers
+cd ../realapps/leveldb
+python3 eval.py -m utilization \
+                -d /path/to/workspace/dir \
+                -l /path/to/libforeactor.so \
+                -w workloads \
+                -r results \
+                --util_dev nvme0n1p4    # device (partition) name
+```
+
+If finished successfully, produces utilization reports at current path's `results/*-util.log`.
 </details>
 
 
