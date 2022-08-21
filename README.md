@@ -15,42 +15,42 @@ TODO paper cite info? =)
 
 The following kernel version, compiler, and libraries are required:
 
-- Linux kernel >= 5.10 (we tested on Ubuntu 20.04 with kernel v5.10.60)
-- gcc/g++ >= 10.2
-- liburing >= 2.1
+- Linux kernel >= 5.15 (we tested on Ubuntu 22.04 with default kernel v5.15.0)
+- gcc/g++ >= 11.2 (shipped by default on Ubuntu 22.04)
+- liburing >= 2.2
 
 **Instructions**:
 
 <details>
-<summary>Update to latest mainline Linux kernel for Ubuntu 20.04...</summary>
+<summary>Update to desired Linux kernel version for Ubuntu < 22.04...</summary>
 
 ```bash
 wget https://raw.githubusercontent.com/pimlie/ubuntu-mainline-kernel.sh/master/ubuntu-mainline-kernel.sh
 sudo chmod +x ubuntu-mainline-kernel.sh
-./ubuntu-mainline-kernel.sh -r v5.10     # search for 5.10 versions available
-sudo ./ubuntu-mainline-kernel.sh -i v5.10.60
+./ubuntu-mainline-kernel.sh -r v5.15     # search for 5.15 versions available
+sudo ./ubuntu-mainline-kernel.sh -i v5.15.0
 sudo reboot
 sudo apt --fix-broken install
 ```
 </details>
 
 <details>
-<summary>Install gcc/g++ version >= 10.2 for full support of c++20 standard...</summary>
+<summary>Install gcc/g++ version >= 11.2 for full support of c++20 standard...</summary>
 
 ```bash
 sudo apt update
 sudo apt upgrade
-sudo apt install build-essential gcc-10 g++-10 cpp-10 cmake
+sudo apt install build-essential gcc-11 g++-11 cpp-11 cmake
 ```
 </details>
 
 <details>
-<summary>Make gcc-10/g++-10 the default version...</summary>
+<summary>Make gcc-11/g++-11 the default version...</summary>
 
 ```bash
-sudo update-alternatives --install /usr/bin/gcc gcc /usr/bin/gcc-10 100
-sudo update-alternatives --install /usr/bin/g++ g++ /usr/bin/g++-10 100
-sudo update-alternatives --install /usr/bin/gcov gcov /usr/bin/gcov-10 100
+sudo update-alternatives --install /usr/bin/gcc gcc /usr/bin/gcc-11 100
+sudo update-alternatives --install /usr/bin/g++ g++ /usr/bin/g++-11 100
+sudo update-alternatives --install /usr/bin/gcov gcov /usr/bin/gcov-11 100
 ```
 </details>
 
