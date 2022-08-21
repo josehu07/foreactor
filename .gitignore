@@ -28,6 +28,8 @@ realapps/coreutils/**/.dirstamp
 realapps/coreutils/coreutils-src/autom4te.cache/
 realapps/coreutils/coreutils-src/Makefile
 realapps/coreutils/coreutils-src/config.*
+realapps/coreutils/coreutils-src/doc/stamp-vti
+realapps/coreutils/coreutils-src/doc/version.texi
 realapps/coreutils/coreutils-src/gnulib-tests/Makefile
 realapps/coreutils/coreutils-src/gnulib-tests/bench-md5
 realapps/coreutils/coreutils-src/gnulib-tests/bench-sha1
