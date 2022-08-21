@@ -57,7 +57,7 @@ static bool fstatat_arggen(const int *epoch, bool *link, int *dirfd, const char 
 //     return false;
 // }
 
-// static bool getdents_arggen(const int *epoch, bool *link, int *fd, struct dirent64 **dirp, size_t *count,
+// static bool getdents_arggen(const int *epoch, bool *link, int *fd, struct dirent **dirp, size_t *count,
 //                             bool *buf_ready) {
 //     return false;
 // }

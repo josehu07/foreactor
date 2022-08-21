@@ -23,6 +23,7 @@ realapps/leveldb/results
 
 realapps/coreutils/results
 realapps/coreutils/**/.deps/
+realapps/coreutils/**/configure~
 realapps/coreutils/**/config.hin~
 realapps/coreutils/**/.dirstamp
 realapps/coreutils/coreutils-src/autom4te.cache/

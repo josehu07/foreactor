@@ -25,25 +25,12 @@ DECL_POSIX_FN(close);
 DECL_POSIX_FN(pread);
 DECL_POSIX_FN(pwrite);
 DECL_POSIX_FN(lseek);
-DECL_POSIX_FN(__fxstat);
-DECL_POSIX_FN(__fxstatat);
+DECL_POSIX_FN(fstat);
+DECL_POSIX_FN(fstatat);
 DECL_POSIX_FN(statx);
 DECL_POSIX_FN(getdents64);
 
 #undef DECL_POSIX_FN
-
-
-// The user function defined by glibc for the SYSCALL_fstat syscall is named
-// `__fxstat()`, and `fstat` is just the name of a macro defined over the
-// `__fxstat()` function. Here, we make `fstat` a function name w/o ver arg.
-[[maybe_unused]] static int fstat(int fd, struct stat *buf) {
-    return __fxstat(_STAT_VER, fd, buf);
-}
-
-[[maybe_unused]] static int fstatat(int dirfd, const char *pathname,
-                                    struct stat *buf, int flags) {
-    return __fxstatat(_STAT_VER, dirfd, pathname, buf, flags);
-}
 
 
 // glibc only provides getdents64. We make a wrapper for the name getdents.

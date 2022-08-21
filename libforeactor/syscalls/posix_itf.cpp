@@ -37,8 +37,8 @@ FIND_POSIX_FN(close);
 FIND_POSIX_FN(pread);
 FIND_POSIX_FN(pwrite);
 FIND_POSIX_FN(lseek);
-FIND_POSIX_FN(__fxstat);
-FIND_POSIX_FN(__fxstatat);
+FIND_POSIX_FN(fstat);
+FIND_POSIX_FN(fstatat);
 FIND_POSIX_FN(statx);
 FIND_POSIX_FN(getdents64);
 
@@ -235,7 +235,7 @@ off64_t lseek64(int fd, off64_t offset, int whence) {
 }
 
 
-int __fxstat([[maybe_unused]] int ver, int fd, struct stat *buf) {
+int fstat(int fd, struct stat *buf) {
     if (active_scgraph == nullptr ||
         active_scgraph->IsInNonInterceptionSet(SC_FSTAT)) {
         DEBUG("posix::fstat(%d, %p)\n", fd, buf);
@@ -252,12 +252,11 @@ int __fxstat([[maybe_unused]] int ver, int fd, struct stat *buf) {
     }
 }
 
-int __fxstat64([[maybe_unused]] int ver, int fd, struct stat64 *buf) {
-    return __fxstat(ver, fd, reinterpret_cast<struct stat *>(buf));
+int fstat64(int fd, struct stat64 *buf) {
+    return fstat(fd, reinterpret_cast<struct stat *>(buf));
 }
 
-int __fxstatat([[maybe_unused]] int ver, int dirfd, const char *pathname,
-               struct stat *buf, int flags) {
+int fstatat(int dirfd, const char *pathname, struct stat *buf, int flags) {
     if (active_scgraph == nullptr ||
         active_scgraph->IsInNonInterceptionSet(SC_FSTATAT)) {
         DEBUG("posix::fstatat(%d, \"%s\", %p, %d)\n",
@@ -276,10 +275,9 @@ int __fxstatat([[maybe_unused]] int ver, int dirfd, const char *pathname,
     }
 }
 
-int __fxstatat64([[maybe_unused]] int ver, int dirfd, const char *pathname,
-                 struct stat64 *buf, int flags) {
-    return __fxstatat(ver, dirfd, pathname,
-                      reinterpret_cast<struct stat *>(buf), flags);
+int fstatat64(int dirfd, const char *pathname, struct stat64 *buf, int flags) {
+    return fstatat(dirfd, pathname, reinterpret_cast<struct stat *>(buf),
+                   flags);
 }
 
 
