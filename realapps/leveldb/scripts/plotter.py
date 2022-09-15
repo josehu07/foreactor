@@ -676,7 +676,7 @@ def handle_zipf_consts(results_dir, output_prefix):
 def plot_breakdown(fractions_map, segments_us_map, segments, x_label, y_label,
                    output_prefix, title_suffix):
     plt.rcParams.update({'font.size': 22})
-    plt.rcParams.update({'figure.figsize': (10, 4)})
+    plt.rcParams.update({'figure.figsize': (11, 4)})
 
     segments_cmap = {
         "pre-issuing-algorithm":    "coral",
@@ -736,7 +736,7 @@ def plot_breakdown(fractions_map, segments_us_map, segments, x_label, y_label,
 
     plt.legend(reversed(legend_handles), reversed(legend_labels),
                loc="upper left", bbox_to_anchor=(1.01, 1.1),
-               frameon=False, handlelength=1)
+               fontsize=20, frameon=False, handlelength=1)
 
     plt.tight_layout()
 
