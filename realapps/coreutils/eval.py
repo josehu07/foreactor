@@ -24,7 +24,7 @@ CP_PRE_ISSUE_DEPTH_LIST = [4, 16]
 CP_TOTAL_SIZE_ABBR_FOR_UTIL = "2G"
 CP_BACKEND_FOR_UTIL = "io_uring_sqe_async"
 
-CP_FIGURES = ["avgtime"]
+CP_FIGURES = ["throughput"]
 
 DU_PREPARE_PY = "./scripts/du-prepare.py"
 DU_BENCHER_PY = "./scripts/du-bencher.py"
@@ -44,7 +44,7 @@ DU_PRE_ISSUE_DEPTH_LIST = [4, 16]
 DU_FILE_COUNT_ABBR_FOR_UTIL = "400k"
 DU_BACKEND_FOR_UTIL = "io_uring_sqe_async"
 
-DU_FIGURES = ["avgtime"]
+DU_FIGURES = ["throughput"]
 
 
 def check_file_exists(path):
@@ -127,25 +127,28 @@ def prepare_all_du(workdir_prefix, num_dirs, file_counts):
         run_prepare_du(workdir_prefix, num_dirs, file_count, file_count_abbr)
 
 
-def run_bench_cp(libforeactor, results_dir, workdir_prefix, file_size_abbr,
-                 num_files, backend, pre_issue_depth_list):
+def run_bench_cp(libforeactor, results_dir, workdir_prefix, workdir_out_prefix,
+                 file_size_abbr, num_files, backend, pre_issue_depth_list):
     workdir = f"{workdir_prefix}/cp_{file_size_abbr}_{num_files}"
+    workdir_out = f"{workdir_out_prefix}/cp_{file_size_abbr}_{num_files}"
+    if not os.path.isdir(workdir_out):
+        os.mkdir(workdir_out)
     output_log = f"{results_dir}/cp-{file_size_abbr}-{num_files}-" + \
                  f"{backend}.log"
 
     cmd = ["python3", CP_BENCHER_PY, "-l", libforeactor, "-d", workdir,
-           "-o", output_log, "-b", backend]
+           "--dout", workdir_out, "-o", output_log, "-b", backend]
     cmd += list(map(lambda d: str(d), pre_issue_depth_list))
 
     return run_subprocess_cmd(cmd, merge=False)
 
-def run_all_cp(libforeactor, results_dir, workdir_prefix, file_sizes,
-               num_files, backends, pre_issue_depth_list):
+def run_all_cp(libforeactor, results_dir, workdir_prefix, workdir_out_prefix,
+               file_sizes, num_files, backends, pre_issue_depth_list):
     for file_size_abbr, file_size in file_sizes.items():
         for backend in backends:
             print(f"RUNNING {file_size_abbr} {num_files} {backend}")
             output = run_bench_cp(libforeactor, results_dir,
-                                  workdir_prefix,
+                                  workdir_prefix, workdir_out_prefix,
                                   file_size_abbr, num_files,
                                   backend, pre_issue_depth_list)
             print(output.rstrip())
@@ -233,6 +236,8 @@ def main():
                              "du-prepare|du-bencher|du-plotter|du-utilization")
     parser.add_argument('-d', dest='workdir_prefix', required=False,
                         help="required for prepare/bencher; absolute path prefix of workdirs")
+    parser.add_argument('--dout', dest='workdir_out_prefix', required=False,
+                        help="used by cp-bencher; specify if want separate output device")
     parser.add_argument('-l', dest='libforeactor', required=False,
                         help="required for bencher; absolute path to libforeactor.so")
     parser.add_argument('-r', dest='results_dir', required=False,
@@ -257,9 +262,13 @@ def main():
         check_arg_given(parser, args, "results_dir")
         check_file_exists(CP_BENCHER_PY)
         prepare_dir(args.results_dir, False)
+        workdir_out_prefix = args.workdir_prefix
+        if hasattr(args, "workdir_out_prefix") and \
+           getattr(args, "workdir_out_prefix") is not None:
+            workdir_out_prefix = args.workdir_out_prefix
         run_all_cp(args.libforeactor, args.results_dir, args.workdir_prefix,
-                   CP_TOTAL_SIZES, CP_NUM_FILES, CP_BACKENDS,
-                   CP_PRE_ISSUE_DEPTH_LIST)
+                   workdir_out_prefix, CP_TOTAL_SIZES, CP_NUM_FILES,
+                   CP_BACKENDS, CP_PRE_ISSUE_DEPTH_LIST)
 
     elif args.mode == "cp-plotter":
         check_arg_given(parser, args, "results_dir")

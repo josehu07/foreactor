@@ -1,3 +1,4 @@
  orig: avg 11993.458 ms
+ wcfr: avg 11793.490 ms
     4: avg 10083.025 ms
    16: avg 9695.833 ms
