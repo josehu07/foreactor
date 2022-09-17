@@ -736,7 +736,7 @@ def plot_breakdown(fractions_map, segments_us_map, segments, x_label, y_label,
 
     plt.legend(reversed(legend_handles), reversed(legend_labels),
                loc="upper left", bbox_to_anchor=(1.01, 1.1),
-               fontsize=20, frameon=False, handlelength=1)
+               fontsize=22, frameon=False, handlelength=1)
 
     plt.tight_layout()
 

@@ -1,3 +1,4 @@
 realapps/coreutils/coreutils-src/** linguist-vendored
 realapps/leveldb/leveldb-src/** linguist-vendored
 realapps/tar/tar-src/** linguist-vendored
+realapps/sqlite/sqlite-src/** linguist-vendored

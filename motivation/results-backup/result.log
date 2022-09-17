@@ -1,0 +1,115 @@
+Exper sequential read reqsize=1048576
+  iter 0  650.269 MB/s
+  iter 1  649.471 MB/s
+  iter 2  646.626 MB/s
+ average  648.789 MB/s
+Exper sequential write reqsize=1048576
+  iter 0 1073.379 MB/s
+  iter 1 1200.363 MB/s
+  iter 2 1177.416 MB/s
+ average 1150.386 MB/s
+Exper mixed_rand nthreads=1 reqsize=4096
+  iter 0   52.366 MB/s
+  iter 1   58.809 MB/s
+  iter 2   58.895 MB/s
+ average   56.690 MB/s
+Exper mixed_rand nthreads=2 reqsize=4096
+  iter 0  110.265 MB/s
+  iter 1   98.815 MB/s
+  iter 2  112.687 MB/s
+ average  107.256 MB/s
+Exper mixed_rand nthreads=4 reqsize=4096
+  iter 0  174.472 MB/s
+  iter 1  199.462 MB/s
+  iter 2  189.900 MB/s
+ average  187.945 MB/s
+Exper mixed_rand nthreads=8 reqsize=4096
+  iter 0  314.548 MB/s
+  iter 1  293.724 MB/s
+  iter 2  287.088 MB/s
+ average  298.453 MB/s
+Exper mixed_rand nthreads=16 reqsize=4096
+  iter 0  438.655 MB/s
+  iter 1  441.516 MB/s
+  iter 2  429.422 MB/s
+ average  436.531 MB/s
+Exper mixed_rand nthreads=24 reqsize=4096
+  iter 0  488.403 MB/s
+  iter 1  480.233 MB/s
+  iter 2  509.725 MB/s
+ average  492.787 MB/s
+Exper mixed_rand nthreads=32 reqsize=4096
+  iter 0  506.015 MB/s
+  iter 1  541.210 MB/s
+  iter 2  533.105 MB/s
+ average  526.777 MB/s
+Exper mixed_rand nthreads=1 reqsize=16384
+  iter 0  131.238 MB/s
+  iter 1  153.212 MB/s
+  iter 2  133.567 MB/s
+ average  139.339 MB/s
+Exper mixed_rand nthreads=2 reqsize=16384
+  iter 0  234.917 MB/s
+  iter 1  237.516 MB/s
+  iter 2  256.006 MB/s
+ average  242.813 MB/s
+Exper mixed_rand nthreads=4 reqsize=16384
+  iter 0  400.506 MB/s
+  iter 1  402.311 MB/s
+  iter 2  383.138 MB/s
+ average  395.318 MB/s
+Exper mixed_rand nthreads=8 reqsize=16384
+  iter 0  550.427 MB/s
+  iter 1  569.290 MB/s
+  iter 2  570.949 MB/s
+ average  563.556 MB/s
+Exper mixed_rand nthreads=16 reqsize=16384
+  iter 0  777.101 MB/s
+  iter 1  785.511 MB/s
+  iter 2  758.039 MB/s
+ average  773.550 MB/s
+Exper mixed_rand nthreads=24 reqsize=16384
+  iter 0  877.088 MB/s
+  iter 1  880.949 MB/s
+  iter 2  888.046 MB/s
+ average  882.028 MB/s
+Exper mixed_rand nthreads=32 reqsize=16384
+  iter 0  908.659 MB/s
+  iter 1  894.857 MB/s
+  iter 2  904.414 MB/s
+ average  902.644 MB/s
+Exper mixed_rand nthreads=1 reqsize=65536
+  iter 0  333.807 MB/s
+  iter 1  331.264 MB/s
+  iter 2  383.426 MB/s
+ average  349.499 MB/s
+Exper mixed_rand nthreads=2 reqsize=65536
+  iter 0  552.861 MB/s
+  iter 1  566.428 MB/s
+  iter 2  577.888 MB/s
+ average  565.726 MB/s
+Exper mixed_rand nthreads=4 reqsize=65536
+  iter 0  776.795 MB/s
+  iter 1  827.845 MB/s
+  iter 2  823.697 MB/s
+ average  809.446 MB/s
+Exper mixed_rand nthreads=8 reqsize=65536
+  iter 0 1042.986 MB/s
+  iter 1 1019.025 MB/s
+  iter 2 1035.573 MB/s
+ average 1032.528 MB/s
+Exper mixed_rand nthreads=16 reqsize=65536
+  iter 0 1117.438 MB/s
+  iter 1 1112.136 MB/s
+  iter 2 1114.403 MB/s
+ average 1114.659 MB/s
+Exper mixed_rand nthreads=24 reqsize=65536
+  iter 0 1117.046 MB/s
+  iter 1 1121.174 MB/s
+  iter 2 1104.772 MB/s
+ average 1114.331 MB/s
+Exper mixed_rand nthreads=32 reqsize=65536
+  iter 0 1110.220 MB/s
+  iter 1 1111.221 MB/s
+  iter 2 1117.982 MB/s
+ average 1113.141 MB/s
