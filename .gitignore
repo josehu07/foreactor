@@ -22,6 +22,10 @@ realapps/leveldb/ycsbcli
 realapps/leveldb/workloads
 realapps/leveldb/results
 
+realapps/bptree/bptcli
+realapps/bptree/workloads
+realapps/bptree/results
+
 realapps/coreutils/results
 realapps/coreutils/**/.deps/
 realapps/coreutils/**/configure~
