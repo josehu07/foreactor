@@ -8,8 +8,8 @@ namespace bptree {
 
 
 template <typename K, typename V>
-BPTree<K, V>::BPTree(std::string filename)
-        : filename(filename) {
+BPTree<K, V>::BPTree(std::string filename, size_t degree)
+        : filename(filename), degree(degree) {
     // key and value type must be integral within 64-bit width
     static_assert(std::is_unsigned<K>::value,
                   "key must be unsigned integral");
@@ -20,14 +20,20 @@ BPTree<K, V>::BPTree(std::string filename)
     static_assert(sizeof(V) <= sizeof(uint64_t),
                   "value must be within 64-bit width");
 
+    // degree must be between [2, MAXNKEYS]
+    if (degree < 2 || degree > MAXNKEYS) {
+        throw BPTreeException("invalid degree parameter "
+                              + std::to_string(degree));
+    }
+
     // open the backing file
-    int fd = open(filename.c_str(), O_CREAT | O_RDWR,
-                  S_IRUSR | S_IWUSR | S_IRGRP | S_IROTH);
+    fd = open(filename.c_str(), O_CREAT | O_RDWR,
+              S_IRUSR | S_IWUSR | S_IRGRP | S_IROTH);
     if (fd <= 0)
         throw BPTreeException("failed to open backing file");
 
     // initialize pager
-    pager = new Pager(fd);
+    pager = new Pager(fd, degree);
 }
 
 template <typename K, typename V>
@@ -36,6 +42,19 @@ BPTree<K, V>::~BPTree() {
         close(fd);
 
     delete pager;
+}
+
+
+template <typename K, typename V>
+void BPTree<K, V>::ReopenBackingFile(int flags) {
+    assert(fd > 0);
+    close(fd);
+
+    fd = open(filename.c_str(), flags | O_RDWR);
+    if (fd <= 0)
+        throw BPTreeException("failed to re-open backing file");
+
+    pager->fd = fd;
 }
 
 
@@ -76,7 +95,7 @@ size_t BPTree<K, V>::PageSearchKey(const Page& page, K key) {
 template <typename K, typename V>
 void BPTree<K, V>::LeafPageInject(Page& page, size_t search_idx, K key,
                                   V value) {
-    assert(page.header.nkeys < MAXNKEYS);
+    assert(page.header.nkeys < degree);
     assert(search_idx == 0 || search_idx % 2 == 1);
 
     // if key has exact match with the one on idx, simply update its value
@@ -118,7 +137,7 @@ void BPTree<K, V>::LeafPageInject(Page& page, size_t search_idx, K key,
 template <typename K, typename V>
 void BPTree<K, V>::ItnlPageInject(Page& page, size_t search_idx, K key,
                                   uint64_t lpageid, uint64_t rpageid) {
-    assert(page.header.nkeys < MAXNKEYS);
+    assert(page.header.nkeys < degree);
     assert(search_idx == 0 || search_idx % 2 == 1);
 
     // must not have duplicate internal node keys
@@ -210,7 +229,8 @@ void BPTree<K, V>::UpdateParentRefs(uint64_t parentid, const Page& parent) {
 }
 
 template <typename K, typename V>
-void BPTree<K, V>::SplitPage(uint64_t pageid, Page& page) {
+uint64_t BPTree<K, V>::SplitPage(uint64_t pageid, Page& page,
+                                 std::vector<uint64_t>& path) {
     // if spliting root page, need to allocate two pages
     if (page.header.type == PAGE_ROOT) {
         assert(pageid == 0);
@@ -256,7 +276,8 @@ void BPTree<K, V>::SplitPage(uint64_t pageid, Page& page) {
 
             // update the parent pageid in all child pages of the new left
             // sibling page
-            UpdateParentRefs(lpageid, lpage);
+            if (update_parent_refs)
+                UpdateParentRefs(lpageid, lpage);
             
             // populate right child
             size_t rsize = ((page.header.nkeys - mpos) * 2 - 1)
@@ -268,7 +289,8 @@ void BPTree<K, V>::SplitPage(uint64_t pageid, Page& page) {
 
             // update the parent pageid in all child pages of the new right
             // sibling page
-            UpdateParentRefs(rpageid, rpage);
+            if (update_parent_refs)
+                UpdateParentRefs(rpageid, rpage);
             
             // populate split node with the middle key
             uint64_t mkey = page.content[1 + mpos * 2];
@@ -283,6 +305,8 @@ void BPTree<K, V>::SplitPage(uint64_t pageid, Page& page) {
         page.header.depth++;
         if (!pager->WritePage(pageid, &page))
             throw BPTreeException("failed to write root page after split");
+
+        return std::make_tuple(lpageid, rpageid);
 
     // if splitting a non-root node
     } else {
@@ -324,7 +348,8 @@ void BPTree<K, V>::SplitPage(uint64_t pageid, Page& page) {
 
             // update the parent pageid in all child pages of the new right
             // sibling page
-            UpdateParentRefs(rpageid, rpage);
+            if (update_parent_refs)
+                UpdateParentRefs(rpageid, rpage);
 
             // trim current node
             mkey = page.content[1 + mpos * 2];
@@ -344,15 +369,17 @@ void BPTree<K, V>::SplitPage(uint64_t pageid, Page& page) {
         Page parent;
         if (!pager->ReadPage(parentid, &parent))
             throw BPTreeException("failed to read parent page");
-        assert(parent.header.nkeys < MAXNKEYS);
+        assert(parent.header.nkeys < degree);
         size_t idx = PageSearchKey(parent, mkey);
         ItnlPageInject(parent, idx, mkey, pageid, rpageid);
         
         // if parent internal node becomes full, do split recursively
-        if (parent.header.nkeys == MAXNKEYS)
+        if (parent.header.nkeys >= degree)
             SplitPage(parentid, parent);
         else if (!pager->WritePage(parentid, &parent))
             throw BPTreeException("failed to update parent page");
+
+        return std::make_tuple(pageid, rpageid);
     }
 }
 
@@ -367,12 +394,12 @@ void BPTree<K, V>::Put(K key, V value) {
         throw BPTreeException("failed to read leaf page");
 
     // inject key-value pair into the leaf node
-    assert(page.header.nkeys < MAXNKEYS);
+    assert(page.header.nkeys < degree);
     size_t idx = PageSearchKey(page, key);
     LeafPageInject(page, idx, key, value);
 
     // if this leaf node becomes full, do split
-    if (page.header.nkeys == MAXNKEYS)
+    if (page.header.nkeys >= degree)
         SplitPage(leafid, page);
     else if (!pager->WritePage(leafid, &page))
         throw BPTreeException("failed to update leaf page");
@@ -400,11 +427,19 @@ bool BPTree<K, V>::Get(K key, V& value) {
 }
 
 template <typename K, typename V>
+bool BPTree<K, V>::Delete(K key) {
+    throw BPTreeException("unimplemented!");
+}
+
+template <typename K, typename V>
 size_t BPTree<K, V>::Scan(K lkey, K rkey,
                           std::vector<std::tuple<K, V>>& results) {
     uint64_t lleafid, litnlid, rleafid, ritnlid;
     size_t litnlidx, ritnlidx;
     std::vector<uint64_t> leaves;   // leaf pages that should be read out
+
+    if (lkey > rkey)
+        return 0;
 
     // traverse up to leaf node for both bounds of range, gather all the
     // leaf nodes that should be read out
@@ -437,11 +472,20 @@ size_t BPTree<K, V>::Scan(K lkey, K rkey,
         itnlid = page.header.next;
     }
 
+    // starting large streaming scan, turn off page cache readahead
+    posix_fadvise(fd, 0, 0, POSIX_FADV_DONTNEED);
+
+    // [foreactor]
+    PluginScanPrologue(fd, &leaves);
+
     // read out the leaf pages in a loop, gathering records in range
     size_t nrecords = 0;
     for (uint64_t leafid : leaves) {
         if (!pager->ReadPage(leafid, &page))
             throw BPTreeException("failed to read out leaf page in scan");
+
+        // [foreactor]
+        foreactor_PauseCurrentSCGraph();
 
         // need a search if in boundary leaf page
         size_t lidx = 1, ridx = page.header.nkeys * 2 - 1;
@@ -462,6 +506,9 @@ size_t BPTree<K, V>::Scan(K lkey, K rkey,
                 ridx = 0;
         }
 
+        // [foreactor]
+        foreactor_ResumeCurrentSCGraph();
+
         // gather records within range
         for (size_t idx = lidx; idx <= ridx; idx += 2) {
             K key = page.content[idx];
@@ -471,38 +518,216 @@ size_t BPTree<K, V>::Scan(K lkey, K rkey,
         }
     }
 
+    // [foreactor]
+    PluginScanEpilogue();
+
     return nrecords;
 }
 
+template <typename K, typename V>
+size_t BPTree<K, V>::Load(const std::vector<std::tuple<K, V>>& records) {
+    // only supports bulk-loading on empty B+ tree
+    Page itnl;
+    if (!pager->ReadPage(0, &itnl))
+        throw BPTreeException("failed to read out root page in load");
+    if (itnl.header.depth != 1 || itnl.header.nkeys != 0)
+        throw BPTreeException("only supports Load on new empty B+ tree");
 
-std::ostream& operator<<(std::ostream& s, const BPTreeStats& stats) {
-    return s << "BPTreeStats{npages=" << stats.npages
-             << ",npages_itnl=" << stats.npages_itnl
-             << ",npages_leaf=" << stats.npages_leaf
-             << ",npages_empty=" << stats.npages_empty
-             << ",nkeys_itnl=" << stats.nkeys_itnl
-             << ",nkeys_leaf=" << stats.nkeys_leaf << "}";
-}
+    if (records.size() == 0)
+        return 0;
 
-static inline std::string PageTypeStr(enum PageType type) {
-    switch (type) {
-        case PAGE_EMPTY: return "empty";
-        case PAGE_ROOT:  return "root";
-        case PAGE_ITNL:  return "itnl";
-        case PAGE_LEAF:  return "leaf";
-        default:         return "unknown";
+    // sort the incoming records according to key and ignore duplicates
+    std::vector<std::tuple<K, V>> srecords(records);
+    std::sort(srecords.begin(), srecords.end(),
+              [](const std::tuple<K, V>& lhs,
+                 const std::tuple<K, V>& rhs) -> bool {
+                  return std::get<0>(lhs) < std::get<0>(rhs);
+              });
+    K currk = std::get<0>(srecords.front());
+    for (auto it = srecords.begin() + 1; it != srecords.end(); ) {
+        if (std::get<0>(*it) == currk)
+            it = srecords.erase(it);
+        else {
+            currk = std::get<0>(*it);
+            ++it;
+        }
     }
+
+    // special case where the root can directly hold all records
+    if (srecords.size() < degree) {
+        // simply put into root node as leaf
+        for (size_t pos = 0; pos < srecords.size(); ++pos) {
+            size_t idx = 1 + pos * 2;
+            auto [key, value] = srecords[pos];
+            itnl.content[idx] = key;
+            itnl.content[idx + 1] = value;
+        }
+        itnl.header.nkeys = srecords.size();
+        if (!pager->WritePage(0, &itnl))
+            throw BPTreeException("failed to write root page in load");
+        return srecords.size();
+    }
+
+    // pre-allocate the required leaf pages at once
+    size_t nkeys = degree - 1;
+    size_t nleaves = srecords.size() / nkeys;
+    if (srecords.size() % nkeys != 0)
+        nleaves++;
+    std::vector<uint64_t> leaves;
+    leaves.reserve(nleaves);
+    for (size_t i = 0; i < nleaves; ++i)
+        leaves.push_back(pager->AllocPage());
+
+    // [foreactor]
+    // using a memory-hungry way to simplify plugin implementation... not the
+    // best design of course
+    std::vector<Page *> leaves_pages;
+    leaves_pages.reserve(nleaves);
+
+    // directly write leaf pages and append to the right-most internal page
+    uint64_t parentid = 0;
+    uint64_t content[1 + nkeys * 2];
+    size_t leafidx = 0, leafpos = 0, itnlpos = 0;
+    Page leaf(PAGE_LEAF, parentid);
+    bool is_first_leaf = true;
+    for (auto&& record : srecords) {
+        assert(leafpos < nkeys);
+        size_t idx = 1 + leafpos * 2;
+        auto [key, value] = record;
+        content[idx] = key;
+        content[idx + 1] = value;
+        leafpos++;
+
+        if (leafpos == nkeys) {
+            // filled current leaf page buffer, write out
+            uint64_t leafid = leaves[leafidx];
+            memcpy(leaf.content, content, (1 + nkeys * 2) * sizeof(uint64_t));
+            leaf.header.nkeys = nkeys;
+            leaf.header.parent = parentid;
+            if (leafidx < nleaves - 1)
+                leaf.header.next = leaves[leafidx + 1];
+            else
+                leaf.header.next = 0;
+            // if (!pager->WritePage(leafid, &leaf))
+            //     throw BPTreeException("failed to write leaf page in load");
+            // [foreactor]
+            leaves_pages.push_back(new (std::align_val_t(BLKSIZE)) Page);
+            memcpy(leaves_pages.back(), &leaf, BLKSIZE);
+
+            if (is_first_leaf) {
+                // for the very first leaf, only a single pageid is to be
+                // written into root pages slot 0
+                assert(itnl.header.type == PAGE_ROOT);
+                itnl.content[0] = leafid;
+                itnl.header.depth = 2;
+                is_first_leaf = false;
+            } else {
+                // else, need to append a key-pageid pair into the current
+                // internal node, possibly triggering splits
+                size_t search_idx = (itnlpos == 0) ? 0 : (itnlpos * 2 - 1);
+                ItnlPageInject(itnl, search_idx, content[1],
+                               leaves[leafidx - 1], leafid);
+                if (itnl.header.nkeys >= degree) {
+                    // [foreactor]
+                    uint64_t lparentid;
+                    std::tie(lparentid, parentid) = SplitPage(parentid, itnl,
+                                                              false);
+                    if (!pager->ReadPage(parentid, &itnl)) {
+                        throw BPTreeException(
+                              "failed to read internal page in load");
+                    }
+                    itnlpos = nkeys - (nkeys / 2) - 1;
+                    // [foreactor]
+                    size_t purcnt = degree - (degree / 2);
+                    for (auto it = leaves_pages.rbegin();
+                         it < leaves_pages.rbegin() + purcnt;
+                         ++it) {
+                        (*it)->header.parent = parentid;
+                    }
+                    if (leaves_pages.size() == degree + 1) {
+                        size_t pulcnt = degree + 1 - purcnt;
+                        for (auto it = leaves_pages.begin();
+                             it < leaves_pages.begin() + pulcnt;
+                             ++it) {
+                            (*it)->header.parent = lparentid;
+                        }
+                    }
+                } else
+                    itnlpos++;
+            }
+
+            memset(content, 0, (1 + nkeys * 2) * sizeof(uint64_t));
+            leafpos = 0;
+            leafidx++;
+        }
+    }
+
+    // wrapping up for the last leaf and last internal node that could
+    // possibly be left out
+    if (srecords.size() % nkeys != 0) {
+        memcpy(leaf.content, content, (1 + leafpos * 2) * sizeof(uint64_t));
+        leaf.header.nkeys = leafpos;
+        leaf.header.parent = parentid;
+        leaf.header.next = 0;
+        // if (!pager->WritePage(leaves.back(), &leaf))
+        //     throw BPTreeException("failed to write leaf page in load");
+        // [foreactor]
+        leaves_pages.push_back(new (std::align_val_t(BLKSIZE)) Page);
+        memcpy(leaves_pages.back(), &leaf, BLKSIZE);
+
+        size_t search_idx = (itnlpos == 0) ? 0 : (itnlpos * 2 - 1);
+        ItnlPageInject(itnl, search_idx, content[1],
+                       leaves[leaves.size() - 2], leaves.back());
+    }
+    if (itnl.header.nkeys >= degree) {
+        // [foreactor]
+        uint64_t lparentid;
+        std::tie(lparentid, parentid) = SplitPage(parentid, itnl, false);
+        // [foreactor]
+        size_t purcnt = degree - (degree / 2);
+        for (auto it = leaves_pages.rbegin();
+             it < leaves_pages.rbegin() + purcnt;
+             ++it) {
+            (*it)->header.parent = parentid;
+        }
+        if (leaves_pages.size() == degree + 1) {
+            size_t pulcnt = degree + 1 - purcnt;
+            for (auto it = leaves_pages.begin();
+                 it < leaves_pages.begin() + pulcnt;
+                 ++it) {
+                (*it)->header.parent = lparentid;
+            }
+        }
+    } else if (!pager->WritePage(parentid, &itnl))
+        throw BPTreeException("failed to write internal page in load");
+
+    // [foreactor]
+    // starting one-pass writes, turn off page cache for these writes
+    ReopenBackingFile(O_DIRECT);
+    PluginLoadPrologue(fd, &leaves, &leaves_pages);
+
+    auto time_start = std::chrono::high_resolution_clock::now();
+
+    // [foreactor]
+    // dump out all leaf pages in one loop
+    for (size_t i = 0; i < nleaves; ++i) {
+        if (!pager->WritePage(leaves[i], leaves_pages[i]))
+            throw BPTreeException("failed to write leaf page in load");
+        delete leaves_pages[i];
+    }
+
+    auto time_end = std::chrono::high_resolution_clock::now();
+    double microsec = std::chrono::duration<double, std::micro>(
+            time_end - time_start).count();
+    std::cout << "??? " << microsec << std::endl;
+
+    // [foreactor]
+    PluginLoadEpilogue();
+    ReopenBackingFile();
+
+    return srecords.size();
 }
 
-std::ostream& operator<<(std::ostream& s, const Page& page) {
-    s << "Page{type=" << PageTypeStr(page.header.type)
-      << ",nkeys=" << page.header.nkeys
-      << ",parent=" << page.header.parent
-      << ",depth/next=" << page.header.next << ",content=[";
-    for (size_t idx = 0; idx < 1 + page.header.nkeys * 2; ++idx)
-        s << page.content[idx] << ",";
-    return s << "]}";
-}
 
 template <typename K, typename V>
 void BPTree<K, V>::PrintStats(bool print_pages) {

@@ -6,6 +6,7 @@
 #include <vector>
 #include <string>
 #include <tuple>
+#include <new>
 #include <cassert>
 #include <cstring>
 
@@ -34,10 +35,15 @@ class BPTree {
     friend Pager;
 
     private:
-        std::string filename;
+        const std::string filename;
         int fd = -1;
 
+        const size_t degree = MAXNKEYS;
+
         Pager *pager = nullptr;
+
+        /** Reopen the backing file with possibly different flags. */
+        void ReopenBackingFile(int flags);
 
         /**
          * Search in page for the closest key that is <= given key.
@@ -69,13 +75,17 @@ class BPTree {
 
         /**
          * Split the given page into two siblings, and propagate one new key
-         * up to the parent node. May trigger cascading splits.
+         * up to the parent node. May trigger cascading splits. The path
+         * argument is a list of internal node pageids, starting root, leading
+         * to the node to be split.
+         * Returns the pageid of the newly split right sibling.
          */
         void UpdateParentRefs(uint64_t parentid, const Page& parent);
-        void SplitPage(uint64_t pageid, Page& page);
+        size_t SplitPage(uint64_t pageid, Page& page,
+                         std::vector<uint64_t>& path);
 
     public:
-        BPTree(std::string filename);
+        BPTree(std::string filename, size_t degree);
         ~BPTree();
 
         /**
@@ -92,11 +102,25 @@ class BPTree {
         bool Get(K key, V& value);
 
         /**
+         * Delete the record mathcing key.
+         * Returns true if key found, otherwise false.
+         */
+        bool Delete(K key);
+
+        /**
          * Do a range scan over an inclusive key range [lkey, rkey], and
          * append found records to the given vector.
          * Returns the number of records found within range.
          */
         size_t Scan(K lkey, K rkey, std::vector<std::tuple<K, V>>& results);
+
+        /**
+         * Bulk-load a collection of records into an empty B+ tree instance.
+         * Only works on a new empty backing file.
+         * Returns the number of records successfully loaded, ignoring any
+         * duplicate keys.
+         */
+        size_t Load(const std::vector<std::tuple<K, V>>& records);
 
         /**
          * Scan the whole backing file and print statistics.

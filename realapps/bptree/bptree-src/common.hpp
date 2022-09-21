@@ -13,11 +13,11 @@ namespace bptree {
 
 
 /** Page size. */
-constexpr size_t BLKSIZE = 128;
+constexpr size_t BLKSIZE = 8192;
 
 
 /** Magic number for integrity check. */
-constexpr uint32_t MAGIC = 0xB1237AEE;
+constexpr uint64_t MAGIC = 0xB1237AEED6548CFF;
 
 
 /** Exception type. */
@@ -58,19 +58,18 @@ enum PageType {
 struct PageHeader {
     enum PageType type : 8 = PAGE_EMPTY;    // page type
     size_t nkeys : 56 = 0;          // number of keys in node
-    uint64_t parent : 32 = 0;       // pageid of parent node
-    uint32_t magic : 32 = MAGIC;    // magic number
+    uint64_t magic : 64 = MAGIC;    // magic number
     union {
         unsigned depth;     // in root page, stores the current depth of tree
         uint64_t next = 0;  // in other pages, stores pageid of right sibling
     };
 
     PageHeader()
-            : type(PAGE_EMPTY), nkeys(0), parent(0), magic(MAGIC), next(0) {}
+            : type(PAGE_EMPTY), nkeys(0), magic(MAGIC), next(0) {}
     PageHeader(enum PageType type)
-            : type(type), nkeys(0), parent(0), magic(MAGIC), next(0) {}
+            : type(type), nkeys(0), magic(MAGIC), next(0) {}
     PageHeader(enum PageType type, uint64_t parent)
-            : type(type), nkeys(0), parent(parent), magic(MAGIC), next(0) {}
+            : type(type), nkeys(0), magic(MAGIC), next(0) {}
 };
 static_assert(sizeof(PageHeader) == 24);
 
@@ -87,7 +86,6 @@ struct Page {
 
     Page() : header() {}
     Page(enum PageType type) : header(type) {}
-    Page(enum PageType type, uint64_t parent) : header(type, parent) {}
 };
 static_assert(sizeof(Page) == BLKSIZE);
 

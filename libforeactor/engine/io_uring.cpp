@@ -71,10 +71,20 @@ int IOUring::SubmitAll() {
         node->stage.Set(epoch_sum, STAGE_ONTHEFLY);
     }
 
+    size_t num_prepared = prepared.size(), num_submitted = 0;
     prepared.clear();
 
-    // call io_uring_submit() once for this bulk
-    return io_uring_submit(&ring);
+    // call io_uring_submit() for this bulk
+    while (num_submitted < num_prepared) {
+        int ret = io_uring_submit(&ring);
+        if (ret < 0) {
+            DEBUG("submit SQEs failed %d\n", ret);
+            // TODO: handle this more elegantly
+            assert(false);
+        } else
+            num_submitted += ret;
+    }
+    return num_submitted;
 }
 
 std::tuple<SyscallNode *, int, long> IOUring::CompleteOne() {

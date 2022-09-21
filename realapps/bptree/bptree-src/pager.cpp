@@ -17,13 +17,14 @@
 namespace bptree {
 
 
-Pager::Pager(int fd)
-        : fd(fd) {
+Pager::Pager(int fd, size_t degree)
+        : fd(fd), degree(degree) {
     assert(fd > 0);
+    assert(degree >= 2 && degree <= MAXNKEYS);
     
     // verify file integrity, at the same time build the freelist
     BPTreeStats stats;
-    CheckStatsInternal(stats, true);
+    CheckStats(stats, true);
 }
 
 Pager::~Pager() {
@@ -49,7 +50,7 @@ bool Pager::ReadPage(uint64_t pageid, size_t off, size_t len, void *buf) {
     return true;
 }
 
-bool Pager::WritePage(uint64_t pageid, void *buf) {
+bool Pager::WritePage(uint64_t pageid, const void *buf) {
     off_t foff = pageid * BLKSIZE;
     ssize_t ret = pwrite(fd, buf, BLKSIZE, foff);
     if (ret != static_cast<ssize_t>(BLKSIZE))
@@ -57,7 +58,8 @@ bool Pager::WritePage(uint64_t pageid, void *buf) {
     return true;
 }
 
-bool Pager::WritePage(uint64_t pageid, size_t off, size_t len, void *buf) {
+bool Pager::WritePage(uint64_t pageid, size_t off, size_t len,
+                      const void *buf) {
     if (off < 0 || off >= BLKSIZE || off + len > BLKSIZE)
         return false;
     off_t foff = (pageid * BLKSIZE) + off;
@@ -92,7 +94,7 @@ uint64_t Pager::AllocPage() {
 }
 
 
-void Pager::CheckStatsInternal(BPTreeStats& stats, bool init) {
+void Pager::CheckStats(BPTreeStats& stats, bool init) {
     if (init)
         freelist.clear();
 
@@ -167,10 +169,6 @@ void Pager::CheckStatsInternal(BPTreeStats& stats, bool init) {
         stats.npages_leaf = 1;
         stats.npages_itnl = 0;
     }
-}
-
-void Pager::CheckStats(BPTreeStats& stats) {
-    CheckStatsInternal(stats, false);
 }
 
 

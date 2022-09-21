@@ -266,10 +266,10 @@ static std::vector<ycsb_req_t> read_input_trace(const std::string& filename,
             // }
             // NOTE: multithreaded Puts are fine and internally mutexed by
             //       LevelDB; commenting out above
-            ycsb_op_t op = opcode == "READ"   ? READ
-                         : opcode == "INSERT" ? INSERT
-                         : opcode == "UPDATE" ? UPDATE
-                         : opcode == "SCAN"   ? SCAN : UNKNOWN;
+            ycsb_op_t op = (opcode == "READ")   ? READ
+                         : (opcode == "INSERT") ? INSERT
+                         : (opcode == "UPDATE") ? UPDATE
+                         : (opcode == "SCAN")   ? SCAN : UNKNOWN;
             size_t scan_len = 0;
             if (op == SCAN) {
                 input >> scan_len;
