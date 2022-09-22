@@ -128,7 +128,7 @@ def handle_load_throughput(results_dir, output_prefix):
 
     results = {"original": []}
 
-    y_scale = 1000.
+    y_scale = 1000000.
 
     for degree in DEGREES:    
         avg_us = read_avg_us(results_dir, degree, "load", BACKEND, "orig")
@@ -146,7 +146,7 @@ def handle_load_throughput(results_dir, output_prefix):
 
     plot_throughput_bars(results, DEGREES,
                          "Tree degree",
-                         "Throughput (k records/s)",
+                         "Throughput (m records/s)",
                          output_prefix, f"load")
 
 def handle_scan_throughput(results_dir, output_prefix):

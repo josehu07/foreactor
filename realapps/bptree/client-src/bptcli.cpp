@@ -87,23 +87,13 @@ static void fuzzy_test_round(const std::string& filename,
     };
     auto CheckedLoad = [&](
             std::vector<std::tuple<uint64_t, uint64_t>>& records) {
-        size_t nrecords = 1, refnrecords = 0;
         // std::cout << "Load " << records.size() << std::endl;
-        nrecords = bptree.Load(records);
+        bptree.Load(records);
         for (auto&& [key, val] : records) {
             if (!refmap.contains(key)) {
                 refmap[key] = val;
                 refvec.push_back(key);
-                refnrecords++;
             }
-        }
-        if (refnrecords != nrecords) {
-            throw FuzzyTestException("Load mismatch: size="
-                                     + std::to_string(records.size())
-                                     + " nrecords="
-                                     + std::to_string(nrecords)
-                                     + " refnrecords="
-                                     + std::to_string(refnrecords));
         }
     };
     auto CheckedScan = [&](uint64_t lkey, uint64_t rkey) {
@@ -158,9 +148,24 @@ static void fuzzy_test_round(const std::string& filename,
     // bulk-loading into the empty tree
     if (num_to_load > 0) {
         std::cout << " Testing bulk Load..." << std::endl;
+        std::set<uint64_t> allkeys;
         std::vector<std::tuple<uint64_t, uint64_t>> records;
-        for (size_t i = 0; i < num_to_load; ++i)
-            records.emplace_back(randkey(gen), 7);
+        for (size_t i = 0; i < num_to_load; ++i) {
+            uint64_t key;
+            while (true) {
+                key = randkey(gen);
+                if (!allkeys.contains(key)) {
+                    allkeys.insert(key);
+                    break;
+                }
+            }
+            records.emplace_back(key, 7);
+        }
+        std::sort(records.begin(), records.end(),
+                  [](const std::tuple<uint64_t, uint64_t>& lhs,
+                   const std::tuple<uint64_t, uint64_t>& rhs) -> bool {
+                    return std::get<0>(lhs) < std::get<0>(rhs);
+                  });
         CheckedLoad(records);
     }
 

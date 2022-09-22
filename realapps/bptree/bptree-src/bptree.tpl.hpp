@@ -363,9 +363,12 @@ void BPTree<K, V>::SplitPage(uint64_t pageid, Page& page,
         if (parent.header.nkeys >= degree) {
             path.pop_back();
             SplitPage(parentid, parent, path);
-        } else if (!pager->WritePage(parentid, &parent))
-            throw BPTreeException("failed to update parent page");
-        path.push_back(rpageid);
+            path.push_back(rpageid);
+        } else {
+            if (!pager->WritePage(parentid, &parent))
+                throw BPTreeException("failed to update parent page");
+            path.back() = rpageid;
+        }
     }
 }
 
@@ -514,9 +517,9 @@ size_t BPTree<K, V>::Scan(K lkey, K rkey,
 }
 
 template <typename K, typename V>
-size_t BPTree<K, V>::Load(const std::vector<std::tuple<K, V>>& records) {
+void BPTree<K, V>::Load(const std::vector<std::tuple<K, V>>& records) {
     if (records.size() == 0)
-        return 0;
+        return;
 
     // only supports bulk-loading on empty B+ tree
     Page itnl;
@@ -526,41 +529,50 @@ size_t BPTree<K, V>::Load(const std::vector<std::tuple<K, V>>& records) {
         throw BPTreeException("only supports Load on new empty B+ tree");
 
     // sort the incoming records according to key and ignore duplicates
-    std::vector<std::tuple<K, V>> srecords(records);
-    std::sort(srecords.begin(), srecords.end(),
-              [](const std::tuple<K, V>& lhs,
-                 const std::tuple<K, V>& rhs) -> bool {
-                  return std::get<0>(lhs) < std::get<0>(rhs);
-              });
-    K currk = std::get<0>(srecords.front());
-    for (auto it = srecords.begin() + 1; it != srecords.end(); ) {
-        if (std::get<0>(*it) == currk)
-            it = srecords.erase(it);
-        else {
-            currk = std::get<0>(*it);
-            ++it;
-        }
+    // std::vector<std::tuple<K, V>> srecords(records);
+    // std::sort(srecords.begin(), srecords.end(),
+    //           [](const std::tuple<K, V>& lhs,
+    //              const std::tuple<K, V>& rhs) -> bool {
+    //               return std::get<0>(lhs) < std::get<0>(rhs);
+    //           });
+    // K currk = std::get<0>(srecords.front());
+    // for (auto it = srecords.begin() + 1; it != srecords.end(); ) {
+    //     if (std::get<0>(*it) == currk)
+    //         it = srecords.erase(it);
+    //     else {
+    //         currk = std::get<0>(*it);
+    //         ++it;
+    //     }
+    // }
+
+    // ensure that the records array is sorted by key in increasing order
+    K currkey = std::numeric_limits<K>::min();
+    for (auto&& record : records) {
+        K key = std::get<0>(record);
+        if (key <= currkey)
+            throw BPTreeException("records vector input not valid");
+        currkey = key;
     }
 
     // special case where the root can directly hold all records
-    if (srecords.size() < degree) {
+    if (records.size() < degree) {
         // simply put into root node as leaf
-        for (size_t pos = 0; pos < srecords.size(); ++pos) {
+        for (size_t pos = 0; pos < records.size(); ++pos) {
             size_t idx = 1 + pos * 2;
-            auto [key, value] = srecords[pos];
+            auto [key, value] = records[pos];
             itnl.content[idx] = key;
             itnl.content[idx + 1] = value;
         }
-        itnl.header.nkeys = srecords.size();
+        itnl.header.nkeys = records.size();
         if (!pager->WritePage(0, &itnl))
             throw BPTreeException("failed to write root page in load");
-        return srecords.size();
+        return;
     }
 
     // pre-allocate the required leaf pages at once
     size_t nkeys = degree - 1;
-    size_t nleaves = srecords.size() / nkeys;
-    if (srecords.size() % nkeys != 0)
+    size_t nleaves = records.size() / nkeys;
+    if (records.size() % nkeys != 0)
         nleaves++;
     std::vector<uint64_t> leaves;
     leaves.reserve(nleaves);
@@ -582,7 +594,7 @@ size_t BPTree<K, V>::Load(const std::vector<std::tuple<K, V>>& records) {
     size_t leafidx = 0, leafpos = 0, itnlpos = 0;
     Page leaf(PAGE_LEAF);
     bool is_first_leaf = true;
-    for (auto&& record : srecords) {
+    for (auto&& record : records) {
         assert(leafpos < nkeys);
         size_t idx = 1 + leafpos * 2;
         auto [key, value] = record;
@@ -616,13 +628,14 @@ size_t BPTree<K, V>::Load(const std::vector<std::tuple<K, V>>& records) {
                 // else, need to append a key-pageid pair into the current
                 // internal node, possibly triggering splits
                 size_t search_idx = (itnlpos == 0) ? 0 : (itnlpos * 2 - 1);
-                std::cout << "??? " << path.back() << " " << search_idx << " " << (search_idx == 0 ? itnl.content[0] : itnl.content[search_idx + 1]) << " " << leaves[leafidx - 1] << " " << leafid << std::endl;
-                if ((search_idx == 0 ? itnl.content[0] : itnl.content[search_idx + 1]) == 0)
-                    PrintStats(true);
                 ItnlPageInject(itnl, search_idx, content[1],
                                leaves[leafidx - 1], leafid);
                 if (itnl.header.nkeys >= degree) {
                     SplitPage(path.back(), itnl, path);
+                    if (!pager->ReadPage(path.back(), &itnl)) {
+                        throw BPTreeException(
+                              "failed to read internal page in load");
+                    }
                     itnlpos = degree - (degree / 2) - 1;
                 } else
                     itnlpos++;
@@ -636,7 +649,7 @@ size_t BPTree<K, V>::Load(const std::vector<std::tuple<K, V>>& records) {
 
     // wrapping up for the last leaf and last internal node that could
     // possibly be left out
-    if (srecords.size() % nkeys != 0) {
+    if (records.size() % nkeys != 0) {
         memcpy(leaf.content, content, (1 + leafpos * 2) * sizeof(uint64_t));
         leaf.header.nkeys = leafpos;
         leaf.header.next = 0;
@@ -661,8 +674,6 @@ size_t BPTree<K, V>::Load(const std::vector<std::tuple<K, V>>& records) {
     // [foreactor]
     PluginLoadPrologue(fd, &leaves, &leaves_pages);
 
-    auto time_start = std::chrono::high_resolution_clock::now();
-
     // [foreactor]
     // dump out all leaf pages in one loop
     for (size_t i = 0; i < nleaves; ++i) {
@@ -671,16 +682,10 @@ size_t BPTree<K, V>::Load(const std::vector<std::tuple<K, V>>& records) {
         delete leaves_pages[i];
     }
 
-    auto time_end = std::chrono::high_resolution_clock::now();
-    double microsec = std::chrono::duration<double, std::micro>(
-            time_end - time_start).count();
-    std::cout << "??? " << microsec << std::endl;
-
     // [foreactor]
     PluginLoadEpilogue();
 
     ReopenBackingFile();
-    return srecords.size();
 }
 
 

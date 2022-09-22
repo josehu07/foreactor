@@ -26,11 +26,15 @@ def check_dir_exists(dir_path):
 
 def generate_load_traces(output_prefix, degree, num_loads):
     trace = f"{output_prefix}-{degree}-load.txt"
+
+    # keys for load must be sorted in increasing order and has no duplicates
+    keys = random.sample(range(MAX_KEY + 1), num_loads)
+    keys.sort()
+
     with open(trace, 'w') as ftrace:
         ftrace.write(f"DEGREE {degree}\n")
         ftrace.write(f"LOAD {num_loads}\n")
-        for i in range(num_loads):
-            key = random.randint(0, MAX_KEY)
+        for key in keys:
             ftrace.write(f"K {key}\n")
         ftrace.write(f"ENDLOAD {num_loads}\n")
 

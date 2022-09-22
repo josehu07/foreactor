@@ -7,7 +7,7 @@
 #include <string>
 #include <tuple>
 #include <new>
-#include <chrono>
+#include <limits>
 #include <cassert>
 #include <cstring>
 
@@ -111,6 +111,7 @@ class BPTree {
         /**
          * Delete the record mathcing key.
          * Returns true if key found, otherwise false.
+         * Exceptions might be thrown.
          */
         bool Delete(K key);
 
@@ -118,16 +119,17 @@ class BPTree {
          * Do a range scan over an inclusive key range [lkey, rkey], and
          * append found records to the given vector.
          * Returns the number of records found within range.
+         * Exceptions might be thrown.
          */
         size_t Scan(K lkey, K rkey, std::vector<std::tuple<K, V>>& results);
 
         /**
          * Bulk-load a collection of records into an empty B+ tree instance.
-         * Only works on a new empty backing file.
-         * Returns the number of records successfully loaded, ignoring any
-         * duplicate keys.
+         * Only works on a new empty backing file. The records vector must be
+         * sorted on key in increasing order and must contain no duplicate
+         * keys, otherwise an exception will be thrown.
          */
-        size_t Load(const std::vector<std::tuple<K, V>>& records);
+        void Load(const std::vector<std::tuple<K, V>>& records);
 
         /**
          * Scan the whole backing file and print statistics.
