@@ -135,12 +135,12 @@ An application can have multiple intercepted functions, each corresponding to a 
 This repository contains a collection of applications that involve functions suitable to be wrapped by foreactor and benefit from asynchrony. We have written plugins for some of them. The plugins code can be found under `realapps/appname/appname-plg/`.
 
 <details>
-<summary>GNU Coreutils v9.1</summary>
+<summary>GNU Coreutils v9.1 (du & cp)</summary>
 
 | Function | Note |
 | :-: | :- |
-| `du du_files` | Regular loop of `fstatat`s on files in a directory |
-| `cp sparse_copy` | Regular loop of `read`-`write`s of 128KiB chunks |
+| du `du_files` | Regular loop of `fstatat`s on files in a directory |
+| cp `sparse_copy` | Regular loop of `read`-`write`s of 128KiB chunks |
 
 Build:
 
@@ -207,7 +207,54 @@ If finished successfully, produces utilization reports at current path's `result
 </details>
 
 <details>
-<summary>LevelDB v1.23</summary>
+<summary>BPTree (self-implemented B+-tree)</summary>
+
+| Function | Note |
+| :-: | :- |
+| `BPTree::Scan` | Range query involving a sequence of leaf page `pread`s |
+| `BPTree::Load` | Bulk-loading involving a sequence of leaf page `pwrite`s |
+
+Build:
+
+```bash
+cd realapps/bptree
+make -j$(nproc)
+```
+
+If built successfully, there will be a `bptcli` binary produced.
+
+Prepare workload traces (may take ~1m):
+
+```bash
+python3 eval.py -m prepare -w workloads
+```
+
+If finished successfully, produces the workload traces under current path's `workloads/`.
+
+Benchmark all workloads (may take ~5m):
+
+```bash
+python3 eval.py -m bencher \
+                -d /path/to/workspace/dir \     # path to hold B+-tree backing files
+                -l /path/to/libforeactor.so \
+                -w workloads \
+                -r results
+```
+
+If finished successfully, stores all benchmarking result logs under current path's `results/`.
+
+Plot result figures:
+
+```bash
+pip3 install matplotlib
+python3 eval.py -m plotter -r results
+```
+
+If finished successfully, produces all plots under current path's `results/`.
+</details>
+
+<details>
+<summary>LevelDB v1.23 (LSM-tree)</summary>
 
 | Function | Note |
 | :-: | :- |
@@ -326,10 +373,9 @@ This section summarizes the steps to make a plugin for an application function, 
 
 ## TODO List
 
-- [ ] speculative I/O analysis
-- [ ] serious related work study
+- [x] serious related work study
 - [ ] readme & website doc
-- [ ] smarter pre_issue_depth
-- [ ] internal buffer GC
-- [ ] compiler CFG mapping
-- [ ] support other static langs
+- [ ] smarter pre_issue_depth?
+- [ ] internal buffer GC?
+- [ ] compiler CFG mapping?
+- [ ] support other static langs?
