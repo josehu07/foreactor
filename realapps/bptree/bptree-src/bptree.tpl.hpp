@@ -617,11 +617,13 @@ size_t BPTree<K, V>::Load(const std::vector<std::tuple<K, V>>& records) {
                 // internal node, possibly triggering splits
                 size_t search_idx = (itnlpos == 0) ? 0 : (itnlpos * 2 - 1);
                 std::cout << "??? " << path.back() << " " << search_idx << " " << (search_idx == 0 ? itnl.content[0] : itnl.content[search_idx + 1]) << " " << leaves[leafidx - 1] << " " << leafid << std::endl;
+                if ((search_idx == 0 ? itnl.content[0] : itnl.content[search_idx + 1]) == 0)
+                    PrintStats(true);
                 ItnlPageInject(itnl, search_idx, content[1],
                                leaves[leafidx - 1], leafid);
                 if (itnl.header.nkeys >= degree) {
                     SplitPage(path.back(), itnl, path);
-                    itnlpos = 
+                    itnlpos = degree - (degree / 2) - 1;
                 } else
                     itnlpos++;
             }
