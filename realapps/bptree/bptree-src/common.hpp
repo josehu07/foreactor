@@ -68,8 +68,6 @@ struct PageHeader {
             : type(PAGE_EMPTY), nkeys(0), magic(MAGIC), next(0) {}
     PageHeader(enum PageType type)
             : type(type), nkeys(0), magic(MAGIC), next(0) {}
-    PageHeader(enum PageType type, uint64_t parent)
-            : type(type), nkeys(0), magic(MAGIC), next(0) {}
 };
 static_assert(sizeof(PageHeader) == 24);
 

@@ -1,6 +1,7 @@
 // This plugin is included directly by bptree source code for convenience.
 
 
+#include <vector>
 #include <foreactor.h>
 
 #pragma once

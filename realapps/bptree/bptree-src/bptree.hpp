@@ -7,6 +7,7 @@
 #include <string>
 #include <tuple>
 #include <new>
+#include <chrono>
 #include <cassert>
 #include <cstring>
 
@@ -17,6 +18,10 @@
 
 #include "common.hpp"
 #include "pager.hpp"
+
+// We include the plugin wrappers in-place.
+#include "bptree_scan_wrap.hpp"
+#include "bptree_load_wrap.hpp"
 
 #pragma once
 
@@ -43,7 +48,7 @@ class BPTree {
         Pager *pager = nullptr;
 
         /** Reopen the backing file with possibly different flags. */
-        void ReopenBackingFile(int flags);
+        void ReopenBackingFile(int flags = 0);
 
         /**
          * Search in page for the closest key that is <= given key.
@@ -69,20 +74,22 @@ class BPTree {
         /**
          * Do B+ tree search to traverse through internal nodes and find the
          * correct leaf node.
-         * Returns a tuple of (leaf_pageid, last_itnl_pageid, last_itnl_idx).
+         * Returns a tuple, where the first element is a vector of node pageids
+         * starting from root to the searched leaf node, and the second element
+         * being the key's index within the last-level internal node.
          */
-        std::tuple<uint64_t, uint64_t, size_t> TraverseToLeaf(K key);
+        std::tuple<std::vector<uint64_t>, size_t> TraverseToLeaf(K key);
 
         /**
          * Split the given page into two siblings, and propagate one new key
          * up to the parent node. May trigger cascading splits. The path
          * argument is a list of internal node pageids, starting root, leading
          * to the node to be split.
-         * Returns the pageid of the newly split right sibling.
+         * After this function returns, the path vector will be updated to
+         * reflect the new path to the right sibling node.
          */
-        void UpdateParentRefs(uint64_t parentid, const Page& parent);
-        size_t SplitPage(uint64_t pageid, Page& page,
-                         std::vector<uint64_t>& path);
+        void SplitPage(uint64_t pageid, Page& page,
+                       std::vector<uint64_t>& path);
 
     public:
         BPTree(std::string filename, size_t degree);
@@ -126,7 +133,7 @@ class BPTree {
          * Scan the whole backing file and print statistics.
          * If print_pages is true, also prints content of all pages.
          */
-        void PrintStats(bool print_pages);
+        void PrintStats(bool print_pages = false);
 };
 
 
