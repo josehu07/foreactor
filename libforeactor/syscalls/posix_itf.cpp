@@ -170,7 +170,17 @@ ssize_t pread(int fd, void *buf, size_t count, off_t offset) {
     }
 }
 
+ssize_t __pread_chk(int fd, void *buf, size_t count, size_t offset,
+                    size_t buflen) {
+    return pread(fd, buf, count, offset);
+}
+
 ssize_t pread64(int fd, void *buf, size_t count, off_t offset) {
+    return pread(fd, buf, count, offset);
+}
+
+ssize_t __pread64_chk(int fd, void *buf, size_t count, size_t offset,
+                    size_t buflen) {
     return pread(fd, buf, count, offset);
 }
 
@@ -180,6 +190,10 @@ ssize_t read(int fd, void *buf, size_t count) {
     if (ret > 0)
         offset = posix::lseek(fd, static_cast<size_t>(ret), SEEK_CUR);
     return ret;
+}
+
+ssize_t __read_chk(int fd, void *buf, size_t count, size_t buflen) {
+    return read(fd, buf, count);
 }
 
 

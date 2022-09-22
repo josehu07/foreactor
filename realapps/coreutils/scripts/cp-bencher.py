@@ -11,7 +11,7 @@ CP_GRAPH_ID = 0
 
 URING_QUEUE = 512
 
-NUM_ITERS = 20
+NUM_ITERS = 3
 
 
 def check_file_exists(path):
@@ -57,8 +57,8 @@ def query_timestamp_sec():
     return time.perf_counter()
 
 
-def compose_cp_cmd_env(libforeactor, workdir, use_foreactor, backend,
-                       pre_issue_depth):
+def compose_cp_cmd_env(libforeactor, workdir, workdir_out, use_foreactor,
+                       allow_reflink, backend, pre_issue_depth):
     envs = os.environ.copy()
     envs["LD_PRELOAD"] = libforeactor
     envs["USE_FOREACTOR"] = "yes" if use_foreactor else "no"
@@ -70,59 +70,70 @@ def compose_cp_cmd_env(libforeactor, workdir, use_foreactor, backend,
         envs[f"QUEUE_{CP_GRAPH_ID}"] = str(URING_QUEUE)
         envs[f"SQE_ASYNC_FLAG_{CP_GRAPH_ID}"] = "yes"
 
-    cmd = [CP_BIN, "--reflink=never", "--sparse=never"]
+    cmd = [CP_BIN, "--sparse=never"]
+    if not allow_reflink:
+        cmd.append("--reflink=never")
     # concurrent background I/O sometimes works better with readahead turned off
     if use_foreactor:
         cmd.append("--fadvise=random")
 
     indir = f"{workdir}/indir"
-    outdir = f"{workdir}/outdir"
+    outdir = f"{workdir_out}/outdir"
 
     assert os.path.isdir(indir)
     for file in os.listdir(indir):
-        cmd.append(f"{workdir}/indir/{file}")
+        cmd.append(f"{indir}/{file}")
     
     cmd.append(f"{outdir}/")
 
     return cmd, envs
 
 
-def run_cp_single(libforeactor, workdir, use_foreactor, backend=None,
-                  pre_issue_depth=0):
+def run_cp_single(libforeactor, workdir, workdir_out, use_foreactor,
+                  allow_reflink=False, backend=None, pre_issue_depth=0):
     os.system("ulimit -n 65536")
     os.system("sudo sync; sudo sh -c 'echo 3 > /proc/sys/vm/drop_caches'")
 
-    cmd, env = compose_cp_cmd_env(libforeactor, workdir, use_foreactor, backend,
-                                  pre_issue_depth)
+    cmd, env = compose_cp_cmd_env(libforeactor, workdir, workdir_out, use_foreactor,
+                                  allow_reflink, backend, pre_issue_depth)
 
     secs_before = query_timestamp_sec()
     run_subprocess_cmd(cmd, merge=False, env=env)
     secs_after = query_timestamp_sec()
     return (secs_after - secs_before)
 
-def run_cp_iters(num_iters, libforeactor, workdir, use_foreactor, backend=None,
-                 pre_issue_depth=0):
+def run_cp_iters(num_iters, libforeactor, workdir, workdir_out, use_foreactor,
+                 allow_reflink=False, backend=None, pre_issue_depth=0):
     result_avg_secs = 0.
     for i in range(num_iters):
-        avg_secs = run_cp_single(libforeactor, workdir, use_foreactor, backend,
-                                 pre_issue_depth)
+        avg_secs = run_cp_single(libforeactor, workdir, workdir_out, use_foreactor,
+                                 allow_reflink=allow_reflink, backend=backend,
+                                 pre_issue_depth=pre_issue_depth)
         result_avg_secs += avg_secs
     avg_ms = (result_avg_secs / num_iters) * 1000
     return avg_ms
 
 
-def run_exprs(libforeactor, workdir, output_log, backend, pre_issue_depth_list):
+def run_exprs(libforeactor, workdir, workdir_out, output_log, backend,
+              pre_issue_depth_list):
     num_iters = NUM_ITERS
 
     with open(output_log, 'w') as fout:
-        avg_ms = run_cp_iters(num_iters, libforeactor, workdir, False)
+        avg_ms = run_cp_iters(num_iters, libforeactor, workdir, workdir_out, False,
+                              allow_reflink=False)
         result = f" orig: avg {avg_ms:.3f} ms"
         fout.write(result + '\n')
         print(result)
 
+        avg_ms = run_cp_iters(num_iters, libforeactor, workdir, workdir_out, False,
+                              allow_reflink=True)
+        result = f" wcfr: avg {avg_ms:.3f} ms"
+        fout.write(result + '\n')
+        print(result)
+
         for pre_issue_depth in pre_issue_depth_list:
-            avg_ms = run_cp_iters(num_iters, libforeactor, workdir, True,
-                                  backend, pre_issue_depth)
+            avg_ms = run_cp_iters(num_iters, libforeactor, workdir, workdir_out, True,
+                                  backend=backend, pre_issue_depth=pre_issue_depth)
             result = f" {pre_issue_depth:4d}: avg {avg_ms:.3f} ms"
             fout.write(result + '\n')
             print(result)
@@ -231,6 +242,8 @@ def main():
                         help="absolute path to libforeactor.so")
     parser.add_argument('-d', dest='workdir', required=True,
                         help="workdir containing files")
+    parser.add_argument('--dout', dest='workdir_out', required=False,
+                        help="specify if want separate output workdir")
     parser.add_argument('-o', dest='output_log', required=True,
                         help="output log filename")
     parser.add_argument('-b', dest='backend', required=True,
@@ -248,18 +261,24 @@ def main():
         print(f"Error: unrecognized backend {args.backend}")
         exit(1)
 
+    workdir_out = args.workdir
+    if hasattr(args, "workdir_out") and getattr(args, "workdir_out") is not None:
+        workdir_out = args.workdir_out
+        if not os.path.isdir(f"{workdir_out}/outdir"):
+            os.mkdir(f"{workdir_out}/outdir")
+
     check_file_exists(args.libforeactor)
     check_file_exists(CP_BIN)
     check_dir_exists(args.workdir)
     check_dir_exists(f"{args.workdir}/indir")
-    check_dir_exists(f"{args.workdir}/outdir")
+    check_dir_exists(f"{workdir_out}/outdir")
 
     if args.util_dev is None:
-        run_exprs(args.libforeactor, args.workdir, args.output_log, args.backend,
-                  args.pre_issue_depths)
+        run_exprs(args.libforeactor, args.workdir, workdir_out, args.output_log,
+                  args.backend, args.pre_issue_depths)
     else:
-        run_utils(args.libforeactor, args.workdir, args.output_log, args.backend,
-                  args.pre_issue_depths, args.util_dev)
+        run_utils(args.libforeactor, args.workdir, args.output_log,
+                  args.backend, args.pre_issue_depths, args.util_dev)
 
 if __name__ == "__main__":
     main()
