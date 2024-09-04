@@ -8,8 +8,19 @@ Foreactor is a library that enables *fine-grained speculative I/O* (or more gene
 
 This is done by describing the application's critical functions (e.g., cp's `sparse_copy` and LevelDB's `Version::Get`) as *foreaction graphs*, a formal abstraction we propose. Such graph abstraction captures the execution order of syscalls to be issued by the function and their mutual dependencies. If the library gets `LD_PRELOAD`ed when running the application, it automatically intercepts those wrapped functions as well as POSIX glibc calls, and pre-issues proper syscalls ahead of time if the graph says it is safe and beneficial to do so.
 
-TODO paper cite info? =)
+An arXiv preprint of our paper can be found at [https://arxiv.org/abs/2409.01580](https://arxiv.org/abs/2409.01580). Please cite as:
 
+```text
+@misc{foreactor,
+      title={Foreactor: Exploiting Storage I/O Parallelism with Explicit Speculation},
+      author={Guanzhou Hu and Andrea Arpaci-Dusseau and Remzi Arpaci-Dusseau},
+      year={2024},
+      eprint={2409.01580},
+      archivePrefix={arXiv},
+      primaryClass={cs.OS},
+      url={https://arxiv.org/abs/2409.01580},
+}
+```
 
 ## Prerequisites
 
@@ -32,6 +43,7 @@ sudo ./ubuntu-mainline-kernel.sh -i v5.15.0
 sudo reboot
 sudo apt --fix-broken install
 ```
+
 </details>
 
 <details>
@@ -42,6 +54,7 @@ sudo apt update
 sudo apt upgrade
 sudo apt install build-essential gcc-11 g++-11 cpp-11 cmake
 ```
+
 </details>
 
 <details>
@@ -52,6 +65,7 @@ sudo update-alternatives --install /usr/bin/gcc gcc /usr/bin/gcc-11 100
 sudo update-alternatives --install /usr/bin/g++ g++ /usr/bin/g++-11 100
 sudo update-alternatives --install /usr/bin/gcov gcov /usr/bin/gcov-11 100
 ```
+
 </details>
 
 <details>
@@ -64,8 +78,8 @@ make -j$(nproc)
 sudo make install
 cd ..
 ```
-</details>
 
+</details>
 
 ## Basic Usage
 
@@ -86,6 +100,7 @@ cd libforeactor
 make -j$(nproc)
 cd ..
 ```
+
 </details>
 
 <details>
@@ -128,7 +143,6 @@ See `demo-cpp-src/hijackees.cpp` and `demo-cpp-plg/` for all the intercepted fun
 
 An application can have multiple intercepted functions, each corresponding to a separate plugin file with its unique graph ID.
 </details>
-
 
 ## Patched Applications
 
@@ -343,7 +357,6 @@ python3 eval.py -m utilization \
 If finished successfully, produces utilization reports at current path's `results/*-util.log`.
 </details>
 
-
 ## Making a New Plugin
 
 This section summarizes the steps to make a plugin for an application function, given that the foreaction graph for that function is conceptually clear.
@@ -352,9 +365,11 @@ This section summarizes the steps to make a plugin for an application function, 
 <summary>Make a plugin for an application function...</summary>
 
 1. Depending on the language of the application, if function names are mangled during linking (e.g. C++), we need to identify the mangled function name:
+
     ```bash
     objdump -t path/to/original/app/file.o | grep funcname_keyword
     ```
+
     For example, the mangled name may look like `_Z13exper_simple2Pv` for a C++ function named `exper_simple`. C functions usually follow ther original names.
 2. Write a plugin file (using the application's source language), mimicking e.g. `demoapps/demo-cpp/demo-cpp-plg/simple2_wrap.cpp`.
     - Include foreactor library interfaces by `#include <foreactor.h>`.
@@ -368,8 +383,8 @@ This section summarizes the steps to make a plugin for an application function, 
     - Use linker wrap trick in the final step of linking to intercept the chosen function `-Wl,--wrap=funcname`.
     - Note: this trick works only for function calls across object files and does not work for e.g. local static functions. Workarounds to be added...
 4. Build the application. If goes successfully, calls to the chosen function will be intercepted by our wrapper function after linking. Run the application with proper environment variables to enable foreactor pre-issuing.
-</details>
 
+</details>
 
 ## TODO List
 
